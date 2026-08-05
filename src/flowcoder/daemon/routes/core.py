@@ -4,11 +4,22 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
+from starlette.responses import FileResponse
 from starlette.routing import BaseRoute, Route, WebSocketRoute
 
 from flowcoder.config.removed_capabilities import assert_no_removed_route_paths
+
+# GUI 静态页面路径：包内 gui/index.html，daemon 直接提供 Web 前端
+_GUI_HTML = Path(__file__).resolve().parents[2] / "gui" / "index.html"
+
+
+async def serve_gui(request: Any) -> FileResponse:
+    """返回内置 Web 前端单页应用（Vue 3 SPA）。"""
+    return FileResponse(_GUI_HTML, media_type="text/html")
+
 from flowcoder.daemon.routes.a2a import (
     a2a_agent_card,
     a2a_message_send,
@@ -84,6 +95,7 @@ class WebSocketRouteSpec:
 
 
 HTTP_ROUTES: tuple[HttpRouteSpec, ...] = (
+    HttpRouteSpec("/", serve_gui, ("GET",)),
     HttpRouteSpec("/.well-known/agent-card.json", a2a_agent_card, ("GET",)),
     HttpRouteSpec("/a2a/agent-card.json", a2a_agent_card, ("GET",)),
     HttpRouteSpec("/a2a/rpc", a2a_rpc, ("POST",)),

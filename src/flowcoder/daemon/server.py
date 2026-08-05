@@ -60,6 +60,7 @@ class DaemonTokenAuthMiddleware:
     """Protect daemon HTTP and WebSocket APIs with one local bearer token."""
 
     PUBLIC_PATHS = frozenset({
+        "/",
         "/api/health",
         "/.well-known/agent-card.json",
         "/a2a/agent-card.json",
@@ -186,6 +187,7 @@ def run_daemon(host: str = "127.0.0.1", port: int = 7800, work_dir: str | None =
 
     origins = os.environ.get(
         "FLOWCODER_CORS_ORIGINS",
+        f"http://localhost:{port},http://127.0.0.1:{port},"
         "http://localhost:1420,http://127.0.0.1:1420,tauri://localhost",
     )
     app = create_app(

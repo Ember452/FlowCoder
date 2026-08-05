@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MozilCode</title>
+<title>FlowCoder</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/styles/github.min.css">
 <style>
   :root {
@@ -477,7 +477,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/highlight.min.js"></script>
 <script>
 const { createApp, ref, computed, nextTick, onMounted } = Vue;
-const APP_NAME = 'MozilCode';
+const APP_NAME = 'FlowCoder';
 
 function stripTrailingSlash(value) {
   return (value || '').replace(/\/+$/, '');
@@ -487,8 +487,8 @@ function httpToWs(value) {
   return value.replace(/^http/i, (match) => (match.toLowerCase() === 'https' ? 'wss' : 'ws'));
 }
 
-const API = stripTrailingSlash(window.MOZILCODE_DAEMON_HTTP || window.location.origin);
-const WS_URL = stripTrailingSlash(window.MOZILCODE_DAEMON_WS || httpToWs(API));
+const API = stripTrailingSlash(window.FLOWCODER_DAEMON_HTTP || window.location.origin);
+const WS_URL = stripTrailingSlash(window.FLOWCODER_DAEMON_WS || httpToWs(API));
 
 // Safely parse JSON from a fetch response. Returns {} when the body is not
 // valid JSON (e.g. Starlette's plain-text "Not Found" on 404).
