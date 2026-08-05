@@ -86,6 +86,17 @@
   .rb-btn{padding:8px 10px;background:var(--accent-dim);border:none;border-radius:var(--r);color:var(--text);font-size:13px;cursor:pointer}
   .rb-btn:hover{background:var(--accent)}
   .rb-hint{font-size:11px;color:var(--dim);line-height:1.5;margin-top:4px}
+  .sb-ext{border-top:1px solid var(--border);padding:6px 0}
+  .sb-ext-h{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;padding:6px 16px 2px}
+  .sb-ext-item{display:flex;align-items:center;gap:8px;padding:6px 16px;cursor:pointer;font-size:12px;color:var(--muted);transition:background .12s}
+  .sb-ext-item:hover{background:var(--bg3);color:var(--text)}
+  .sb-ext-item .ei{width:14px;height:14px;flex-shrink:0;opacity:.8;color:var(--accent)}
+  .sb-ext-label{flex:1;white-space:nowrap}
+  .sb-ext-val{color:var(--dim);font-size:11px;font-family:var(--mono);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sb-ext-item:hover .sb-ext-val{color:var(--muted)}
+  .sb-ext-badge{font-size:10px;padding:1px 6px;border-radius:4px;background:var(--bg3);color:var(--muted)}
+  .sb-ext-badge.on{background:rgba(92,122,52,.18);color:var(--green)}
+  .sb-ext-badge.off{background:var(--bg3);color:var(--dim)}
   .sb-f{display:flex;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid var(--border);font-size:13px;color:var(--muted);cursor:pointer}
   .sb-f:hover{background:var(--bg3);color:var(--text)}
   .sb-f .gear{width:16px;height:16px;flex-shrink:0}
@@ -270,6 +281,29 @@
           </div>
         </div>
       </div>
+      <div class="sb-ext">
+        <div class="sb-ext-h">扩展状态</div>
+        <div class="sb-ext-item" @click="openSettings(); setSettingsTab('skills')" title="管理技能">
+          <svg class="ei" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.6 5.3 5.9.9-4.3 4.1 1 5.9L12 21.4 6.8 18.2l1-5.9L3.5 8.2l5.9-.9z"/></svg>
+          <span class="sb-ext-label">技能</span>
+          <span class="sb-ext-badge" :class="activeSkillsCount > 0 ? 'on' : 'off'">{{ activeSkillsCount }}/{{ skills.length }}</span>
+        </div>
+        <div class="sb-ext-item" @click="openSettings(); setSettingsTab('mcp')" title="管理 MCP 服务器">
+          <svg class="ei" viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h16v5H4zm0 9h16v5H4zm3-6.5h2v2H7zm0 9h2v2H7z"/></svg>
+          <span class="sb-ext-label">MCP</span>
+          <span class="sb-ext-badge" :class="activeMcpCount > 0 ? 'on' : 'off'">{{ activeMcpCount }}/{{ mcpServers.length }}</span>
+        </div>
+        <div class="sb-ext-item" @click="openSettings(); setSettingsTab('model')" title="模型配置">
+          <svg class="ei" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+          <span class="sb-ext-label">模型</span>
+          <span class="sb-ext-val" :title="configInfo.provider + ' · ' + configInfo.model">{{ configInfo.model || '—' }}</span>
+        </div>
+        <div class="sb-ext-item" @click="cyclePermissionMode" title="点击切换权限模式">
+          <svg class="ei" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+          <span class="sb-ext-label">权限</span>
+          <span class="sb-ext-val">{{ permModeLabel }}</span>
+        </div>
+      </div>
       <div class="sb-f" @click="openSettings" title="个人中心 / 设置">
         <svg class="gear" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94a7.49 7.49 0 0 0 0-1.88l2.03-1.58a.5.5 0 0 0 .12-.61l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7 7 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54a7 7 0 0 0-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.87a.5.5 0 0 0 .12.61l2.03 1.58a7.49 7.49 0 0 0 0 1.88L2.82 14.5a.5.5 0 0 0-.12.61l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96a7 7 0 0 0 1.62.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54a7 7 0 0 0 1.62-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.61zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
         <span class="sb-f-name">个人中心</span>
@@ -417,6 +451,11 @@
         <svg class="si" viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h16v5H4zm0 9h16v5H4zm3-6.5h2v2H7zm0 9h2v2H7z"/></svg>
         MCP 服务器
       </button>
+      <div class="set-group">运行时</div>
+      <button class="set-item" :class="{active: setTab === 'model'}" @click="setSettingsTab('model')">
+        <svg class="si" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+        模型与权限
+      </button>
     </div>
     <div class="set-main">
       <div v-if="setTab === 'skills'" class="set-pane">
@@ -465,6 +504,31 @@
           </div>
         </div>
         <p class="set-note">提示：配置会保存到本地，接入将在新建会话时生效。</p>
+      </div>
+
+      <div v-else-if="setTab === 'model'" class="set-pane">
+        <h2>模型与权限</h2>
+        <p class="set-desc">当前使用的 LLM 提供商与会话权限模式。更改后新建会话生效。</p>
+        <div class="rb-sec" style="margin-top:0">当前模型</div>
+        <div class="set-row" v-for="p in configInfo.providers" :key="p.name">
+          <div class="set-row-l">
+            <div class="set-row-title">{{ p.display_name || p.model }} <span class="set-tag">{{ p.protocol }}</span></div>
+            <div class="set-row-desc mono">{{ p.base_url }}</div>
+            <div class="set-row-desc" style="margin-top:2px">API Key: <span :style="{color: p.api_key_set ? 'var(--green)' : 'var(--red)'}">{{ p.api_key_set ? '已配置' : '未配置' }}</span></div>
+          </div>
+        </div>
+        <div v-if="configInfo.providers.length === 0" class="set-empty">未配置任何模型提供商，请编辑 config.yaml</div>
+        <div class="rb-sec" style="margin-top:20px">权限模式</div>
+        <div class="set-row" style="cursor:pointer" v-for="m in permModes" :key="m.value" @click="setPermissionMode(m.value)">
+          <div class="set-row-l">
+            <div class="set-row-title">{{ m.label }} <span v-if="configInfo.permissionMode === m.value" class="set-tag" style="color:var(--green)">当前</span></div>
+            <div class="set-row-desc">{{ m.desc }}</div>
+          </div>
+          <div class="set-row-r">
+            <span v-if="configInfo.permissionMode === m.value" style="color:var(--green);font-size:18px">✓</span>
+          </div>
+        </div>
+        <p class="set-note">权限模式控制 Agent 执行文件写入、命令运行等操作时的审批行为。</p>
       </div>
     </div>
   </div>
@@ -590,6 +654,13 @@ createApp({
     const newMcp = ref({ name: '', command: '', args: '', url: '' });
     const showAddSkill = ref(false);
     const newSkill = ref({ name: '', description: '', body: '' });
+    const configInfo = ref({ providers: [], permissionMode: 'default', provider: '', model: '' });
+    const permModes = [
+      { value: 'default', label: '默认', desc: '危险操作弹窗确认' },
+      { value: 'acceptEdits', label: '自动批准编辑', desc: '文件编辑自动通过，命令仍需确认' },
+      { value: 'plan', label: '计划模式', desc: '只规划不执行，不修改任何文件' },
+      { value: 'bypassPermissions', label: '跳过权限', desc: '所有操作自动通过，无需确认' },
+    ];
     const currentSession = computed(() => sessions.value.find((s) => s.id === activeSessionId.value) || null);
     const currentWorkDir = computed(() => (currentSession.value && currentSession.value.work_dir) || defaultWorkDir.value);
     const currentWorkShort = computed(() => {
@@ -610,6 +681,12 @@ createApp({
         short: workDir.split(/[\\/]/).filter(Boolean).pop() || workDir,
         items,
       }));
+    });
+    const activeSkillsCount = computed(() => skills.value.filter((s) => s.enabled).length);
+    const activeMcpCount = computed(() => mcpServers.value.filter((m) => m.enabled).length);
+    const permModeLabel = computed(() => {
+      const m = permModes.find((x) => x.value === configInfo.value.permissionMode);
+      return m ? m.label : configInfo.value.permissionMode;
     });
     let ws = null;
     let _replaying = false; // true while the daemon replays history on connect
@@ -710,6 +787,47 @@ createApp({
       setTab.value = t;
       if (t === 'skills') loadSkills();
       else if (t === 'mcp') loadMcp();
+      else if (t === 'model') loadConfigInfo();
+    }
+    async function loadConfigInfo() {
+      try {
+        const d = await safeJson(await fetch(`${API}/api/config`));
+        const providers = (d.providers || []).map((p) => ({
+          name: p.name, protocol: p.protocol, base_url: p.base_url,
+          model: p.model, api_key_set: p.api_key_set,
+          display_name: p.display_name || p.model,
+        }));
+        const primary = providers[0] || {};
+        configInfo.value = {
+          providers,
+          permissionMode: d.permission_mode || 'default',
+          provider: primary.name || '',
+          model: primary.display_name || primary.model || '',
+        };
+      } catch { /* keep defaults */ }
+    }
+    async function setPermissionMode(mode) {
+      // 需要把当前 providers 一起回传，save_config 要求 providers 列表
+      const providers = configInfo.value.providers.map((p) => ({
+        name: p.name, protocol: p.protocol, base_url: p.base_url,
+        model: p.model,
+      }));
+      try {
+        const r = await fetch(`${API}/api/config`, {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ providers, permission_mode: mode }),
+        });
+        const d = await safeJson(r);
+        if (!r.ok) { toast(d.error || '保存失败', 'err'); return; }
+        configInfo.value.permissionMode = mode;
+        toast('权限模式已切换: ' + (permModes.find((x) => x.value === mode) || {}).label, 'ok');
+      } catch { toast('保存失败', 'err'); }
+    }
+    function cyclePermissionMode() {
+      const modes = ['default', 'acceptEdits', 'plan', 'bypassPermissions'];
+      const idx = modes.indexOf(configInfo.value.permissionMode);
+      const next = modes[(idx + 1) % modes.length];
+      setPermissionMode(next);
     }
     async function loadSkills() {
       try { skills.value = (await safeJson(await fetch(`${API}/api/skills`))).skills || []; } catch { skills.value = []; }
@@ -1099,6 +1217,8 @@ createApp({
     onMounted(async () => {
       await checkHealth();
       await refreshSessions();
+      // 预加载侧栏扩展状态（不阻塞会话选择）
+      loadSkills(); loadMcp(); loadConfigInfo();
       if (sessions.value.length > 0) await selectSession(sessions.value[0].id);
       else await createSession();
       if (inputEl.value) inputEl.value.focus();
@@ -1114,6 +1234,8 @@ createApp({
       collapsedGroups, sessionGroups, toggleGroup, pickWorkspace, deleteSession,
       createSession, createSessionAt, selectSession, send, resolvePerm, pickOpt, pickText,
       fmtArgs, fmtRes, onKey, autoGrow, onMdClick, copyMsg, toolBody,
+      configInfo, permModes, activeSkillsCount, activeMcpCount, permModeLabel,
+      loadConfigInfo, setPermissionMode, cyclePermissionMode,
     };
   }
 }).mount('#app');
