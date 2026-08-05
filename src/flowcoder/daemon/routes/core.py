@@ -34,7 +34,7 @@ from flowcoder.daemon.routes.account import (
     post_account_model,
     post_account_session,
 )
-from flowcoder.daemon.routes.config import get_config, save_config
+from flowcoder.daemon.routes.config import get_config, save_config, set_permission_mode
 from flowcoder.daemon.routes.settings import (
     create_mcp_server,
     delete_mcp_server,
@@ -110,6 +110,7 @@ HTTP_ROUTES: tuple[HttpRouteSpec, ...] = (
     HttpRouteSpec("/api/account/model", post_account_model, ("POST",)),
     HttpRouteSpec("/api/config", get_config, ("GET",)),
     HttpRouteSpec("/api/config", save_config, ("POST",)),
+    HttpRouteSpec("/api/settings/permission_mode", set_permission_mode, ("POST",)),
     HttpRouteSpec("/api/skills", list_skills, ("GET",)),
     HttpRouteSpec("/api/skills", create_skill, ("POST",)),
     HttpRouteSpec("/api/skills/{name}/toggle", toggle_skill, ("POST",)),

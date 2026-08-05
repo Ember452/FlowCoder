@@ -201,3 +201,28 @@ async def save_config(request: Request) -> JSONResponse:
         return bad_request_response(f"Configuration was not applied: {exc}")
 
     return JSONResponse(_config_payload(server))
+
+
+async def set_permission_mode(request: Request) -> JSONResponse:
+    """轻量级权限模式切换：只改 permission_mode 字段，不触碰 providers。"""
+    server = daemon_server(request)
+    try:
+        payload = await request.json()
+    except Exception:
+        return bad_request_response("Invalid JSON body")
+    mode = payload.get("permission_mode", "")
+    if mode not in VALID_PERMISSION_MODES:
+        return bad_request_response(
+            f"Invalid permission_mode '{mode}', must be one of: {', '.join(sorted(VALID_PERMISSION_MODES))}"
+        )
+    config_path = USER_CONFIG_FILE
+    raw = _read_raw_config(config_path)
+    raw["permission_mode"] = mode
+    raw.setdefault("schema_version", CURRENT_CONFIG_SCHEMA_VERSION)
+    try:
+        _write_raw_config(config_path, raw)
+        from flowcoder.config import load_config
+        server.config = load_config()
+    except Exception as exc:
+        return bad_request_response(f"Failed to save: {exc}")
+    return JSONResponse(_config_payload(server))
