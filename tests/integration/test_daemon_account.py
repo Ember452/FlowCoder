@@ -101,9 +101,7 @@ def test_save_config_strips_account_providers(
     monkeypatch.setattr("flowcoder.account.session.SESSION_FILE", session_file)
     # save_config 写入 USER_CONFIG_FILE 后会用无参 load_config() 重新发现加载，
     # 发现路径含 Path.home()/.flowcoder/config.yaml，因此补丁 Path.home 使其命中写入文件
-    monkeypatch.setattr(
-        "flowcoder.config.core.Path.home", lambda *args, **kwargs: tmp_path
-    )
+    monkeypatch.setattr("flowcoder.config.core.Path.home", lambda *args, **kwargs: tmp_path)
     cfg = tmp_path / ".flowcoder" / "config.yaml"
     monkeypatch.setattr("flowcoder.daemon.routes.config.USER_CONFIG_FILE", cfg)
 
