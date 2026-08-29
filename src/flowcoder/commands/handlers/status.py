@@ -16,6 +16,13 @@ async def handle_status(ctx: CommandContext) -> None:
     mode = ctx.agent.permission_mode.value if ctx.agent else "unknown"
     lines.append(f"模式: {mode}")
 
+    sandbox_mode = "off"
+    if ctx.agent:
+        bash = ctx.agent.registry.get("Bash")
+        if bash is not None:
+            sandbox_mode = bash.sandbox_mode
+    lines.append(f"沙箱: {sandbox_mode}")
+
     if ctx.session:
         m = ctx.session.meta
         lines.append(f"会话: {m.id}（{m.message_count} 条消息）")

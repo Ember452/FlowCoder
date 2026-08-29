@@ -19,6 +19,7 @@ def create_default_registry(
     file_cache: FileCache | None = None,
     file_history: Any = None,
     base_dir: str | Path | None = None,
+    sandbox_mode: str = "off",
 ) -> ToolRegistry:
     from flowcoder.tools.bash import Bash
     from flowcoder.tools.edit_file import EditFile
@@ -54,7 +55,9 @@ def create_default_registry(
             base_dir=base_dir,
         )
     )
-    registry.register(Bash())
+    registry.register(
+        Bash(host_workdir=str(base_dir) if base_dir else None, sandbox_mode=sandbox_mode)
+    )
     registry.register(Glob(base_dir=base_dir))
     registry.register(Grep(base_dir=base_dir))
     return registry

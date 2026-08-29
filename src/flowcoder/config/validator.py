@@ -27,6 +27,9 @@ VALID_PERMISSION_MODES = {
 }
 
 VALID_TEAMMATE_MODES = {"", "in-process"}
+
+VALID_SANDBOX_MODES = {"off", "docker"}
+
 CURRENT_CONFIG_SCHEMA_VERSION = 1
 
 
@@ -203,6 +206,16 @@ def validate_permission_mode(mode: str) -> str:
         raise ConfigError(
             f"Invalid permission_mode '{mode}', "
             f"must be one of: {', '.join(sorted(VALID_PERMISSION_MODES))}"
+        )
+    return mode
+
+
+def validate_sandbox_mode(mode: str) -> str:
+    """校验 sandbox_mode 取值。"""
+    if mode not in VALID_SANDBOX_MODES:
+        raise ConfigError(
+            f"Invalid sandbox_mode '{mode}', "
+            f"must be one of: {', '.join(sorted(VALID_SANDBOX_MODES))}"
         )
     return mode
 
@@ -412,6 +425,7 @@ def validate_config_structure(raw: object, *, require_providers: bool = True) ->
         "schema_version": schema_version,
         "providers": providers,
         "permission_mode": validate_permission_mode(raw.get("permission_mode", "default")),
+        "sandbox_mode": validate_sandbox_mode(raw.get("sandbox_mode", "off")),
         "mcp_servers": validate_mcp_servers(raw.get("mcp_servers")),
         "hooks": validate_hooks(raw.get("hooks")),
         "memory": validate_memory(raw.get("memory")),

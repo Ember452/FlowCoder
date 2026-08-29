@@ -14,6 +14,7 @@ from flowcoder.commands.handlers.plan import PLAN_COMMAND
 from flowcoder.commands.handlers.session import SESSION_COMMAND
 from flowcoder.commands.handlers.skill import SKILL_COMMAND
 from flowcoder.commands.handlers.rewind import REWIND_COMMAND
+from flowcoder.commands.handlers.sandbox import SANDBOX_COMMAND
 from flowcoder.commands.handlers.status import STATUS_COMMAND
 from flowcoder.commands.registry import CommandRegistry
 
@@ -30,6 +31,7 @@ ALL_COMMANDS = [
     MEMORY_COMMAND,
     PERMISSION_COMMAND,
     REWIND_COMMAND,
+    SANDBOX_COMMAND,
     STATUS_COMMAND,
     SKILL_COMMAND,
 ]
