@@ -10,6 +10,7 @@
 - [permissions-hooks.md](permissions-hooks.md) — 权限与钩子
 - [tools.md](tools.md) — 工具系统
 - [sandbox.md](sandbox.md) — Docker 沙箱
+- [eval.md](eval.md) — 评测流水线
 - [daemon.md](daemon.md) — Daemon 服务
 - [config.md](config.md) — 配置系统
 - [mcp-teams.md](mcp-teams.md) — MCP 与多 Agent
