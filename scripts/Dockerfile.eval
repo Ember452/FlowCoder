@@ -1,0 +1,10 @@
+# 评测沙箱镜像：python:3.11-slim + numpy（HumanEval+ 测试片段大量 import numpy，
+# 而沙箱默认断网无法在容器内安装——构建一次镜像，运行期保持断网安全默认）
+#
+# 构建并用于评测：
+#   docker build -t flowcoder-eval:py311 -f scripts/Dockerfile.eval .
+#   python -m flowcoder.eval --image flowcoder-eval:py311
+FROM python:3.11-slim
+
+# 项目已配置阿里 PyPI 镜像（pyproject.toml [[tool.uv.index]]），保持一致
+RUN pip install --no-cache-dir numpy -i https://mirrors.aliyun.com/pypi/simple/

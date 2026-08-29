@@ -32,6 +32,7 @@ def build_chat_completion_request_kwargs(
     system: str = "",
     tools: list[dict[str, Any]] | None = None,
     thinking: bool = False,
+    temperature: float | None = None,
 ) -> dict[str, Any]:
     """Build common Chat Completions streaming request arguments."""
     request_messages = messages
@@ -47,6 +48,8 @@ def build_chat_completion_request_kwargs(
     }
     if tools:
         kwargs["tools"] = convert_tools_for_chat_completions(tools)
+    if temperature is not None and not thinking:
+        kwargs["temperature"] = temperature
     if thinking:
         # OpenAI's SDK merges extra_body into the JSON payload.  This is the
         # OpenAI-compatible convention used by the cloud's thinking models.

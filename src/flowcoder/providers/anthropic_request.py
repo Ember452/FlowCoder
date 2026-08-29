@@ -73,6 +73,7 @@ def build_anthropic_request_kwargs(
     system: str = "",
     tools: list[dict[str, Any]] | None = None,
     thinking: bool = False,
+    temperature: float | None = None,
 ) -> dict[str, Any]:
     mark_last_user_tail_for_cache(messages)
     kwargs: dict[str, Any] = {
@@ -92,4 +93,7 @@ def build_anthropic_request_kwargs(
         kwargs["tools"] = mark_last_tool_for_cache(tools)
     if thinking:
         kwargs["thinking"] = thinking_config(model, max_output_tokens)
+    elif temperature is not None:
+        # Anthropic API 约束：thinking 启用时不能传 temperature
+        kwargs["temperature"] = temperature
     return kwargs
