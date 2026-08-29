@@ -38,6 +38,10 @@ class ProviderConfig:
     # None = 未设置（走 provider 默认温度）；设置后透传给 API。
     # thinking 模式下不生效（Anthropic API 约束 thinking 与 temperature 互斥）
     temperature: float | None = None
+    # 韧性参数（P3）：429/5xx/网络错误指数退避重试、RPM 平滑限流、单请求超时
+    max_retries: int = 2
+    rate_limit_rpm: int | None = None
+    request_timeout_s: float | None = None
     # 0 表示"未设置" — get_context_window() 通过四层 fallback 解析真实窗口大小。
     # 正数表示配置文件里显式指定的覆盖值。
     context_window: int = 0

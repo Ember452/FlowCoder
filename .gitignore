@@ -52,3 +52,4 @@ Thumbs.db
 # 评测（P2a）：数据与结果均不入 git
 eval-data/
 eval-results/
+chaos-results/

@@ -192,6 +192,31 @@ def validate_providers(raw_providers: list) -> list[dict]:
                 raise ConfigError(f"Provider #{i + 1}: temperature must be within [0, 2]")
             temperature = float(temperature)
 
+        max_retries = entry.get("max_retries", 2)
+        max_retries = _integer_field(
+            max_retries,
+            f"Provider #{i + 1}: max_retries",
+            min_value=0,
+            allow_zero=True,
+        )
+        rate_limit_rpm = entry.get("rate_limit_rpm")
+        if rate_limit_rpm is not None:
+            rate_limit_rpm = _integer_field(
+                rate_limit_rpm,
+                f"Provider #{i + 1}: rate_limit_rpm",
+                min_value=1,
+                allow_zero=False,
+            )
+        request_timeout_s = entry.get("request_timeout_s")
+        if request_timeout_s is not None:
+            if (
+                isinstance(request_timeout_s, bool)
+                or not isinstance(request_timeout_s, (int, float))
+                or request_timeout_s <= 0
+            ):
+                raise ConfigError(f"Provider #{i + 1}: request_timeout_s must be a positive number")
+            request_timeout_s = float(request_timeout_s)
+
         providers.append(
             {
                 "name": name,
@@ -201,6 +226,9 @@ def validate_providers(raw_providers: list) -> list[dict]:
                 "api_key": api_key,
                 "thinking": thinking,
                 "temperature": temperature,
+                "max_retries": max_retries,
+                "rate_limit_rpm": rate_limit_rpm,
+                "request_timeout_s": request_timeout_s,
                 "context_window": context_window,
                 "max_output_tokens": max_output_tokens,
             }

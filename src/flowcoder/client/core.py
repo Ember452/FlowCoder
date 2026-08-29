@@ -424,14 +424,26 @@ class OpenAICompatClient(LLMClient):
 
 
 def create_client(config: ProviderConfig) -> LLMClient:
-    # 协议工厂：根据 config.protocol 选用对应客户端，对外返回统一的 LLMClient
+    # 协议工厂：根据 config.protocol 选用对应客户端，对外返回统一的 LLMClient；
+    # 外层统一包 ResilientClient（重试/限流/超时，P3），对消费方透明
     if config.protocol == "anthropic":
-        return AnthropicClient(config)
+        inner: LLMClient = AnthropicClient(config)
     elif config.protocol == "openai":
-        return OpenAIClient(config)
+        inner = OpenAIClient(config)
     elif config.protocol == "openai-compat":
-        return OpenAICompatClient(config)
-    raise ValueError(f"Unknown protocol: {config.protocol}")
+        inner = OpenAICompatClient(config)
+    else:
+        raise ValueError(f"Unknown protocol: {config.protocol}")
+
+    from flowcoder.client.resilience import ResilientClient, TokenBucket
+
+    bucket = TokenBucket(config.rate_limit_rpm) if config.rate_limit_rpm else None
+    return ResilientClient(
+        inner,
+        max_retries=config.max_retries,
+        request_timeout_s=config.request_timeout_s,
+        bucket=bucket,
+    )
 
 
 async def resolve_context_window(config: ProviderConfig) -> None:
