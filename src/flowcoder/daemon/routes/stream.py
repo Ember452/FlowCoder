@@ -11,12 +11,13 @@ from typing import Any
 
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
+from flowcoder.daemon.outbox import NO_REPLAY_TYPES, event_seq
 from flowcoder.daemon.request_context import daemon_server, path_param
 from flowcoder.daemon.tasks.events import pending_prompt_request_id
 
 log = logging.getLogger(__name__)
 
-CLIENT_ACTIONS = {"cancel"}
+CLIENT_ACTIONS = {"cancel", "ack"}
 
 
 def event_with_id(event: dict, index: int) -> dict:
@@ -39,18 +40,25 @@ def history_page(events: list[dict], before: int, limit: int) -> tuple[list[dict
 
 
 def parse_client_action(raw: str) -> str:
+    return parse_client_message(raw)[0]
+
+
+def parse_client_message(raw: str) -> tuple[str, int | None]:
+    """解析客户端消息：返回 (action, seq)。ack 动作携带 seq（Outbox P5c）。"""
     if not raw:
-        return ""
+        return ("", None)
     try:
         payload = json.loads(raw)
     except json.JSONDecodeError:
-        return ""
+        return ("", None)
     if not isinstance(payload, dict):
-        return ""
+        return ("", None)
     action = payload.get("action")
-    if not isinstance(action, str):
-        return ""
-    return action if action in CLIENT_ACTIONS else ""
+    if not isinstance(action, str) or action not in CLIENT_ACTIONS:
+        return ("", None)
+    seq = payload.get("seq")
+    seq_val = seq if isinstance(seq, int) and not isinstance(seq, bool) and seq >= 0 else None
+    return (action, seq_val)
 
 
 async def listen_client_actions(
@@ -62,9 +70,12 @@ async def listen_client_actions(
 ) -> None:
     try:
         while True:
-            action = parse_client_action(await websocket.receive_text())
+            action, seq = parse_client_message(await websocket.receive_text())
             if action == "cancel":
                 server.cancel_active_task(sid)
+            elif action == "ack" and seq is not None:
+                # Outbox（P5c）：客户端确认已收到 seq，记账并持久化
+                server.ack_outbox(sid, seq)
     except WebSocketDisconnect:
         disconnected.set()
     except Exception:
@@ -94,7 +105,16 @@ async def stream_events(websocket: WebSocket) -> None:
         await websocket.close(code=4404)
         return
 
-    log.info("WS client connected to session %s", sid)
+    # Outbox（P5c）：断点重连。since 显式指定游标；缺省用持久化的 ack。
+    try:
+        since = int(websocket.query_params.get("since", "-1"))
+    except ValueError:
+        since = -1
+    if since < 0:
+        since = server.outbox_ack(sid)
+    unknown_seqs = server.take_outbox_unknown(sid)
+
+    log.info("WS client connected to session %s (since=%d)", sid, since)
     disconnected = asyncio.Event()
     listener = asyncio.create_task(
         listen_client_actions(
@@ -113,6 +133,7 @@ async def stream_events(websocket: WebSocket) -> None:
     _, idx = history_page(log_list, len(log_list), limit) if limit else (log_list, 0)
     replay_marked = False
     replayed_request_ids: set[str] = set()
+    since_mode = since > 0
     try:
         while not disconnected.is_set():
             if idx < len(log_list):
@@ -124,11 +145,21 @@ async def stream_events(websocket: WebSocket) -> None:
                     if event is None:
                         stop = True
                         break
-                    if include_event_ids:
-                        event = event_with_id(event, start + offset)
+                    seq = event_seq(event) if event_seq(event) is not None else start + offset + 1
+                    if since_mode and seq <= since:
+                        continue  # 断点之前的事件：客户端已有，跳过（不丢不重）
+                    if seq in unknown_seqs and event.get("type") in NO_REPLAY_TYPES:
+                        # 结果未知的交互事件不重放（保守投递语义）
+                        log.info("跳过结果未知的交互事件（session=%s seq=%d）", sid, seq)
+                        unknown_seqs.discard(seq)
+                        continue
+                    if include_event_ids or since_mode:
+                        event = {**event, "event_id": str(seq)}
                     request_id = pending_prompt_request_id(event)
                     if request_id:
                         replayed_request_ids.add(request_id)
+                    if event.get("type") in NO_REPLAY_TYPES:
+                        server.mark_outbox_pushed(sid, seq)
                     await websocket.send_json(event)
                 if stop:
                     break
