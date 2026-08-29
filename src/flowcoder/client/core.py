@@ -4,6 +4,7 @@ Anthropic / OpenAI / OpenAI-compat 客户端与 create_client 工厂。"""
 
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from typing import Any, AsyncIterator
 
@@ -50,6 +51,7 @@ from flowcoder.providers.openai_streaming import (
 )
 from flowcoder.providers.openai_compat_request import build_chat_completion_request_kwargs
 from flowcoder.providers.openai_responses_request import build_openai_response_request_kwargs
+from flowcoder.providers._stream_common import with_guaranteed_stream_end
 from flowcoder.client.auth import (
     is_local_base_url as is_local_base_url,
     resolve_openai_api_key as _resolve_openai_api_key,
@@ -59,6 +61,9 @@ from flowcoder.tools.base import (
     StreamEvent,
     TextDelta,
 )
+
+
+log = logging.getLogger(__name__)
 
 
 # 重导出别名：历史公开名，flowcoder.client 与测试从本模块取这些名字
@@ -210,6 +215,19 @@ class OpenAIClient(LLMClient):
         system: str = "",
         tools: list[dict[str, Any]] | None = None,
     ) -> AsyncIterator[StreamEvent]:
+        # 流收尾保底：断流/事件被忽略等异常路径也保证恰好一个 StreamEnd
+        async for event in with_guaranteed_stream_end(
+            self._stream_responses_events(conversation, system, tools),
+            lambda: StreamEnd(stop_reason="error", input_tokens=0, output_tokens=0),
+        ):
+            yield event
+
+    async def _stream_responses_events(
+        self,
+        conversation: ConversationManager,
+        system: str = "",
+        tools: list[dict[str, Any]] | None = None,
+    ) -> AsyncIterator[StreamEvent]:
         import openai as _openai
 
         error_mapper = provider_error_mapper(_openai)
@@ -261,6 +279,18 @@ class OpenAIClient(LLMClient):
                             yield reasoning_event
                     usage = getattr(resp, "usage", None) if resp else None
                     yield _stream_end_from_openai_response_usage(usage)
+                elif event.type == "response.incomplete":
+                    # 响应被截断：上报 max_tokens，让上层 output_recovery 有机会续写
+                    resp = getattr(event, "response", None)
+                    usage = getattr(resp, "usage", None) if resp else None
+                    end = _stream_end_from_openai_response_usage(usage)
+                    end.stop_reason = "max_tokens"
+                    yield end
+                elif event.type in ("response.failed", "response.error"):
+                    # 失败事件原先被白名单静默丢弃，上层拿不到终止信号；
+                    # 以 error 语义收尾保证流确定性终止
+                    log.warning("Responses stream terminated with %s", event.type)
+                    yield StreamEnd(stop_reason="error", input_tokens=0, output_tokens=0)
 
         except error_mapper.handled_errors as e:
             raise error_mapper.to_llm_error(e) from e
@@ -296,6 +326,26 @@ class OpenAICompatClient(LLMClient):
         system: str = "",
         tools: list[dict[str, Any]] | None = None,
     ) -> AsyncIterator[StreamEvent]:
+        # 流收尾保底：无 usage chunk / 断流等异常路径也保证恰好一个 StreamEnd
+        final_reason = {"stop_reason": "end_turn"}
+
+        async for event in with_guaranteed_stream_end(
+            self._stream_chat_events(conversation, system, tools, final_reason),
+            lambda: StreamEnd(
+                stop_reason=final_reason["stop_reason"],
+                input_tokens=0,
+                output_tokens=0,
+            ),
+        ):
+            yield event
+
+    async def _stream_chat_events(
+        self,
+        conversation: ConversationManager,
+        system: str = "",
+        tools: list[dict[str, Any]] | None = None,
+        final_reason: dict[str, str] | None = None,
+    ) -> AsyncIterator[StreamEvent]:
         import openai as _openai
 
         error_mapper = provider_error_mapper(_openai)
@@ -311,6 +361,8 @@ class OpenAICompatClient(LLMClient):
 
         chat_tool_call = OpenAIChatToolCallState()
         reasoning_state = OpenAIReasoningState()
+        if final_reason is None:
+            final_reason = {"stop_reason": "end_turn"}
 
         try:
             response = await self._client.chat.completions.create(**kwargs)
@@ -318,7 +370,11 @@ class OpenAICompatClient(LLMClient):
                 if not chunk.choices:
                     # 末尾 chunk：choices 为空，只承载 usage（stream_options 而来）
                     if chunk.usage:
-                        yield _stream_end_from_openai_chat_usage(chunk.usage)
+                        end = _stream_end_from_openai_chat_usage(chunk.usage)
+                        if final_reason["stop_reason"] == "max_tokens":
+                            # finish_reason=length 先到、usage chunk 后到时保留截断语义
+                            end.stop_reason = "max_tokens"
+                        yield end
                     continue
 
                 # Chat Completions 每个 chunk 只有一个 choice（取第 0 个）
@@ -341,7 +397,7 @@ class OpenAICompatClient(LLMClient):
                         yield tool_event
 
                 # --- 结束原因 ---
-                if choice.finish_reason in ("tool_calls", "stop"):
+                if choice.finish_reason in ("tool_calls", "stop", "length"):
                     # 先把挂起的推理收尾，再按 finish_reason 决定是否收尾工具调用
                     complete = reasoning_state.complete_if_pending()
                     if complete is not None:
@@ -349,6 +405,9 @@ class OpenAICompatClient(LLMClient):
                     if choice.finish_reason == "tool_calls":
                         for tool_complete in chat_tool_call.complete():
                             yield tool_complete
+                    if choice.finish_reason == "length":
+                        # 输出长度截断：记录语义，usage chunk 缺失时由保底收尾携带
+                        final_reason["stop_reason"] = "max_tokens"
 
         except error_mapper.handled_errors as e:
             raise error_mapper.to_llm_error(e) from e

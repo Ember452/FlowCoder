@@ -255,6 +255,8 @@ async def test_openai_compat_streams_tool_call_arguments():
 
     events = await _collect(client.stream(ConversationManager()))
 
+    # 流以 finish_reason=tool_calls 结束且无 usage chunk：
+    # 流收尾保底（P0-5）补发一个零用量的 StreamEnd
     assert events == [
         ToolCallStart(tool_name="Bash", tool_id="call-1"),
         ToolCallDelta(text='{"command":"git'),
@@ -264,6 +266,7 @@ async def test_openai_compat_streams_tool_call_arguments():
             tool_name="Bash",
             arguments={"command": "git status"},
         ),
+        StreamEnd(stop_reason="end_turn", input_tokens=0, output_tokens=0),
     ]
 
 
