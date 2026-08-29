@@ -9,6 +9,7 @@ from flowcoder.client.errors import (
     AuthenticationError,
     LLMError,
     NetworkError,
+    ServerError,
     rate_limit_error,
 )
 
@@ -48,6 +49,9 @@ class ProviderErrorMapper:
         if isinstance(error, self.status_errors):
             status_code = getattr(error, "status_code", "unknown")
             message = getattr(error, "message", str(error))
+            # 5xx 是 provider 侧瞬时故障（可重试），4xx 归一般 API 错误
+            if isinstance(status_code, int) and status_code >= 500:
+                return ServerError(f"API error ({status_code}): {message}", status_code)
             return LLMError(f"API error ({status_code}): {message}")
         return LLMError(f"Provider error: {error}")
 

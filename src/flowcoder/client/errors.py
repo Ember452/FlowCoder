@@ -23,6 +23,18 @@ class NetworkError(LLMError):
     """Raised when a provider request fails due to connectivity."""
 
 
+class ServerError(LLMError):
+    """Raised when the provider returns a 5xx server error (retryable)."""
+
+    def __init__(self, message: str, status_code: int | None = None):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+class LLMTimeoutError(LLMError):
+    """Raised when a provider request exceeds the per-request timeout (retryable)."""
+
+
 def response_header(error: BaseException, name: str) -> str:
     response = getattr(error, "response", None)
     headers = getattr(response, "headers", None)
