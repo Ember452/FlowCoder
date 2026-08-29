@@ -184,6 +184,14 @@ def validate_providers(raw_providers: list) -> list[dict]:
             allow_zero=True,
         )
 
+        temperature = entry.get("temperature")
+        if temperature is not None:
+            if isinstance(temperature, bool) or not isinstance(temperature, (int, float)):
+                raise ConfigError(f"Provider #{i + 1}: temperature must be a number")
+            if not 0 <= temperature <= 2:
+                raise ConfigError(f"Provider #{i + 1}: temperature must be within [0, 2]")
+            temperature = float(temperature)
+
         providers.append(
             {
                 "name": name,
@@ -192,6 +200,7 @@ def validate_providers(raw_providers: list) -> list[dict]:
                 "model": model,
                 "api_key": api_key,
                 "thinking": thinking,
+                "temperature": temperature,
                 "context_window": context_window,
                 "max_output_tokens": max_output_tokens,
             }

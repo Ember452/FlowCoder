@@ -83,6 +83,10 @@ class LLMClient(ABC):
     翻译成这套统一事件流。
     """
 
+    #: 采样温度（provider 配置透传；None=provider 默认）。类级默认兜底：
+    #: 部分测试绕过 __init__ 构造实例
+    temperature: float | None = None
+
     @abstractmethod
     async def stream(
         self,
@@ -100,6 +104,7 @@ class AnthropicClient(LLMClient):
     def __init__(self, config: ProviderConfig) -> None:
         self.model = config.model
         self.thinking = config.thinking
+        self.temperature = config.temperature
         self.max_output_tokens = config.get_max_output_tokens()
         api_key = config.resolve_api_key()
         if not api_key:
@@ -149,6 +154,7 @@ class AnthropicClient(LLMClient):
             system=system,
             tools=tools,
             thinking=self.thinking,
+            temperature=self.temperature,
         )
 
         # 流式状态机：跟踪当前 content_block 是 thinking 还是 tool_use
@@ -197,6 +203,7 @@ class OpenAIClient(LLMClient):
     def __init__(self, config: ProviderConfig) -> None:
         self.model = config.model
         self.thinking = config.thinking
+        self.temperature = config.temperature
         self.max_output_tokens = config.get_max_output_tokens()
         api_key = _resolve_openai_api_key(config)
         if not api_key:
@@ -237,6 +244,7 @@ class OpenAIClient(LLMClient):
             system=system,
             tools=tools,
             thinking=self.thinking,
+            temperature=self.temperature,
         )
 
         response_tool_call = OpenAIResponseToolCallState()
@@ -308,6 +316,7 @@ class OpenAICompatClient(LLMClient):
     def __init__(self, config: ProviderConfig) -> None:
         self.model = config.model
         self.thinking = config.thinking
+        self.temperature = config.temperature
         self.max_output_tokens = config.get_max_output_tokens()
         api_key = _resolve_openai_api_key(config)
         if not api_key:
@@ -357,6 +366,7 @@ class OpenAICompatClient(LLMClient):
             system=system,
             tools=tools,
             thinking=self.thinking,
+            temperature=self.temperature,
         )
 
         chat_tool_call = OpenAIChatToolCallState()

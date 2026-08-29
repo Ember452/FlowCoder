@@ -35,6 +35,9 @@ class ProviderConfig:
     model: str
     api_key: str = ""
     thinking: bool = False
+    # None = 未设置（走 provider 默认温度）；设置后透传给 API。
+    # thinking 模式下不生效（Anthropic API 约束 thinking 与 temperature 互斥）
+    temperature: float | None = None
     # 0 表示"未设置" — get_context_window() 通过四层 fallback 解析真实窗口大小。
     # 正数表示配置文件里显式指定的覆盖值。
     context_window: int = 0
@@ -187,6 +190,7 @@ def _load_single_file(path: Path, *, require_providers: bool = True) -> AppConfi
             model=p["model"],
             api_key=p["api_key"],
             thinking=p["thinking"],
+            temperature=p["temperature"],
             context_window=p["context_window"],
             max_output_tokens=p["max_output_tokens"],
         )
