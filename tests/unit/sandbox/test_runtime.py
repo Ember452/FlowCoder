@@ -27,6 +27,11 @@ class FakeContainer:
     def __init__(self, parent: FakeDockerClient, cid: str) -> None:
         self._parent = parent
         self.id = cid
+        self.status = "running"
+
+    def reload(self) -> None:
+        if self.id in self._parent.dead:
+            self.status = "exited"
 
     def start(self) -> None:
         self._parent.calls.append(("start", self.id))
@@ -46,6 +51,9 @@ class FakeContainer:
             raise FakeDockerErrors.NotFound("already gone")
         self._parent.calls.append(("remove", self.id, force))
 
+    def stats(self, *, stream: bool) -> Any:
+        return self._parent.stats_result
+
 
 class FakeContainers:
     def __init__(self, parent: FakeDockerClient) -> None:
@@ -58,6 +66,10 @@ class FakeContainers:
     def get(self, container_id: str) -> FakeContainer:
         return FakeContainer(self._parent, container_id)
 
+    def list(self, *, filters: dict[str, Any]) -> list[FakeContainer]:
+        self._parent.calls.append(("list", filters))
+        return [FakeContainer(self._parent, cid) for cid in self._parent.listed_ids]
+
 
 class FakeDockerClient:
     def __init__(self) -> None:
@@ -65,6 +77,20 @@ class FakeDockerClient:
         self.calls: list[Any] = []
         self.exec_result: Any = (0, (b"out", b"err"))
         self.removed_externally: set[str] = set()
+        self.dead: set[str] = set()
+        self.listed_ids: list[str] = []
+        self.stats_result: Any = {
+            "memory_stats": {"usage": 64 * 1024 * 1024},
+            "cpu_stats": {
+                "cpu_usage": {"total_usage": 2_000_000},
+                "system_cpu_usage": 1_000_000_000,
+                "online_cpus": 2,
+            },
+            "precpu_stats": {
+                "cpu_usage": {"total_usage": 1_000_000},
+                "system_cpu_usage": 900_000_000,
+            },
+        }
 
     def ping(self) -> None: ...
 
@@ -125,6 +151,32 @@ class TestDockerRuntime:
         client.exec_result = (0, (b"a\xffb", None))
         outcome = runtime.exec_run("cid", ["x"], "/workspace")
         assert "\ufffd" in outcome.stdout
+
+    def test_is_alive_true_when_running(self, runtime: DockerRuntime) -> None:
+        assert runtime.is_alive("cid") is True
+
+    def test_is_alive_false_when_exited(self, runtime: DockerRuntime) -> None:
+        client: FakeDockerClient = runtime._client  # type: ignore[attr-defined]
+        client.dead.add("cid")
+        assert runtime.is_alive("cid") is False
+
+    def test_list_by_label_returns_ids(self, runtime: DockerRuntime) -> None:
+        client: FakeDockerClient = runtime._client  # type: ignore[attr-defined]
+        client.listed_ids = ["a", "b"]
+        assert runtime.list_by_label("flowcoder.sandbox") == ["a", "b"]
+        assert client.calls[-1] == ("list", {"label": "flowcoder.sandbox"})
+
+    def test_stats_parses_memory_and_cpu(self, runtime: DockerRuntime) -> None:
+        usage = runtime.stats("cid")
+        assert usage["memory_mb"] == 64.0
+        # cpu_delta=1_000_000 / system_delta=100_000_000 * 2 核 * 100 = 2%
+        assert abs(usage["cpu_percent"] - 2.0) < 1e-6
+
+    def test_stats_zero_when_no_system_delta(self, runtime: DockerRuntime) -> None:
+        client: FakeDockerClient = runtime._client  # type: ignore[attr-defined]
+        client.stats_result = {"memory_stats": {"usage": 0}, "cpu_stats": {}, "precpu_stats": {}}
+        usage = runtime.stats("cid")
+        assert usage["cpu_percent"] == 0.0
 
 
 class TestFromEnv:
