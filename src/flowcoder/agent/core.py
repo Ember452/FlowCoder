@@ -78,6 +78,7 @@ from flowcoder.agent.tool_results import (
     tool_result_block,
     tool_result_event,
 )
+from flowcoder.agent.budget import Budget, BudgetState, converge_message
 from flowcoder.agent.usage import (
     UsageTotals,
     accumulate_response_usage,
@@ -141,6 +142,7 @@ class Agent:
         memory_manager: MemoryManager | None = None,  # 旧版记忆管理器
         memory_hub: MemoryHub | None = None,  # 新版可插拔记忆中心
         hook_engine: HookEngine | None = None,  # Hook 引擎（生命周期钩子）
+        budget: "Budget | None" = None,  # 四维预算闸（P3；None=不设预算）
     ) -> None:
         self.client = client
         self.registry = registry
@@ -170,6 +172,9 @@ class Agent:
                 providers=[MarkdownMemoryProvider(work_dir, manager=self.memory_manager)]
             )
         # 记忆桥接层：Agent 循环 ↔ MemoryHub 之间的适配器
+        # P3 预算闸：判定逻辑在 agent/budget.py，这里只做最小接入
+        self._budget_state = BudgetState(budget) if budget is not None else None
+        self._budget_converging = False
         self.memory_bridge = AgentMemoryBridge(
             memory_hub=self.memory_hub,
             client=self.client,
@@ -300,6 +305,9 @@ class Agent:
         iteration = 0  # 本轮循环次数，每一轮大模型交互和工具执行算一轮。防止无限死循环
         consecutive_unknown = 0  # 连续未知工具调用计数（超过 3 次终止）
         output_recovery_state = OutputRecoveryState()  # max_tokens 触顶恢复状态
+        if self._budget_state is not None:
+            self._budget_state.reset()
+        self._budget_converging = False
 
         while True:  #  无限循环，一轮一轮的跑
             iteration += 1
@@ -310,6 +318,28 @@ class Agent:
                     message=f"Agent reached maximum iterations ({self.max_iterations})"
                 )
                 break
+
+            # 预算闸（P3）：轮次/时间/token/成本在每轮开头统一判定。
+            # 首次超限不硬杀——注入收敛请求并撤下工具 schema，给模型一轮
+            # 收尾机会；收敛轮仍超限才强制结束。
+            if self._budget_state is not None:
+                breach = self._budget_state.breach_reason(
+                    total_input_tokens=self.total_input_tokens,
+                    total_output_tokens=self.total_output_tokens,
+                    iteration=iteration,
+                )
+                if breach is not None:
+                    if self._budget_converging:
+                        # 收敛轮仍未收敛（或收敛轮又调工具）：强制结束
+                        log.warning("预算收敛轮仍超限，强制结束：%s", breach)
+                        for he in await self._run_lifecycle_hook("session_end"):
+                            yield he
+                        yield ErrorEvent(message=f"预算已耗尽且未能收敛，强制结束：{breach}")
+                        yield LoopComplete(total_turns=iteration)
+                        break
+                    self._budget_converging = True
+                    log.warning("触发预算闸，注入收敛请求：%s", breach)
+                    conversation.add_user_message(converge_message(breach))
 
             # ① 触发 turn_start 生命周期 Hook
             for he in await self._run_lifecycle_hook("turn_start"):
@@ -422,8 +452,9 @@ class Agent:
                 self.registry.get_deferred_tool_names(),
             )
 
-            # 本轮 tools schema（跳过未发现 deferred / disabled）
-            tools = self.registry.get_all_schemas(self.protocol)
+            # 本轮 tools schema（跳过未发现 deferred / disabled）；
+            # 预算收敛轮撤下工具，逼模型走纯文本收敛（P3）
+            tools = [] if self._budget_converging else self.registry.get_all_schemas(self.protocol)
 
             # ④ Layer1：按 tool-result 预算生成 api_conv（不改原始 conversation）
             api_conv, _ = prepare_api_conversation(
@@ -508,6 +539,16 @@ class Agent:
                 response,
                 thinking_blocks=conv_thinking,
             )
+
+            # 预算收敛轮：schema 已撤下但模型仍幻觉出工具调用 → 不执行，
+            # 直接以强制结束收场（"总结并收敛"的机会已给过）
+            if self._budget_converging:
+                log.warning("预算收敛轮仍返回工具调用，跳过执行并强制结束")
+                for he in await self._run_lifecycle_hook("session_end"):
+                    yield he
+                yield ErrorEvent(message="预算收敛轮仍返回工具调用，已强制结束")
+                yield LoopComplete(total_turns=iteration)
+                break
 
             tool_results: list[ToolResultBlock] = []
             # 按并发安全对工具调用分区（只读安全工具可批量并行，写/执行类串行）
