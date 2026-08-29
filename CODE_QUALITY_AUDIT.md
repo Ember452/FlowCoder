@@ -11,32 +11,34 @@
 
 ## P0 — 必须立即修（12 项）
 
+> 2026-08-29 更新：**12 项已全部修复**，每项带回归测试；安全类的根因与修法详见 `docs/specs/2026-08-29-p0-security-fixes.md`。标注格式：✅ 已修复 — 回归测试。
+
 ### 安全类
 
-| # | 位置 | 问题 |
-|---|---|---|
-| 1 | `permissions/sandbox.py:36-52` | **沙箱绕过（已实测复现）**：目标不存在时 fallback 分支的 `..` 未消除，`relative_to` 是纯词法匹配。`<root>/x/../../secret.txt`（x 不存在）通过校验，实际读写落在沙箱外。修法：fallback 后对完整 real_path 再 `resolve(strict=False)` 重查 |
-| 2 | `skills/executor.py:101-109` | fork 技能传 `permission_checker=None`，且 `allowed_tools` 为空时 `filter_tool_registry` 原样返回完整 registry——fork 模式可无审批执行任意工具（含 Bash），完全绕过 permissions 层 |
-| 3 | `hooks/models.py:112-134` + `hooks/executors.py:40-46` | **Hook 命令注入**：`$FILE_PATH`/`$TOOL_ARGS.*` 原文替换进 `create_subprocess_shell`。文件名含 `; rm -rf ~` 即注入。展开值必须 `shlex.quote` |
+| # | 位置 | 问题 | 状态 |
+|---|---|---|---|
+| 1 | `permissions/sandbox.py:36-52` | **沙箱绕过（已实测复现）**：目标不存在时 fallback 分支的 `..` 未消除，`relative_to` 是纯词法匹配。`<root>/x/../../secret.txt`（x 不存在）通过校验，实际读写落在沙箱外。修法：fallback 后对完整 real_path 再 `resolve(strict=False)` 重查 | ✅ 已修复 — fallback 后对完整路径 `resolve(strict=False)` 重查（Windows 上该分支因 Win32 `..` 词法折叠语义不可达，POSIX/CI 回归）；测试：`test_permissions.py::TestPathSandbox::test_nonexistent_target_with_dotdot_escape_denied`、`test_multiple_dotdot_escape_to_sibling_denied`、`test_windows_drive_case_normalized` |
+| 2 | `skills/executor.py:101-109` | fork 技能传 `permission_checker=None`，且 `allowed_tools` 为空时 `filter_tool_registry` 原样返回完整 registry——fork 模式可无审批执行任意工具（含 Bash），完全绕过 permissions 层 | ✅ 已修复 — `_AskDenyingChecker`（继承父 checker 规则/模式，ask→deny，与 noninteractive 语义对齐）；测试：`test_executor.py::test_fork_cannot_execute_ask_tools_without_approval` |
+| 3 | `hooks/models.py:112-134` + `hooks/executors.py:40-46` | **Hook 命令注入**：`$FILE_PATH`/`$TOOL_ARGS.*` 原文替换进 `create_subprocess_shell`。文件名含 `; rm -rf ~` 即注入。展开值必须 `shlex.quote` | ✅ 已修复 — `expand(shell_quote=True)` + 平台感知引用（POSIX shlex.quote / Windows `^` 转义，cmd 不认单引号）；测试：`test_executors.py::test_expand_shell_quote_wraps_values`、`test_command_action_neutralizes_shell_injection` |
 
 ### 挂死/崩溃类
 
-| # | 位置 | 问题 |
-|---|---|---|
-| 4 | `providers/openai_responses_request.py:25` | Responses API 的 tools 格式未转换（透传内部 schema，该 API 要求扁平格式），带工具的请求必然 400。Chat Completions 有转换函数，Responses 漏了——三协议漂移的典型 |
-| 5 | `providers/openai 流式 core.py:320-324` | StreamEnd 只在 usage chunk 里发；vLLM/Ollama 等无 usage chunk 或中途断流时循环退出但无终止事件，上层无限等待 |
-| 6 | `providers/openai_responses core.py:225-265` | `response.failed`/`incomplete`/`error` 事件被白名单静默丢弃，失败时不报错也不发 StreamEnd，同样挂死 |
-| 7 | `app.py:1169-1171` | `adopt_running(self._subagent_task, ...)` 把 asyncio.Task 当 Agent 传入，触发即 AttributeError；且 `_subagent_task` 从未赋值，分支永假——既是 bug 又是死代码 |
-| 8 | `app.py:951-954 vs 1488/1509` | 发消息竞态：用户输入与通知触发的两条 `_send_message` 可并发执行（`_streaming` 布尔在 create_task 后才生效），conversation 历史交错。需单一队列/锁 |
+| # | 位置 | 问题 | 状态 |
+|---|---|---|---|
+| 4 | `providers/openai_responses_request.py:25` | Responses API 的 tools 格式未转换（透传内部 schema，该 API 要求扁平格式），带工具的请求必然 400。Chat Completions 有转换函数，Responses 漏了——三协议漂移的典型 | ✅ 已修复 — 新增 `convert_tools_for_responses`（对齐 compat 实现，扁平格式原样透传）；测试：`test_openai_responses_request.py::test_build_openai_response_request_kwargs_converts_internal_tool_schema` |
+| 5 | `providers/openai 流式 core.py:320-324` | StreamEnd 只在 usage chunk 里发；vLLM/Ollama 等无 usage chunk 或中途断流时循环退出但无终止事件，上层无限等待 | ✅ 已修复 — 协议无关的 `providers/_stream_common.py::with_guaranteed_stream_end` 收尾包装（断流/无 usage chunk/重复 StreamEnd 三种路径保证恰好一个终止事件）；测试：`test_stream_finale.py::test_compat_without_usage_chunk_still_yields_single_stream_end`、`test_compat_broken_stream_still_yields_single_stream_end` 等 |
+| 6 | `providers/openai_responses core.py:225-265` | `response.failed`/`incomplete`/`error` 事件被白名单静默丢弃，失败时不报错也不发 StreamEnd，同样挂死 | ✅ 已修复 — failed/error → `StreamEnd(stop_reason="error")`，incomplete → `stop_reason="max_tokens"`（供 output_recovery 续写），并接入收尾包装器；测试：`test_stream_finale.py::test_responses_failed_event_yields_error_stream_end`、`test_responses_incomplete_event_yields_max_tokens_stream_end`、`test_responses_broken_stream_still_yields_single_stream_end` |
+| 7 | `app.py:1169-1171` | `adopt_running(self._subagent_task, ...)` 把 asyncio.Task 当 Agent 传入，触发即 AttributeError；且 `_subagent_task` 从未赋值，分支永假——既是 bug 又是死代码 | ✅ 已修复 — 删除死分支与 `_subagent_task` 属性；验证：全量测试绿 + grep 无残留引用（死代码删除，无可观察行为的回归测试） |
+| 8 | `app.py:951-954 vs 1488/1509` | 发消息竞态：用户输入与通知触发的两条 `_send_message` 可并发执行（`_streaming` 布尔在 create_task 后才生效），conversation 历史交错。需单一队列/锁 | ✅ 已修复 — `SerializedSendGate`（单一 asyncio.Queue + 单一泵任务，四个触发源全部改走 submit；cancel 同时丢弃排队请求）；测试：`test_app.py::test_gate_serializes_concurrent_submissions`、`test_gate_cancel_drops_queued_requests`、`test_gate_pump_restarts_after_completion` |
 
 ### 引擎类
 
-| # | 位置 | 问题 |
-|---|---|---|
-| 9 | `agent/core.py:489-498` | fire-and-forget 任务无引用（可能被 GC 中途回收）、无异常兜底日志。应保存到 `self._bg_tasks` 集合 |
-| 10 | `agent/core.py:578 vs 626-629` | 并行路径无条件清零 `consecutive_unknown`，串行路径的 unknown 工具熔断（≥3 终止）在可并行分区时完全失效 |
-| 11 | `agent/tool_authorization.py:72` | PermissionRequest 的 `await future` 无超时（对比 AskUser 有 300s），前端失联时 Agent 永久挂死 |
-| 12 | `context/manager.py:353` | `if "prompt" in err and "long" in err or "too many" in err:` —— and 优先于 or，任何含 "too many" 的错误都会触发静默丢弃最老 20% 轮次（有损且无记录） |
+| # | 位置 | 问题 | 状态 |
+|---|---|---|---|
+| 9 | `agent/core.py:489-498` | fire-and-forget 任务无引用（可能被 GC 中途回收）、无异常兜底日志。应保存到 `self._bg_tasks` 集合 | ✅ 已修复 — `Agent._spawn_bg`（`_bg_tasks` 集合持引用 + done callback 记 error 日志）；测试：`test_agent_bg_tasks.py::test_bg_task_keeps_reference_and_cleans_up`、`test_bg_task_exception_is_logged`、`test_bg_task_cancellation_is_not_logged_as_error` |
+| 10 | `agent/core.py:578 vs 626-629` | 并行路径无条件清零 `consecutive_unknown`，串行路径的 unknown 工具熔断（≥3 终止）在可并行分区时完全失效 | ✅ 已修复 — 移除并行批的无条件清零（计数只由串行路径更新：unknown +1、已知串行执行清零）；测试：`test_agent.py::test_stop_consecutive_unknown_tools_with_parallel_reads` |
+| 11 | `agent/tool_authorization.py:72` | PermissionRequest 的 `await future` 无超时（对比 AskUser 有 300s），前端失联时 Agent 永久挂死 | ✅ 已修复 — `PERMISSION_REQUEST_TIMEOUT=300` + `asyncio.wait_for`，超时按拒绝收尾；测试：`test_agent_tool_authorization.py::test_authorize_tool_call_times_out_when_frontend_silent` |
+| 12 | `context/manager.py:353` | `if "prompt" in err and "long" in err or "too many" in err:` —— and 优先于 or，任何含 "too many" 的错误都会触发静默丢弃最老 20% 轮次（有损且无记录） | ✅ 已修复 — 括号明确为 `("prompt" and "long") or ("too many" and "token")`，限流类错误不再触发有损丢弃；测试：`test_context.py::test_unrelated_too_many_error_does_not_drop_history`、`test_prompt_too_long_error_triggers_degrade_retries`、`test_too_many_tokens_error_triggers_degrade_retries` |
 
 ---
 
