@@ -98,6 +98,11 @@ async def _create_server_with_agent(tmp_path, agent, conversation):
     return server, sid
 
 
+def _strip_outbox_stamps(events):
+    """剥离 P5c 的 outbox 盖章字段，仅比较事件结构。"""
+    return [{k: v for k, v in e.items() if k not in ("seq", "ts")} for e in events]
+
+
 @pytest.mark.asyncio
 async def test_start_task_runs_agent_and_cleans_active_task(tmp_path):
     conversation = _Conversation()
@@ -112,7 +117,7 @@ async def test_start_task_runs_agent_and_cleans_active_task(tmp_path):
     assert server._records.session_meta[sid]["title"] == "run task"
     assert sid not in server._active_tasks.tasks
     assert sid not in server._active_tasks.task_ids
-    assert server._records.event_logs[sid] == [
+    assert _strip_outbox_stamps(server._records.event_logs[sid]) == [
         {"type": "UserMessage", "task_id": task_id, "data": {"content": "run task"}},
         {"type": "StreamText", "task_id": task_id, "data": {"text": "done"}},
         {"type": "LoopComplete", "task_id": task_id, "data": {}},
@@ -157,7 +162,7 @@ async def test_start_task_registers_pending_permission_prompt(tmp_path):
     session = await server.session_mgr.get_session(sid)
     assert session is not None
     assert session._pending_futures[request_id] is future
-    assert server.pending_prompt_events(sid) == [
+    assert _strip_outbox_stamps(server.pending_prompt_events(sid)) == [
         {
             "type": "PermissionRequest",
             "task_id": task_id,
@@ -203,8 +208,8 @@ async def test_resolve_permission_clears_pending_prompt_and_emits_event(tmp_path
 
     assert ok is True
     assert future.result() is PermissionResponse.ALLOW
-    assert server.pending_prompt_events(sid) == []
-    assert server._records.event_logs[sid] == [
+    assert _strip_outbox_stamps(server.pending_prompt_events(sid)) == []
+    assert _strip_outbox_stamps(server._records.event_logs[sid]) == [
         {
             "type": "PermissionResolved",
             "data": {"request_id": "req-permission"},
@@ -227,8 +232,8 @@ async def test_resolve_askuser_clears_pending_prompt_and_emits_event(tmp_path):
 
     assert ok is True
     assert future.result() == {"language": "Python"}
-    assert server.pending_prompt_events(sid) == []
-    assert server._records.event_logs[sid] == [
+    assert _strip_outbox_stamps(server.pending_prompt_events(sid)) == []
+    assert _strip_outbox_stamps(server._records.event_logs[sid]) == [
         {
             "type": "AskUserResolved",
             "data": {"request_id": "req-ask"},
@@ -245,5 +250,5 @@ async def test_close_session_clears_pending_prompt_state(tmp_path):
     await server.close_session(sid)
 
     assert future.cancelled()
-    assert server.pending_prompt_events(sid) == []
+    assert _strip_outbox_stamps(server.pending_prompt_events(sid)) == []
     assert sid not in server._pending_prompts
