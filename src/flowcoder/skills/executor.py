@@ -5,9 +5,16 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from flowcoder.conversation import ConversationManager, Message
+from flowcoder.permissions import (
+    DangerousCommandDetector,
+    Decision,
+    PathSandbox,
+    PermissionChecker,
+    RuleEngine,
+)
 from flowcoder.skills.parser import SkillDef, substitute_arguments
 from flowcoder.tools import ToolRegistry
 
@@ -24,6 +31,45 @@ FORK_RECENT_COUNT = 5
 
 class SkillDependencyError(Exception):
     pass
+
+
+class _AskDenyingChecker(PermissionChecker):
+    """fork 技能的非交互权限适配：ask 决策一律拒绝。
+
+    fork Agent 在无人应答的上下文里跑交互循环，若透传父 checker，
+    ask 会 yield PermissionRequest 且 future 永远无人 set_result，直接挂死；
+    若传 None 则完全绕过 permissions 层。故继承父规则/模式，仅把 ask 压成 deny，
+    与 agent/noninteractive_tools.py 的非交互语义保持一致。
+    """
+
+    def __init__(self, inner: PermissionChecker) -> None:
+        super().__init__(
+            detector=inner.detector,
+            sandbox=inner.sandbox,
+            rule_engine=inner.rule_engine,
+            mode=inner.mode,
+        )
+
+    def check(self, tool: Any, arguments: dict[str, Any]) -> Decision:
+        decision = super().check(tool, arguments)
+        if decision.effect == "ask":
+            return Decision(
+                effect="deny",
+                reason="non-interactive agent cannot prompt user",
+            )
+        return decision
+
+
+def _fork_permission_checker(agent: Agent) -> PermissionChecker:
+    inner = agent.permission_checker
+    if inner is None:
+        inner = PermissionChecker(
+            detector=DangerousCommandDetector(),
+            sandbox=PathSandbox(agent.work_dir),
+            rule_engine=RuleEngine(),
+            mode=agent.permission_mode,
+        )
+    return _AskDenyingChecker(inner)
 
 
 def filter_tool_registry(registry: ToolRegistry, allowed: list[str]) -> ToolRegistry:
@@ -90,7 +136,7 @@ class SkillExecutor:
             protocol=self.protocol,
             work_dir=self.agent.work_dir,
             max_iterations=self.agent.max_iterations,
-            permission_checker=None,
+            permission_checker=_fork_permission_checker(self.agent),
             context_window=self.agent.context_window,
         )
 
