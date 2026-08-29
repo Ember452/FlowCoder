@@ -55,3 +55,30 @@ def test_build_openai_response_request_kwargs_omits_empty_optionals() -> None:
     assert "instructions" not in kwargs
     assert "tools" not in kwargs
     assert "reasoning" not in kwargs
+
+
+def test_build_openai_response_request_kwargs_converts_internal_tool_schema() -> None:
+    """内部 schema（input_schema 形态）必须转换为 Responses 扁平格式，
+    否则带工具的请求会被 API 以 400 拒绝。"""
+    internal_tools = [
+        {
+            "name": "ReadFile",
+            "description": "Read a file",
+            "input_schema": {"type": "object", "properties": {}},
+        }
+    ]
+
+    kwargs = build_openai_response_request_kwargs(
+        model="gpt-test",
+        input_messages=[],
+        tools=internal_tools,
+    )
+
+    assert kwargs["tools"] == [
+        {
+            "type": "function",
+            "name": "ReadFile",
+            "description": "Read a file",
+            "parameters": {"type": "object", "properties": {}},
+        }
+    ]
