@@ -36,6 +36,7 @@ def build_openai_response_request_kwargs(
     system: str = "",
     tools: list[dict[str, Any]] | None = None,
     thinking: bool = False,
+    temperature: float | None = None,
 ) -> dict[str, Any]:
     """Build common OpenAI Responses streaming request arguments."""
     kwargs: dict[str, Any] = {
@@ -49,4 +50,6 @@ def build_openai_response_request_kwargs(
         kwargs["tools"] = convert_tools_for_responses(tools)
     if thinking:
         kwargs["reasoning"] = {"summary": "auto"}
+    elif temperature is not None:
+        kwargs["temperature"] = temperature
     return kwargs
