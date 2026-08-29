@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 
 from flowcoder.daemon.session.meta import (
     new_session_meta,
@@ -26,6 +27,8 @@ class SessionRecords:
         self.event_logs: dict[str, list[dict | None]] = {}
         self.session_meta: dict[str, dict] = {}
         self.persisted_count: dict[str, int] = {}
+        #: Outbox（P5c）：会话内单调事件序号；ack 后写进 meta 持久化
+        self.ack_seq: dict[str, int] = {}
 
     def load_persisted(self) -> int:
         """Load persisted sessions from disk; runtimes are created lazily."""
@@ -33,6 +36,9 @@ class SessionRecords:
             self.event_logs[session.sid] = session.events
             self.session_meta[session.sid] = session.meta
             self.persisted_count[session.sid] = len(session.events)
+            ack = session.meta.get("outbox_ack_seq")
+            if isinstance(ack, int):
+                self.ack_seq[session.sid] = ack
         if self.session_meta:
             log.info("Loaded %d persisted session(s)", len(self.session_meta))
         return len(self.session_meta)
@@ -55,7 +61,34 @@ class SessionRecords:
     def emit(self, sid: str, event: dict | None) -> None:
         log_list = self.event_logs.get(sid)
         if log_list is not None:
+            if event is not None:
+                # Outbox 盖章（P5c）：seq 单调、ts 用于保留期清理。
+                # seq 取"历史最大 seq + 1"而非 len+1：保留期清理会缩短
+                # 磁盘/内存视图，len 不再是可靠的单调来源
+                event.setdefault("seq", self._next_seq(sid))
+                event.setdefault("ts", time.time())
             log_list.append(event)
+
+    def _next_seq(self, sid: str) -> int:
+        highest = self.ack_seq.get(sid, 0)
+        for item in self.event_logs.get(sid, []):
+            if item is None:
+                continue
+            seq = item.get("seq")
+            if isinstance(seq, int) and seq > highest:
+                highest = seq
+        return highest + 1
+
+    def set_ack(self, sid: str, seq: int) -> None:
+        """客户端确认已收到 seq（单调取大），持久化进 session meta。"""
+        current = self.ack_seq.get(sid, 0)
+        if seq > current:
+            self.ack_seq[sid] = seq
+            self.session_meta.setdefault(sid, {})["outbox_ack_seq"] = seq
+            self.persist_meta(sid)
+
+    def get_ack(self, sid: str) -> int:
+        return self.ack_seq.get(sid, 0)
 
     def persist_meta(self, sid: str) -> None:
         self.store.persist_meta(sid, self.session_meta.get(sid, {}))

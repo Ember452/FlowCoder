@@ -33,7 +33,11 @@ def test_session_records_create_emit_persist_and_close(tmp_path):
 
     assert records.has("sid")
     assert records.work_dir("sid") == "/workspace"
-    assert store.load_sessions()[0].events == [{"type": "UserMessage"}]
+    persisted = store.load_sessions()[0].events
+    assert [e["type"] for e in persisted] == ["UserMessage"]
+    # Outbox 盖章（P5c）：seq 单调、ts 存在
+    assert persisted[0]["seq"] == 1
+    assert isinstance(persisted[0]["ts"], float)
 
     log_ref = records.event_log("sid")
     records.close("sid")

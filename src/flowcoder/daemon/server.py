@@ -17,6 +17,7 @@ from flowcoder.config.validator import ConfigError
 from flowcoder.hooks import HookEngine, load_hooks
 
 from flowcoder.daemon.routes.core import build_routes
+from flowcoder.daemon.outbox import build_outbox_lifespan
 from flowcoder.daemon.server_state import DaemonServer
 from flowcoder.daemon.session.store import SessionStore
 from flowcoder.a2a.bridge import A2ABridge
@@ -133,12 +134,23 @@ def create_app(
     session_store: SessionStore | None = None,
     cors_origins: list[str] | None = None,
     auth_token: str | None = None,
+    outbox_retention_s: float | None = 72 * 3600.0,
 ) -> Starlette:
     """Create the Starlette application with all routes wired."""
     server = DaemonServer(config, work_dir, hook_engine, session_store=session_store)
     a2a_bridge = A2ABridge(server)
+    if outbox_retention_s is not None:
+        server.outbox_retention_s = outbox_retention_s
 
-    app = Starlette(routes=build_routes())
+    app = Starlette(
+        routes=build_routes(),
+        # Outbox（P5c）：保留期清理守护任务（仅当启用保留期）
+        lifespan=(
+            build_outbox_lifespan(server, interval_s=3600.0)
+            if outbox_retention_s is not None
+            else None
+        ),
+    )
     configured_token = auth_token
     if configured_token is None:
         configured_token = os.environ.get("FLOWCODER_DAEMON_TOKEN", "").strip()
@@ -200,12 +212,14 @@ def run_daemon(host: str = "127.0.0.1", port: int = 7800, work_dir: str | None =
         f"http://localhost:{port},http://127.0.0.1:{port},"
         "http://localhost:1420,http://127.0.0.1:1420,tauri://localhost",
     )
+    retention_hours = float(os.environ.get("FLOWCODER_OUTBOX_RETENTION_HOURS", "72"))
     app = create_app(
         config,
         wd,
         hook_engine,
         cors_origins=[o.strip() for o in origins.split(",") if o.strip()],
         auth_token=auth_token,
+        outbox_retention_s=retention_hours * 3600.0,
     )
 
     log.info("Starting FlowCoder daemon on %s:%d (work_dir=%s)", host, port, wd)

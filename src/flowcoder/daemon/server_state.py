@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 from flowcoder.agent import Agent
 from flowcoder.agent.events import PermissionResponse
@@ -28,6 +29,7 @@ from flowcoder.daemon.responses import (
 from flowcoder.daemon.tasks.pending_prompts import PendingPromptRegistry
 from flowcoder.daemon.actions.pending_prompt import resolve_session_pending_prompt
 from flowcoder.daemon.actions.permission_mode import set_session_permission_mode
+from flowcoder.daemon.outbox import OutboxLedger, cleanup_outbox_file
 from flowcoder.daemon.session.close_actions import close_daemon_session
 from flowcoder.daemon.session.lifecycle_actions import (
     ensure_session_runtime,
@@ -85,6 +87,9 @@ class DaemonServer:
             set_title_from_prompt=self._set_session_title_from_prompt,
         )
         self._records.load_persisted()
+        # Outbox（P5c）：结果未知的交互事件账本 + 客户端 ack 记账
+        self._outbox = OutboxLedger()
+        self.outbox_retention_s = 72 * 3600.0
 
     def _persist_meta(self, sid: str) -> None:
         self._records.persist_meta(sid)
@@ -187,6 +192,45 @@ class DaemonServer:
 
     def emit_event(self, sid: str, event: dict | None) -> None:
         self._emit(sid, event)
+
+    # -------------------------------------------------- Outbox（P5c）
+
+    def mark_outbox_pushed(self, sid: str, seq: int) -> None:
+        """交互事件已推送但 ack 未知：结果未知账本记账。"""
+        self._outbox.mark_pushed(sid, seq)
+
+    def take_outbox_unknown(self, sid: str) -> set[int]:
+        return self._outbox.take_unknown(sid)
+
+    def ack_outbox(self, sid: str, seq: int) -> None:
+        self._records.set_ack(sid, seq)
+        self._outbox.ack(sid, seq)
+
+    def outbox_ack(self, sid: str) -> int:
+        return self._records.get_ack(sid)
+
+    def outbox_events_path(self, sid: str) -> Path | None:
+        return self._records.store.events_path(sid)
+
+    def cleanup_outbox(self, *, now: float | None = None) -> dict[str, int]:
+        """按保留期清理各会话已投递的过期事件，返回 {sid: dropped}。"""
+        import time as _time
+
+        now = now if now is not None else _time.time()
+        dropped: dict[str, int] = {}
+        for sid in list(self._records.event_logs.keys()):
+            path = self.outbox_events_path(sid)
+            if path is None:
+                continue
+            _, removed = cleanup_outbox_file(
+                path,
+                now=now,
+                retention_s=self.outbox_retention_s,
+                acked_seq=self._records.get_ack(sid),
+            )
+            if removed:
+                dropped[sid] = removed
+        return dropped
 
     def persist_events(self, sid: str) -> None:
         self._persist_events(sid)

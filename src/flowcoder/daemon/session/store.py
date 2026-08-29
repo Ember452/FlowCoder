@@ -100,6 +100,10 @@ class SessionStore:
     def __init__(self, root: Path | str | None = None) -> None:
         self.root = Path(root) if root is not None else DEFAULT_SESSIONS_DIR
 
+    def events_path(self, sid: str) -> Path:
+        """会话 outbox（events.jsonl）文件路径（P5c）。"""
+        return self.session_dir(sid) / EVENTS_FILE
+
     def session_dir(self, sid: str) -> Path:
         return self.root / validate_session_id(sid)
 
