@@ -23,6 +23,9 @@ dev = [
     "websockets>=14.0",
     "ruff>=0.15,<0.16",
 ]
+sandbox = [
+    "docker>=7.0",
+]
 
 [project.scripts]
 flowcoder = "flowcoder.__main__:main"
