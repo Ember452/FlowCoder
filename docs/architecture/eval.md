@@ -28,22 +28,27 @@ load_problems(eval-data/humaneval_plus.jsonl, limit=50)
   → write_report(...)                            # eval-results/report-<ts>.md / .json
 ```
 
-## 关键设计决策（详见 docs/specs/2026-08-29-sandbox-p2a-adr.md）
+## 关键设计决策（详见 docs/specs/ 三篇 ADR）
 
-1. **双 Protocol 注入**：`SolutionSolver` / `SandboxExecutor` 使 fake 与真实实现可互换，评测不改核心循环。
+1. **双 Protocol 注入**：`SolutionSolver`（会话式：start → ask） / `SandboxExecutor` 使 fake 与真实实现可互换，评测不改核心循环。
 2. **special-oracle 跳过**：evalplus 官方 runner 用预计算输入 + special oracle，不跑 test 片段的 check()；含 `*candidate(` 变换的题对轻量 harness 会误判，跳过并单列指标。
 3. **numpy 预装镜像**：测试片段大量依赖 numpy 且沙箱断网，`scripts/Dockerfile.eval` 构建一次镜像解决，运行期保持断网安全默认。
 4. **权限模式 bypassPermissions**：无人批跑场景的兜底（评测提示不要求工具调用）。
+5. **自愈闭环**（P2b）：失败输出喂回同一会话，最多 heal_rounds（默认 3）轮修复；超时/生成错误不重试；逐轮记录 token 与结果。
+6. **k-sample 首胜**（P2b）：同题并行 k 个独立 trial（独立 Agent 会话），首个通过即胜出、其余 cancel（CancelledError 放行）；取消 trial 未完成轮的 token 不可观测不计入。
+7. **失败四分类**（P2b）：超时/轮次耗尽→超预算；compile 失败→编译错；AssertionError→逻辑错；其他运行时异常→测试理解错（启发式，局限见 ADR）。
+8. **温度固定**（P2b）：`--temperature` 默认 0.0，经 `ProviderConfig.temperature` 透传三协议；thinking 模式互斥不传。
 
 ## 使用
 
 ```bash
 python scripts/download_humaneval_plus.py                  # 下载 + sha256 校验到 eval-data/
 docker build -t flowcoder-eval:py311 -f scripts/Dockerfile.eval .
-python -m flowcoder.eval --image flowcoder-eval:py311      # 默认 50 题、并发 4
+python -m flowcoder.eval --image flowcoder-eval:py311      # 默认 50 题、k=3、自愈 3 轮
+python -m flowcoder.eval --compare --image flowcoder-eval:py311   # 对比矩阵 → comparison-<ts>.md
 ```
 
 ## 当前边界
 
-- 温度未显式固定（client 无 temperature 接线），报告 meta 如实标注；P2b 一并处理。
 - 与 evalplus 官方数字存在已知口径差：pass@1 分母 = 兼容轻量 harness 的题数。
+- 被取消 trial 的未完成轮 token 不可观测，不计入成本统计（口径见 P2b ADR）。
