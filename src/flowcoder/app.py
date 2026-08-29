@@ -643,6 +643,49 @@ _FLOWCODER_THEME = Theme(
 )
 
 
+class SerializedSendGate:
+    """把 _send_message 的多个触发源（用户输入 / 通知轮询 / mailbox）串行化。
+
+    原实现里各触发源各自 create_task，``_streaming`` 标志在 create_task 之后
+    才被 _send_message 置位，同一事件循环 tick 内的两个触发源都会通过守卫，
+    造成两条 _send_message 并发执行、conversation 历史交错。改为：所有触发源
+    只入队，单一泵任务顺序消费——并发从结构上不可能发生。
+    """
+
+    def __init__(self, runner: Any) -> None:
+        self._runner = runner
+        self._queue: asyncio.Queue[str] = asyncio.Queue()
+        self._pump: asyncio.Task[None] | None = None
+
+    @property
+    def current_task(self) -> asyncio.Task[None] | None:
+        return self._pump
+
+    def submit(self, text: str) -> asyncio.Task[None] | None:
+        """入队一条发送请求，确保泵任务在跑；返回泵任务供取消/等待。"""
+        self._queue.put_nowait(text)
+        if self._pump is None or self._pump.done():
+            self._pump = asyncio.create_task(self._drain())
+        return self._pump
+
+    def cancel(self) -> None:
+        """取消当前发送并丢弃排队中的请求（中断语义：排队的旧请求不再补发）。"""
+        if self._pump and not self._pump.done():
+            self._pump.cancel()
+        while not self._queue.empty():
+            self._queue.get_nowait()
+
+    async def _drain(self) -> None:
+        try:
+            while True:
+                text = await self._queue.get()
+                await self._runner(text)
+                if self._queue.empty():
+                    return
+        finally:
+            self._pump = None
+
+
 class FlowCoderApp(App):
     CSS_PATH = "ui/styles.tcss"
     TITLE = "FlowCoder"
@@ -696,7 +739,7 @@ class FlowCoderApp(App):
         self._spinner_label: Static | None = None
         self._mcp_server_info: str = ""
         self._agent_task: asyncio.Task[None] | None = None
-        self._subagent_task: asyncio.Task[None] | None = None
+        self._send_gate = SerializedSendGate(self._send_message)
         self._subagent_start_time: float | None = None
         self.session_manager: SessionManager | None = None
         self.session: Session | None = None
@@ -1023,7 +1066,7 @@ class FlowCoderApp(App):
     def send_user_message(self, text: str) -> None:
         if self._streaming or self.agent is None:
             return
-        self._agent_task = asyncio.create_task(self._send_message(text))
+        self._agent_task = self._send_gate.submit(text)
 
     def set_plan_mode(self, enabled: bool) -> None:
         if self.agent is None:
@@ -1101,7 +1144,7 @@ class FlowCoderApp(App):
         if not is_command:
             if self._streaming or self.agent is None:
                 return
-            self._agent_task = asyncio.create_task(self._send_message(text))
+            self._agent_task = self._send_gate.submit(text)
             return
 
         if name == "":
@@ -1139,7 +1182,7 @@ class FlowCoderApp(App):
         text = event.text.strip()
         if self._streaming and not text.startswith("/"):
             if self._agent_task and not self._agent_task.done():
-                self._agent_task.cancel()
+                self._send_gate.cancel()
                 try:
                     await self._agent_task
                 except (asyncio.CancelledError, Exception):
@@ -1235,16 +1278,7 @@ class FlowCoderApp(App):
             self.query_one("#chat-input", ChatInput).focus()
             return
         if self._agent_task and not self._agent_task.done():
-            if self._subagent_task and not self._subagent_task.done():
-                task_id = (
-                    self.task_manager.adopt_running(self._subagent_task, "background task")
-                    if hasattr(self.task_manager, "adopt_running")
-                    else None
-                )
-                if task_id:
-                    self._show_system_message(f"Task moved to background (id: {task_id})")
-                    return
-            self._agent_task.cancel()
+            self._send_gate.cancel()
 
     async def _prefetch_relevant_memories(self, query: str) -> str:
         """Run the recall selector as a side-query with an 8s timeout.
@@ -1553,7 +1587,7 @@ class FlowCoderApp(App):
             if hasattr(self, "team_manager"):
                 self.team_manager.on_teammate_completed(task.agent.agent_id)
 
-        self._agent_task = asyncio.create_task(self._send_message("", is_notification=True))
+        self._agent_task = self._send_gate.submit("")
 
     async def _start_notification_polling(self) -> None:
         while True:
@@ -1572,7 +1606,7 @@ class FlowCoderApp(App):
             return
         for note in notes:
             self.conversation.add_system_reminder(note)
-        self._agent_task = asyncio.create_task(self._send_message("", is_notification=True))
+        self._agent_task = self._send_gate.submit("")
 
     async def _show_plan_approval(self) -> None:
         from flowcoder.ui.plan_dialog import InlinePlanWidget
@@ -1891,7 +1925,7 @@ class FlowCoderApp(App):
     async def action_handle_ctrl_c(self) -> None:
         if self._streaming:
             if self._agent_task and not self._agent_task.done():
-                self._agent_task.cancel()
+                self._send_gate.cancel()
             self._show_system_message("(response interrupted)")
             self._finish_streaming()
             try:
