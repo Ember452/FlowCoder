@@ -363,7 +363,12 @@ async def auto_compact(
 
         except Exception as e:
             err_msg = str(e).lower()
-            if "prompt" in err_msg and "long" in err_msg or "too many" in err_msg:
+            # 括号明确原意：只有"prompt too long"或"too many tokens"这类
+            # 上下文长度错误才走"丢弃最老轮次重试"的降级路径；
+            # "too many requests"（限流）等与长度无关的错误不得触发有损丢弃。
+            if ("prompt" in err_msg and "long" in err_msg) or (
+                "too many" in err_msg and "token" in err_msg
+            ):
                 groups = _group_messages_by_turn(summary_conv.history[1:-1])
                 drop_count = max(1, len(groups) // 5)
                 remaining = groups[drop_count:]

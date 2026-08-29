@@ -740,3 +740,80 @@ class TestAutoCompactKeepRecent:
         assert result.boundary.summary == "PREFIX SUMMARY"
         # 保留的尾部与原样沿用下来的内容完全一致。
         assert result.boundary.keep == kept_before
+
+
+# ---------------------------------------------------------------------------
+# P0-12 回归：摘要失败降级只对上下文长度类错误生效
+# ---------------------------------------------------------------------------
+
+
+class _FailingClient:
+    """stream() 直接抛指定错误并记录调用次数的假客户端。"""
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        self.calls = 0
+
+    async def stream(self, conversation, system=""):
+        self.calls += 1
+        raise RuntimeError(self.message)
+        yield  # pragma: no cover - 使其成为异步生成器
+
+
+def _make_error(message: str):
+    """构造 auto_compact 错误路径测试所需的 (conv, client) 并返回断言闭包。"""
+    conv = _make_long_conversation()
+    conv.record_usage_anchor(input_tokens=200_000)
+    return conv, _FailingClient(message)
+
+
+@pytest.mark.asyncio
+async def test_unrelated_too_many_error_does_not_drop_history(tmp_path: Path) -> None:
+    """限流类"too many requests"错误不得触发有损的降级重试（P0-12）。"""
+    conv, client = _make_error("too many requests for your quota")
+    from flowcoder.context import CompactCircuitBreaker
+
+    result = await auto_compact(
+        conv,
+        client,
+        context_window=200_000,
+        session_dir=tmp_path,
+        breaker=CompactCircuitBreaker(),
+    )
+    assert isinstance(result, str)
+    assert "too many requests" in result
+    assert client.calls == 1, "与上下文长度无关的错误不应触发 3 次降级重试"
+
+
+@pytest.mark.asyncio
+async def test_prompt_too_long_error_triggers_degrade_retries(tmp_path: Path) -> None:
+    conv, client = _make_error("prompt is too long: 300000 tokens > 200000 maximum")
+    from flowcoder.context import CompactCircuitBreaker
+
+    result = await auto_compact(
+        conv,
+        client,
+        context_window=200_000,
+        session_dir=tmp_path,
+        breaker=CompactCircuitBreaker(),
+    )
+    assert isinstance(result, str)
+    assert "多次重试" in result
+    assert client.calls == 3
+
+
+@pytest.mark.asyncio
+async def test_too_many_tokens_error_triggers_degrade_retries(tmp_path: Path) -> None:
+    conv, client = _make_error("too many tokens in the request")
+    from flowcoder.context import CompactCircuitBreaker
+
+    result = await auto_compact(
+        conv,
+        client,
+        context_window=200_000,
+        session_dir=tmp_path,
+        breaker=CompactCircuitBreaker(),
+    )
+    assert isinstance(result, str)
+    assert "多次重试" in result
+    assert client.calls == 3
