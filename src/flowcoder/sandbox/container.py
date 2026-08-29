@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Mapping
 
 from flowcoder.sandbox import transport
@@ -39,6 +39,8 @@ class SandboxConfig:
     user: str = NON_ROOT_USER
     limits: ResourceLimits = ResourceLimits()
     network_enabled: bool = False
+    #: docker labels；池用它标记归属，reaper 据此清理遗留容器
+    labels: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -173,7 +175,14 @@ class SandboxContainer:
         }
         spec.update(limit_kwargs(cfg.limits))
         spec.update(network_kwargs(cfg.network_enabled))
+        if cfg.labels:
+            spec["labels"] = dict(cfg.labels)
         return spec
+
+    @property
+    def container_id(self) -> str | None:
+        """当前容器 ID；未启动或已关闭时为 None。"""
+        return self._container_id
 
     def _ensure_runtime(self) -> ContainerRuntime:
         if self._runtime is None:
