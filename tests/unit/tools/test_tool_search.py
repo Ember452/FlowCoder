@@ -88,7 +88,7 @@ def test_mcp_tool_deferred():
     mock_tool_def = MagicMock()
     mock_tool_def.name = "example"
     mock_tool_def.description = "An MCP tool"
-    mock_tool_def.inputSchema = {"type": "object", "properties": {}}
+    mock_tool_def.input_schema = {"type": "object", "properties": {}}
 
     mock_client = MagicMock()
 

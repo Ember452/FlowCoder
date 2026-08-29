@@ -41,6 +41,7 @@ class _Agent:
 
 
 class _Provider:
+    thinking = False
     name = "runtime"
     protocol = "openai-compat"
     model = "runtime-model"

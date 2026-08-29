@@ -201,6 +201,7 @@ def test_a2a_message_send_rejects_non_object_configuration(tmp_path):
 
 def test_route_registry_keeps_local_daemon_surface_only():
     assert [(spec.path, spec.methods) for spec in HTTP_ROUTES] == [
+        ("/", ("GET",)),
         ("/.well-known/agent-card.json", ("GET",)),
         ("/a2a/agent-card.json", ("GET",)),
         ("/a2a/rpc", ("POST",)),
@@ -215,6 +216,7 @@ def test_route_registry_keeps_local_daemon_surface_only():
         ("/api/account/model", ("POST",)),
         ("/api/config", ("GET",)),
         ("/api/config", ("POST",)),
+        ("/api/settings/permission_mode", ("POST",)),
         ("/api/skills", ("GET",)),
         ("/api/skills", ("POST",)),
         ("/api/skills/{name}/toggle", ("POST",)),
@@ -233,6 +235,7 @@ def test_route_registry_keeps_local_daemon_surface_only():
         ("/api/sessions", ("GET",)),
         ("/api/task", ("POST",)),
         ("/api/session/{sid}/status", ("GET",)),
+        ("/api/session/{sid}/history", ("GET",)),
         ("/api/session/{sid}/mode", ("POST",)),
         ("/api/session/{sid}/provider", ("POST",)),
         ("/api/session/{sid}/cancel", ("POST",)),

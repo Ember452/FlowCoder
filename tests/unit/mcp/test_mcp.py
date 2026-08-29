@@ -323,7 +323,7 @@ class TestMCPToolWrapper:
         tool_def = mcp_types.Tool(
             name="search_issues",
             description="Search GitHub issues",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "repo": {"type": "string"},
@@ -349,7 +349,7 @@ class TestMCPToolWrapper:
         tool_def = mcp_types.Tool(
             name="search issues with a very long external MCP name!!!" * 2,
             description="Search",
-            inputSchema={"type": "object", "properties": {}},
+            input_schema={"type": "object", "properties": {}},
         )
         wrapper = MCPToolWrapper("github-prod", tool_def, MagicMock())
 
@@ -371,7 +371,7 @@ class TestMCPToolWrapper:
         tool_def = mcp_types.Tool(
             name="search",
             description="Search",
-            inputSchema=input_schema,
+            input_schema=input_schema,
         )
         mock_client = MagicMock()
         wrapper = MCPToolWrapper("srv", tool_def, mock_client)
@@ -387,7 +387,7 @@ class TestMCPToolWrapper:
         tool_def = mcp_types.Tool(
             name="search",
             description="Search",
-            inputSchema={
+            input_schema={
                 "type": "array",
                 "properties": [],
                 "required": "query",
@@ -406,7 +406,7 @@ class TestMCPToolWrapper:
         tool_def = mcp_types.Tool(
             name="search",
             description="Search",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "query": {"type": ["string", "null"]},
@@ -441,7 +441,7 @@ class TestMCPToolWrapper:
         tool_def = mcp_types.Tool(
             name="search issues",
             description="Search",
-            inputSchema={"type": "object", "properties": {}},
+            input_schema={"type": "object", "properties": {}},
         )
         result = mcp_types.CallToolResult(
             content=[mcp_types.TextContent(type="text", text="ok")],
@@ -467,7 +467,7 @@ class TestMCPToolWrapper:
         tool_def = mcp_types.Tool(
             name="search",
             description="Search",
-            inputSchema={"type": "object", "properties": {}},
+            input_schema={"type": "object", "properties": {}},
         )
         client = AsyncMock()
         client.is_alive = True
@@ -549,7 +549,7 @@ class TestExtractText:
         from mcp import types as mcp_types
         from flowcoder.mcp.tool_wrapper import _extract_text
 
-        content = [mcp_types.ImageContent(type="image", data="...", mimeType="image/png")]
+        content = [mcp_types.ImageContent(type="image", data="...", mime_type="image/png")]
         assert "[image: image/png]" in _extract_text(content)
 
 
@@ -589,7 +589,7 @@ class TestMCPManagerPartialFailure:
                 mcp_types.Tool(
                     name="test_tool",
                     description="A test",
-                    inputSchema={"type": "object", "properties": {}},
+                    input_schema={"type": "object", "properties": {}},
                 )
             ]
 
@@ -674,12 +674,12 @@ class TestMCPManagerPartialFailure:
                 mcp_types.Tool(
                     name="same_tool",
                     description="First",
-                    inputSchema={"type": "object", "properties": {}},
+                    input_schema={"type": "object", "properties": {}},
                 ),
                 mcp_types.Tool(
                     name="same_tool",
                     description="Second",
-                    inputSchema={"type": "object", "properties": {}},
+                    input_schema={"type": "object", "properties": {}},
                 ),
             ]
             MockClient.return_value = client

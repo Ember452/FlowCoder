@@ -49,6 +49,7 @@ class _Conversation:
 
 
 class _Provider:
+    thinking = False
     name = "local"
     protocol = "openai-compat"
     model = "smoke-model"

@@ -107,7 +107,7 @@ def _extract_text(content: list[Any]) -> str:
         if isinstance(block, mcp_types.TextContent):
             parts.append(block.text)
         elif isinstance(block, mcp_types.ImageContent):
-            parts.append(f"[image: {block.mimeType}]")
+            parts.append(f"[image: {block.mime_type}]")
         elif isinstance(block, mcp_types.EmbeddedResource):
             resource = block.resource
             if hasattr(resource, "text"):
@@ -127,7 +127,7 @@ class MCPToolWrapper(Tool):
         self._server_name = server_name
         self._tool_def = tool_def
         self._client = client
-        self._input_schema = _normalize_input_schema(tool_def.inputSchema)
+        self._input_schema = _normalize_input_schema(tool_def.input_schema)
         self.name = build_public_tool_name(server_name, tool_def.name)
         self.description = tool_def.description or tool_def.name
         self.category = "command"
@@ -168,4 +168,4 @@ class MCPToolWrapper(Tool):
             )
 
         text = _extract_text(result.content)
-        return ToolResult(output=text, is_error=bool(result.isError))
+        return ToolResult(output=text, is_error=bool(result.is_error))
