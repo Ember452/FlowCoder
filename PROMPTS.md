@@ -68,13 +68,16 @@ docs/architecture/tools.md、P0 产出的两篇走读笔记。
 3. 双层超时：asyncio 外层超时 + 容器内 timeout 命令；超时先 SIGTERM 再 SIGKILL。
 4. transport.py：输入文件用 docker cp 或临时卷传入，不用目录挂载（规避 WSL2 跨文件系统慢 IO）。
 5. tests/unit/sandbox/ 与 tests/integration/sandbox/ 补测试：正常执行、超时击杀、内存超限、
-   断网验证（容器内 curl 失败）。集成测试需 docker 可用，加 skip 标记。
+   断网逻辑（容器内 curl 失败）。
+   **开发环境无 Docker（既定决策）：单元测试全部用 fake docker SDK 实现验证，
+   不依赖真实 Docker；集成测试全量挂 docker marker，无 daemon 时自动跳过。**
 6. docs/specs/ 写一篇 ADR：说明为什么容器级+执行级双层限额、为什么断网是默认值。
 7. docs/architecture/ 新增 sandbox.md，并在 AGENTS.md 第三节目录职责表中登记 sandbox/。
 
 约束：不改 agent/、tools/ 任何现有文件（本阶段不接入，P1c 才接）；不引入新第三方依赖，
 docker SDK 若未安装先在 pyproject.toml 可选依赖组中声明。
-验收：单元测试全绿；集成测试在有 docker 的机器上全绿； kill -9 容器进程后无残留。
+验收：单元测试（fake）全绿、逻辑闭环；集成测试在无 Docker 环境下显示 skip 而非 fail；
+"kill -9 容器后无残留"等真实容器验收延后，待 Docker 环境就绪后补测并回填 ADR。
 ```
 
 ## P1b — 沙箱：容器池化与泄漏回收
@@ -90,10 +93,13 @@ docker SDK 若未安装先在 pyproject.toml 可选依赖组中声明。
 3. 指标：租借等待时间、容器复用次数、执行耗时、资源峰值，接入现有 TraceManager
    （先读 docs/architecture/observability.md 了解 TraceManager 用法）。
 4. 测试：并发 20 请求压池、池耗尽排队行为、手工 kill 容器后池自动补充、
-   模拟泄漏后 reaper 回收。
+   模拟泄漏后 reaper 回收——全部基于 fake 容器实现做单元验证；
+   真实容器的集成版本同样挂 docker marker 自动跳过。
 5. docs/specs/ 写 ADR：预热租借 vs 每次冷启动的取舍；队列背压 vs 快速失败的取舍。
 
-验收：20 并发压测无泄漏（docker ps 对账）、冷启动消除效果有数据（对比 P1a 的执行耗时）。
+验收：fake 驱动的单元测试全绿（池化/排队/回收逻辑闭环）；
+"20 并发压测无泄漏（docker ps 对账）、冷启动消除数据（对比 P1a 耗时）"
+为真实 Docker 环境的可选验收，待环境就绪后补测，数据回填 ADR 与简历素材。
 ```
 
 ## P1c — 沙箱：接入工具链与权限门
@@ -104,15 +110,21 @@ permissions-hooks.md、src/flowcoder/permissions/ 与 tools/ 的 bash 工具实�
 
 任务：把 bash 工具的执行从裸 subprocess 切换到沙箱：
 1. 工具层加配置项 sandbox_mode: off | docker（默认 off，保证行为兼容），off 走原路径零改动。
+   终端（TUI）提供斜杠命令（如 /sandbox）在会话内切换 off/docker，切换即生效并持久化
+   到用户配置；daemon/GUI 侧状态同步展示。未安装 Docker 时 /sandbox 开启 docker 模式
+   要给出明确的错误提示，不得静默失败。
 2. docker 模式下：命令在沙箱容器内执行，工作目录映射到白名单目录；执行前先过现有
    permissions 四模式审批门，审批语义不变（这是硬要求：权限门在沙箱之前）。
 3. 危险命令规则、路径校验逻辑保持生效——先读清楚现有实现再动手，不许绕过。
 4. 全部现有 unit/integration 测试必须保持通过（行为兼容是验收的一部分）；
-   新增 docker 模式下的集成测试。
+   docker 模式的接入逻辑用 fake 沙箱做单元验证，真实容器集成测试挂 docker marker
+   自动跳过。
 5. docs/specs/ 写 ADR：为什么默认 off、为什么权限门在沙箱之前而不是之后。
 
-验收：sandbox_mode=off 时所有既有测试通过；docker 模式演示"超时脚本被杀、内存超限被限、
-断网命令失败"三个场景，输出记录进 ADR。
+验收：sandbox_mode=off（默认）时所有既有测试通过、行为零变化；
+/sandbox 命令切换逻辑与未装 Docker 时的降级提示有单元测试覆盖；
+docker 模式"超时脚本被杀、内存超限被限、断网命令失败"三场景演示为可选验收，
+待 Docker 环境就绪后补录进 ADR。
 ```
 
 ## P2a — 评测：HumanEval+ 流水线

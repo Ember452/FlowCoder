@@ -31,7 +31,11 @@ sandbox/
 - **安全默认**：断网执行、non-root 用户、只读根文件系统、白名单工作目录；与现有 `permissions/` 四模式审批对接——高危操作先过权限门再进沙箱
 - **可观测**：每次执行记录耗时/退出码/资源峰值，挂进 TraceManager
 
-验收标准：bash 工具切到沙箱执行（保留 subprocess 作为 fallback 配置）；20 容器池压测无泄漏；kill -9 容器后池自动补充。
+验收标准：bash 工具切到沙箱执行（`sandbox_mode` 默认 off，off 走原 subprocess 路径零改动；
+TUI 提供 `/sandbox` 斜杠命令切换并持久化，未装 Docker 时开启给出明确报错）；
+沙箱逻辑由 fake docker SDK 的单元测试全量验证（开发环境无 Docker，既定决策）；
+真实容器的压测/演示数据（20 容器池压测无泄漏、kill -9 后池自动补充、超时/内存/断网三场景）
+为可选验收，待 Docker 环境就绪后补测并回填 ADR。
 
 ## Phase 2：评测流水线（第 3 周，把空壳变成真家伙）
 
