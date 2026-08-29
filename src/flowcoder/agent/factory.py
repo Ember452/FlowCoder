@@ -63,7 +63,7 @@ async def create_agent_from_config(
 
     instructions = load_instructions(work_dir)
     memory_hub = build_memory_hub(config.memory, work_dir)
-    registry = _create_base_registry(provider.protocol, work_dir)
+    registry = _create_base_registry(provider.protocol, work_dir, config.sandbox_mode)
     mcp_manager = MCPManager()
     mcp_manager.load_configs(config.mcp_servers)
     mcp_errors = await mcp_manager.register_all_tools(registry)
@@ -107,8 +107,11 @@ def _create_permission_checker(
     )
 
 
-def _create_base_registry(protocol: str, work_dir: str) -> ToolRegistry:
-    registry = create_default_registry(base_dir=work_dir)
+def _create_base_registry(protocol: str, work_dir: str, sandbox_mode: str = "off") -> ToolRegistry:
+    registry = create_default_registry(
+        base_dir=work_dir,
+        sandbox_mode=sandbox_mode,
+    )
     registry.register(ToolSearchTool(registry, protocol=protocol))
     registry.register(AskUserTool())
     registry.register(ExitPlanModeTool())
