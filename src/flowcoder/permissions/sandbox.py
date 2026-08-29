@@ -41,7 +41,10 @@ class PathSandbox:
                 resolved_ancestor = ancestor.resolve(strict=True)
             except OSError:
                 return False, f"无法解析路径: {path}"
-            real_path = resolved_ancestor / abs_path.relative_to(ancestor)
+            # 拼回不存在的尾部时可能重新引入 ".." 段（abs_path 未经词法归一化），
+            # 而 relative_to 是纯词法匹配，不消除 ".." 即可穿越沙箱；
+            # 因此必须对完整结果再 resolve(strict=False) 重查
+            real_path = (resolved_ancestor / abs_path.relative_to(ancestor)).resolve(strict=False)
 
         for root in self._allowed_roots:
             try:

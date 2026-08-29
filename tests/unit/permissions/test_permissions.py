@@ -202,6 +202,31 @@ class TestPathSandbox:
         ok, _ = self.sandbox.check(str(deep))
         assert ok
 
+    def test_nonexistent_target_with_dotdot_escape_denied(self) -> None:
+        # 目标不存在走 fallback 分支时，".." 段必须被消除后重查，
+        # 否则 <root>/x/../../.. 形态会通过词法校验、实际落在沙箱外。
+        # 注意 PathSandbox 恒定放行系统临时目录，逃逸目标必须落在 Temp 之外才有意义
+        escape = self.tmpdir / "nonexistent_dir" / ".." / ".." / ".." / "escape_probe.txt"
+        ok, reason = self.sandbox.check(str(escape))
+        assert not ok, f"沙箱被穿越：{escape} 实际指向 {escape.resolve(strict=False)}"
+        assert "沙箱" in reason
+
+    def test_multiple_dotdot_escape_to_sibling_denied(self) -> None:
+        escape = self.tmpdir / "a" / "b" / ".." / ".." / ".." / ".." / "escape_probe.txt"
+        ok, _ = self.sandbox.check(str(escape))
+        assert not ok
+
+    def test_windows_drive_case_normalized(self) -> None:
+        # Windows 盘符大小写差异（C: vs c:）不应影响沙箱判定；
+        # 目标不存在时走 fallback 分支也必须归一化
+        if not self.tmpdir.drive:
+            pytest.skip("Not a Windows drive path")
+        lowered = str(self.tmpdir).replace(self.tmpdir.drive, self.tmpdir.drive.lower(), 1)
+        if lowered == str(self.tmpdir):
+            pytest.skip("Drive letter already lowercase")
+        ok, _ = self.sandbox.check(str(Path(lowered) / "missing_file.txt"))
+        assert ok
+
 
 # ===========================================================================
 # 第三层：RuleEngine（规则引擎）
