@@ -30,9 +30,7 @@ def test_config_without_schema_version_uses_current_version() -> None:
 
 def test_future_config_schema_is_rejected() -> None:
     with pytest.raises(ConfigError, match="newer than supported"):
-        validate_config_structure(
-            _config(schema_version=CURRENT_CONFIG_SCHEMA_VERSION + 1)
-        )
+        validate_config_structure(_config(schema_version=CURRENT_CONFIG_SCHEMA_VERSION + 1))
 
 
 @pytest.mark.parametrize("value", [0, -1, True, "1"])

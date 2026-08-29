@@ -46,9 +46,7 @@ def create_child_agent(
         permission_checker=checker,
         context_window=parent_agent.context_window,
         instructions_content=(
-            definition.system_prompt
-            if instructions_content is None
-            else instructions_content
+            definition.system_prompt if instructions_content is None else instructions_content
         ),
         hook_engine=parent_agent.hook_engine,
     )

@@ -13,6 +13,7 @@ GIT_ENV = {"GIT_TERMINAL_PROMPT": "0", "GIT_ASKPASS": ""}
 
 def _run_git(args: list[str], cwd: str) -> subprocess.CompletedProcess[str]:
     import os
+
     env = {**os.environ, **GIT_ENV}
     return subprocess.run(
         ["git"] + args,
@@ -35,16 +36,12 @@ def count_worktree_changes(wt_path: str, head_commit: str) -> Changes:
     try:
         status = _run_git(["status", "--porcelain"], cwd=wt_path)
         if status.returncode == 0:
-            changes.uncommitted = len(
-                [line for line in status.stdout.splitlines() if line.strip()]
-            )
+            changes.uncommitted = len([line for line in status.stdout.splitlines() if line.strip()])
     except (subprocess.SubprocessError, OSError):
         changes.uncommitted = 1
 
     try:
-        rev_list = _run_git(
-            ["rev-list", "--count", f"{head_commit}..HEAD"], cwd=wt_path
-        )
+        rev_list = _run_git(["rev-list", "--count", f"{head_commit}..HEAD"], cwd=wt_path)
         if rev_list.returncode == 0:
             changes.new_commits = int(rev_list.stdout.strip())
     except (subprocess.SubprocessError, OSError, ValueError):

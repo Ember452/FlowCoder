@@ -24,7 +24,6 @@ def _status_icon(status: str) -> str:
 
 def create_trace_command(trace_manager: TraceManager, lead_agent_id: str = "") -> Command:
 
-
     async def handler(ctx: CommandContext) -> None:
         nodes = list(trace_manager._nodes.values())
         if not nodes:
@@ -37,13 +36,16 @@ def create_trace_command(trace_manager: TraceManager, lead_agent_id: str = "") -
 
         lines = ["Agent 追踪树:"]
 
-
         def _render(parent_id: str | None, indent: int) -> None:
             children = parent_map.get(parent_id, [])
             for n in children:
                 icon = _status_icon(n.status)
                 elapsed = _format_elapsed(n.start_time, n.end_time)
-                tokens = f"↑{n.input_tokens} ↓{n.output_tokens}" if n.input_tokens or n.output_tokens else ""
+                tokens = (
+                    f"↑{n.input_tokens} ↓{n.output_tokens}"
+                    if n.input_tokens or n.output_tokens
+                    else ""
+                )
                 prefix = "  " * indent
                 lines.append(
                     f"{prefix}{icon} [{n.agent_id[:8]}] {n.agent_type} — {n.status} ({elapsed}) {tokens}"
@@ -60,8 +62,14 @@ def create_trace_command(trace_manager: TraceManager, lead_agent_id: str = "") -
         for root in roots:
             icon = _status_icon(root.status)
             elapsed = _format_elapsed(root.start_time, root.end_time)
-            tokens = f"↑{root.input_tokens} ↓{root.output_tokens}" if root.input_tokens or root.output_tokens else ""
-            lines.append(f"  {icon} [{root.agent_id[:8]}] {root.agent_type} — {root.status} ({elapsed}) {tokens}")
+            tokens = (
+                f"↑{root.input_tokens} ↓{root.output_tokens}"
+                if root.input_tokens or root.output_tokens
+                else ""
+            )
+            lines.append(
+                f"  {icon} [{root.agent_id[:8]}] {root.agent_type} — {root.status} ({elapsed}) {tokens}"
+            )
             _render(root.agent_id, 2)
 
         total_in = sum(n.input_tokens for n in nodes)

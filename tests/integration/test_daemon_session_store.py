@@ -139,11 +139,7 @@ def test_session_store_skips_missing_meta_without_warning(tmp_path, caplog):
         loaded = store.load_sessions()
 
     assert [session.sid for session in loaded] == ["valid"]
-    assert not [
-        record
-        for record in caplog.records
-        if "missing-meta" in record.getMessage()
-    ]
+    assert not [record for record in caplog.records if "missing-meta" in record.getMessage()]
 
 
 def test_session_store_skips_malformed_event_lines(tmp_path):
@@ -152,11 +148,7 @@ def test_session_store_skips_malformed_event_lines(tmp_path):
     store.persist_meta(sid, {"title": "recover"})
     events_path = store.session_dir(sid) / "events.jsonl"
     events_path.write_text(
-        '{"type": "UserMessage"}\n'
-        '{bad\n'
-        'null\n'
-        '[]\n'
-        '{"type": "LoopComplete"}\n',
+        '{"type": "UserMessage"}\n{bad\nnull\n[]\n{"type": "LoopComplete"}\n',
         encoding="utf-8",
     )
 
@@ -235,9 +227,7 @@ def test_session_store_preserves_existing_meta_when_atomic_replace_fails(
     store.persist_meta(sid, {"title": "new"})
 
     session_dir = store.session_dir(sid)
-    assert json.loads((session_dir / "meta.json").read_text(encoding="utf-8")) == (
-        original_meta
-    )
+    assert json.loads((session_dir / "meta.json").read_text(encoding="utf-8")) == (original_meta)
     assert list(session_dir.glob(".meta.json.*.tmp")) == []
 
 

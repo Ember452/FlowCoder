@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
@@ -10,7 +10,6 @@ from flowcoder.tools.base import Tool, ToolResult
 
 if TYPE_CHECKING:
     from flowcoder.agent import Agent
-    from flowcoder.skills.directory import register_skill_tools
     from flowcoder.skills.loader import SkillLoader
 
 
@@ -30,18 +29,15 @@ class LoadSkill(Tool):
     is_concurrency_safe = False
     is_system_tool = True
 
-
     def __init__(self) -> None:
         self._loader: SkillLoader | None = None
         self._agent: Agent | None = None
-
 
     def set_loader(self, loader: SkillLoader) -> None:
         self._loader = loader
 
     def set_agent(self, agent: Agent) -> None:
         self._agent = agent
-
 
     async def execute(self, params: BaseModel) -> ToolResult:
         assert isinstance(params, LoadSkillParams)
@@ -65,6 +61,7 @@ class LoadSkill(Tool):
         tool_count = 0
         if skill.is_directory and skill.source_path is not None:
             from flowcoder.skills.directory import register_skill_tools
+
             skill_dir = skill.source_path.parent
             tool_count = register_skill_tools(skill_dir, self._agent.registry)
 

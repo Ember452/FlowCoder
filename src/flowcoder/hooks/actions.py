@@ -47,9 +47,7 @@ def _headers_field(data: dict, label: str) -> dict[str, str]:
         raise HookConfigError(f"{label}: 'headers' must be a mapping")
     for key, header_value in value.items():
         if not isinstance(key, str) or not isinstance(header_value, str):
-            raise HookConfigError(
-                f"{label}: 'headers' must map strings to strings"
-            )
+            raise HookConfigError(f"{label}: 'headers' must map strings to strings")
     return dict(value)
 
 
@@ -88,8 +86,7 @@ def load_action(raw_action: object, label: str) -> Action:
     for field_name in required:
         if not string_fields[field_name]:
             raise HookConfigError(
-                f"{label}: action type '{action_type}' requires "
-                f"'{field_name}' field"
+                f"{label}: action type '{action_type}' requires '{field_name}' field"
             )
 
     timeout = raw_action.get("timeout", 30)

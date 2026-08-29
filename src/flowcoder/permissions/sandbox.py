@@ -7,8 +7,6 @@ from pathlib import Path
 
 
 class PathSandbox:
-
-
     def __init__(
         self,
         project_root: str,
@@ -20,11 +18,9 @@ class PathSandbox:
             for p in extra_allowed:
                 self._allowed_roots.append(Path(p).resolve())
 
-
     @property
     def project_root(self) -> Path:
         return self._allowed_roots[0]
-
 
     def check(self, path: str) -> tuple[bool, str]:
         p = Path(path).expanduser()

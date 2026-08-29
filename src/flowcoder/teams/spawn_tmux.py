@@ -74,25 +74,33 @@ def spawn_tmux_teammate(
             "split-window",
             "-h",
             "-P",
-            "-F", "#{pane_id}",
-            "-t", f"{team_name}",
+            "-F",
+            "#{pane_id}",
+            "-t",
+            f"{team_name}",
         )
     except TmuxSpawnError:
         try:
-            _run_tmux("new-window", "-t", f"{team_name}", "-n", window_name, "-P", "-F", "#{pane_id}")
+            _run_tmux(
+                "new-window", "-t", f"{team_name}", "-n", window_name, "-P", "-F", "#{pane_id}"
+            )
             pane_id = _run_tmux(
                 "split-window",
                 "-h",
                 "-P",
-                "-F", "#{pane_id}",
-                "-t", f"{team_name}:{window_name}",
+                "-F",
+                "#{pane_id}",
+                "-t",
+                f"{team_name}:{window_name}",
             )
         except TmuxSpawnError:
             _run_tmux("new-session", "-d", "-s", team_name, "-n", window_name)
             pane_id = _run_tmux(
                 "list-panes",
-                "-t", f"{team_name}:{window_name}",
-                "-F", "#{pane_id}",
+                "-t",
+                f"{team_name}:{window_name}",
+                "-F",
+                "#{pane_id}",
             ).split("\n")[0]
 
     cli_cmd = build_cli_command(

@@ -45,17 +45,13 @@ class RecoveryState:
         if not path:
             return
         with self._lock:
-            self._files[path] = FileReadRecord(
-                path=path, content=content, timestamp=time.time()
-            )
+            self._files[path] = FileReadRecord(path=path, content=content, timestamp=time.time())
 
     def record_skill_invocation(self, name: str, body: str) -> None:
         if not name:
             return
         with self._lock:
-            self._skills[name] = SkillInvocationRecord(
-                name=name, body=body, timestamp=time.time()
-            )
+            self._skills[name] = SkillInvocationRecord(name=name, body=body, timestamp=time.time())
 
     def snapshot_files(self, limit: int) -> list[FileReadRecord]:
         with self._lock:
@@ -130,9 +126,7 @@ def build_recovery_attachment(
             ]
             for rec in files:
                 content = _truncate_by_tokens(rec.content, RECOVERY_TOKENS_PER_FILE)
-                ts = time.strftime(
-                    "%Y-%m-%dT%H:%M:%SZ", time.gmtime(rec.timestamp)
-                )
+                ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(rec.timestamp))
                 buf.append(f"### {rec.path}  (read {ts})\n")
                 buf.append("```\n")
                 buf.append(content)

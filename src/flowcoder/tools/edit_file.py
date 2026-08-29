@@ -17,7 +17,9 @@ if TYPE_CHECKING:
 
 class Params(BaseModel):
     file_path: str = Field(description="Path to the file to edit")
-    old_string: str = Field(description="The exact string to find and replace (must be unique in file)")
+    old_string: str = Field(
+        description="The exact string to find and replace (must be unique in file)"
+    )
     new_string: str = Field(description="The replacement string")
 
 
@@ -30,7 +32,6 @@ class EditFile(Tool):
     params_model = Params
     category = "write"
 
-
     def __init__(
         self,
         file_cache: FileCache | None = None,
@@ -42,7 +43,6 @@ class EditFile(Tool):
         self.file_history = file_history
         self._state_cache = file_state_cache
         self._base_dir = base_dir
-
 
     async def execute(self, params: Params) -> ToolResult:
         path = resolve_tool_path(params.file_path, self._base_dir)

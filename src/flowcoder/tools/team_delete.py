@@ -27,11 +27,9 @@ class TeamDeleteTool(Tool):
     category = "command"
     is_concurrency_safe = False
 
-
     def __init__(self, team_manager: TeamManager, parent_agent: Agent | None = None) -> None:
         self._team_manager = team_manager
         self._parent_agent = parent_agent
-
 
     async def execute(self, params: BaseModel) -> ToolResult:
         p: TeamDeleteParams = params  # type: ignore[assignment]
@@ -47,7 +45,7 @@ class TeamDeleteTool(Tool):
 
         coordinator_note = ""
         if self._parent_agent and self._parent_agent.coordinator_mode:
-            full_registry = getattr(self._parent_agent, '_full_registry', None)
+            full_registry = getattr(self._parent_agent, "_full_registry", None)
             if full_registry is not None:
                 self._parent_agent.registry = full_registry
                 self._parent_agent._full_registry = None

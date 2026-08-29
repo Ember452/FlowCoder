@@ -23,9 +23,7 @@ async def test_read_file_respects_offset_and_limit(tmp_path):
     target = tmp_path / "sample.txt"
     target.write_text("one\ntwo\nthree\n", encoding="utf-8")
 
-    result = await ReadFile().execute(
-        ReadFileParams(file_path=str(target), offset=1, limit=1)
-    )
+    result = await ReadFile().execute(ReadFileParams(file_path=str(target), offset=1, limit=1))
 
     assert not result.is_error
     assert result.output == "2\ttwo"
@@ -42,9 +40,7 @@ async def test_file_tools_resolve_relative_paths_from_base_dir(tmp_path, monkeyp
     read_target = work_dir / "sample.txt"
     read_target.write_text("one\ntwo\n", encoding="utf-8")
 
-    read = await ReadFile(base_dir=work_dir).execute(
-        ReadFileParams(file_path="sample.txt")
-    )
+    read = await ReadFile(base_dir=work_dir).execute(ReadFileParams(file_path="sample.txt"))
     assert not read.is_error
     assert read.output == "1\tone\n2\ttwo"
 
@@ -64,15 +60,11 @@ async def test_file_tools_resolve_relative_paths_from_base_dir(tmp_path, monkeyp
     assert not edit.is_error
     assert (work_dir / "nested" / "out.txt").read_text(encoding="utf-8") == "updated"
 
-    grep = await Grep(base_dir=work_dir).execute(
-        GrepParams(pattern="updated", path="nested")
-    )
+    grep = await Grep(base_dir=work_dir).execute(GrepParams(pattern="updated", path="nested"))
     assert not grep.is_error
     assert grep.output == "out.txt:1:updated"
 
-    glob = await Glob(base_dir=work_dir).execute(
-        GlobParams(pattern="**/*.txt", path="nested")
-    )
+    glob = await Glob(base_dir=work_dir).execute(GlobParams(pattern="**/*.txt", path="nested"))
     assert not glob.is_error
     assert glob.output.replace("\\", "/") == "out.txt"
 
@@ -167,9 +159,7 @@ async def test_grep_finds_matches_with_include_filter(tmp_path):
     ignored = tmp_path / "notes.txt"
     ignored.write_text("needle\n", encoding="utf-8")
 
-    result = await Grep().execute(
-        GrepParams(pattern="needle", path=str(tmp_path), include="*.py")
-    )
+    result = await Grep().execute(GrepParams(pattern="needle", path=str(tmp_path), include="*.py"))
 
     assert not result.is_error
     assert result.output == "source.py:1:print('needle')"

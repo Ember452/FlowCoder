@@ -40,9 +40,7 @@ async def authorize_tool_call(
         yield _AuthResult(
             False,
             ToolResult(
-                output=(
-                    f"Error: tool '{tool_call.tool_name}' is disabled in current mode"
-                ),
+                output=(f"Error: tool '{tool_call.tool_name}' is disabled in current mode"),
                 is_error=True,
             ),
         )

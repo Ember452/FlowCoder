@@ -45,16 +45,22 @@ def test_clean_tool_schema_keeps_description_and_schema_fields(tmp_path: Path) -
 def test_clean_tool_schema_rejects_bad_description_or_input_schema(
     tmp_path: Path,
 ) -> None:
-    assert clean_tool_schema(
-        {"name": "bad_description", "description": []},
-        tmp_path / "tool.json",
-        1,
-    ) is None
-    assert clean_tool_schema(
-        {"name": "bad_schema", "description": "bad", "input_schema": []},
-        tmp_path / "tool.json",
-        2,
-    ) is None
+    assert (
+        clean_tool_schema(
+            {"name": "bad_description", "description": []},
+            tmp_path / "tool.json",
+            1,
+        )
+        is None
+    )
+    assert (
+        clean_tool_schema(
+            {"name": "bad_schema", "description": "bad", "input_schema": []},
+            tmp_path / "tool.json",
+            2,
+        )
+        is None
+    )
 
 
 def test_normalize_tool_schemas_accepts_single_object_and_skips_duplicates(

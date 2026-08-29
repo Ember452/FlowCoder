@@ -17,9 +17,7 @@ from flowcoder.tools.agent.messages import (
 
 
 def test_available_agent_names_formats_loader_listing() -> None:
-    assert available_agent_names([("Explore", "desc"), ("Plan", "desc")]) == (
-        "Explore, Plan"
-    )
+    assert available_agent_names([("Explore", "desc"), ("Plan", "desc")]) == ("Explore, Plan")
 
 
 def test_unknown_agent_type_message_uses_configurable_label() -> None:
@@ -77,8 +75,7 @@ def test_teammate_launch_message_contains_runtime_details() -> None:
 
 def test_pane_spawn_failed_message_includes_exception() -> None:
     assert pane_spawn_failed_message(RuntimeError("boom")) == (
-        "Pane spawn failed (boom), teammate not started. "
-        "Retry or set teammate_mode to in-process."
+        "Pane spawn failed (boom), teammate not started. Retry or set teammate_mode to in-process."
     )
 
 

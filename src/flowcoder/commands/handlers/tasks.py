@@ -25,7 +25,6 @@ def _format_status(status: str) -> str:
 
 def create_tasks_handler(task_manager: TaskManager):
 
-
     async def handler(ctx: CommandContext) -> None:
         args = ctx.args.strip()
         parts = args.split(maxsplit=1) if args else []
@@ -64,9 +63,7 @@ def create_tasks_handler(task_manager: TaskManager):
             if task_manager.cancel(task_id):
                 ctx.ui.add_system_message(f"已取消任务: {task_id}")
             else:
-                ctx.ui.add_system_message(
-                    f"无法取消任务: {task_id}（可能不存在或已完成）"
-                )
+                ctx.ui.add_system_message(f"无法取消任务: {task_id}（可能不存在或已完成）")
             return
 
         # 默认：列出所有任务
@@ -78,9 +75,7 @@ def create_tasks_handler(task_manager: TaskManager):
         lines = ["后台任务列表:"]
         for bg in tasks:
             elapsed = _format_elapsed(bg.start_time, bg.end_time)
-            lines.append(
-                f"  [{bg.id}] {bg.name:<20} {_format_status(bg.status):<14} {elapsed}"
-            )
+            lines.append(f"  [{bg.id}] {bg.name:<20} {_format_status(bg.status):<14} {elapsed}")
         ctx.ui.add_system_message("\n".join(lines))
 
     return handler

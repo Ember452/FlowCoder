@@ -57,7 +57,7 @@ SELECTOR_SYSTEM_PROMPT = (
     "already exercising them). DO still select memories containing warnings, "
     "gotchas, or known issues about those tools — active use is exactly when "
     "those matter.\n\n"
-    'Respond with valid JSON only, no markdown, in this exact shape: '
+    "Respond with valid JSON only, no markdown, in this exact shape: "
     '{"selected_memories": ["filename1.md", "filename2.md"]}'
 )
 
@@ -69,20 +69,23 @@ SelectorFn = Callable[[str, str], Awaitable[str]]
 # 数据类
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class MemoryHeader:
     """记忆文件的元信息（从 frontmatter 和文件系统中提取）。"""
-    filename: str      # 相对于 memory_dir 的路径
-    file_path: str     # 绝对路径
-    scope: str         # 作用域："user" 或 "project"
-    mtime_ms: int      # 修改时间（毫秒时间戳）
-    description: str   # frontmatter 中的描述；无则为 ""
-    type: str          # frontmatter 中的类型；无法识别则为 ""
+
+    filename: str  # 相对于 memory_dir 的路径
+    file_path: str  # 绝对路径
+    scope: str  # 作用域："user" 或 "project"
+    mtime_ms: int  # 修改时间（毫秒时间戳）
+    description: str  # frontmatter 中的描述；无则为 ""
+    type: str  # frontmatter 中的类型；无法识别则为 ""
 
 
 @dataclass
 class RelevantMemory:
     """被选择器选中的记忆文件（路径 + 修改时间）。"""
+
     path: str
     mtime_ms: int
 
@@ -90,6 +93,7 @@ class RelevantMemory:
 # ---------------------------------------------------------------------------
 # 记忆时效性辅助函数
 # ---------------------------------------------------------------------------
+
 
 def memory_age_days(mtime_ms: int) -> int:
     """返回记忆文件的年龄（天数，向下取整）。今天为 0，昨天为 1。"""
@@ -126,6 +130,7 @@ def memory_freshness_text(mtime_ms: int) -> str:
 # ---------------------------------------------------------------------------
 # Frontmatter 解析
 # ---------------------------------------------------------------------------
+
 
 def parse_frontmatter(content: str) -> dict[str, str]:
     """从 YAML 风格的 frontmatter 中提取 name / description / type 三个字段。
@@ -165,6 +170,7 @@ def parse_frontmatter(content: str) -> dict[str, str]:
 # 文件扫描
 # ---------------------------------------------------------------------------
 
+
 def scan_memory_files(memory_dir: Path, scope: str) -> list[MemoryHeader]:
     """递归扫描 memory_dir 下的 .md 文件（排除 MEMORY.md），
     读取每个文件的 frontmatter，返回按修改时间降序排列的头部列表，
@@ -194,9 +200,7 @@ def scan_memory_files(memory_dir: Path, scope: str) -> list[MemoryHeader]:
     return results
 
 
-def _read_memory_header(
-    file_path: Path, memory_dir: Path, scope: str
-) -> MemoryHeader | None:
+def _read_memory_header(file_path: Path, memory_dir: Path, scope: str) -> MemoryHeader | None:
     """读取单个记忆文件的头部信息（修改时间 + frontmatter）。
     只读前 FRONTMATTER_MAX_LINES 行以避免读取大文件。
     """
@@ -237,6 +241,7 @@ def _read_memory_header(
 # 清单格式化
 # ---------------------------------------------------------------------------
 
+
 def format_memory_manifest(memories: list[MemoryHeader]) -> str:
     """将记忆头部列表格式化为文本清单，供选择器 LLM 阅读。
 
@@ -248,9 +253,12 @@ def format_memory_manifest(memories: list[MemoryHeader]) -> str:
     for m in memories:
         scope_tag = f"[{m.scope}-scope] " if m.scope else ""
         type_tag = f"[{m.type}] " if m.type else ""
-        ts = datetime.fromtimestamp(
-            m.mtime_ms / 1000, tz=timezone.utc
-        ).strftime("%Y-%m-%dT%H:%M:%S.") + f"{m.mtime_ms % 1000:03d}Z"
+        ts = (
+            datetime.fromtimestamp(m.mtime_ms / 1000, tz=timezone.utc).strftime(
+                "%Y-%m-%dT%H:%M:%S."
+            )
+            + f"{m.mtime_ms % 1000:03d}Z"
+        )
         path = m.file_path if m.file_path else m.filename
         if m.description:
             lines.append(f"- {scope_tag}{type_tag}{path} ({ts}): {m.description}")
@@ -262,6 +270,7 @@ def format_memory_manifest(memories: list[MemoryHeader]) -> str:
 # ---------------------------------------------------------------------------
 # 语义召回
 # ---------------------------------------------------------------------------
+
 
 async def find_relevant_memories(
     query: str,
@@ -292,9 +301,7 @@ async def find_relevant_memories(
     if not candidates:
         return []
 
-    selected_filenames = await _select_relevant_memories(
-        query, candidates, recent_tools, selector
-    )
+    selected_filenames = await _select_relevant_memories(query, candidates, recent_tools, selector)
 
     # Build lookup from both file_path and filename to header.
     by_key: dict[str, MemoryHeader] = {}
@@ -365,6 +372,7 @@ def _extract_json_object(raw: str) -> str:
 # ---------------------------------------------------------------------------
 # 提醒渲染
 # ---------------------------------------------------------------------------
+
 
 def render_reminder(memories: list[RelevantMemory]) -> str:
     """读取每个选中记忆文件的完整内容，格式化为 system-reminder 文本。

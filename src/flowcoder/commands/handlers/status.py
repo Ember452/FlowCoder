@@ -28,14 +28,14 @@ async def handle_status(ctx: CommandContext) -> None:
     lines.append(f"Token: {input_tokens:,} / {context_window:,}（{pct}%）")
 
     if ctx.agent:
-        enabled = [t for t in ctx.agent.registry.list_tools()
-                   if ctx.agent.registry.is_enabled(t.name)]
+        enabled = [
+            t for t in ctx.agent.registry.list_tools() if ctx.agent.registry.is_enabled(t.name)
+        ]
         lines.append(f"工具: {len(enabled)} 个已启用")
-
 
     if ctx.memory_manager:
         content = ctx.memory_manager.load()
-        mem_lines = [l for l in content.split("\n") if l.strip().startswith("- ")]
+        mem_lines = [line for line in content.split("\n") if line.strip().startswith("- ")]
         lines.append(f"记忆: {len(mem_lines)} 条")
 
     work_dir = ctx.agent.work_dir if ctx.agent else os.getcwd()
@@ -53,4 +53,3 @@ STATUS_COMMAND = Command(
     type=CommandType.LOCAL,
     handler=handle_status,
 )
-

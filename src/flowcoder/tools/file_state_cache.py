@@ -41,7 +41,10 @@ class FileStateCache:
             return True, ""
 
         if current_mtime_ns != cached_mtime_ns:
-            return False, "Error: file has been modified since last read. Read it again before editing."
+            return (
+                False,
+                "Error: file has been modified since last read. Read it again before editing.",
+            )
 
         return True, ""
 

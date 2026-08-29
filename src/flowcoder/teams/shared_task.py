@@ -40,7 +40,6 @@ class SharedTask:
     blocked_by: list[str] = field(default_factory=list)
     created_by: str = ""
 
-
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
@@ -51,8 +50,7 @@ class SharedTask:
         status = _task_string_field(data, "status", default="pending")
         if status not in VALID_TASK_STATUSES:
             raise ValueError(
-                f"task.status must be one of: "
-                f"{', '.join(sorted(VALID_TASK_STATUSES))}"
+                f"task.status must be one of: {', '.join(sorted(VALID_TASK_STATUSES))}"
             )
         return cls(
             id=_task_string_field(data, "id", required=True),
@@ -67,8 +65,6 @@ class SharedTask:
 
 
 class SharedTaskStore:
-
-
     def __init__(self, path: str | Path) -> None:
         self._path = Path(path)
         self._next_id = 1
@@ -99,11 +95,7 @@ class SharedTaskStore:
                 max_numeric_id = max(max_numeric_id, int(task.id))
 
         raw_next_id = data.get("next_id", max_numeric_id + 1)
-        if (
-            isinstance(raw_next_id, int)
-            and not isinstance(raw_next_id, bool)
-            and raw_next_id > 0
-        ):
+        if isinstance(raw_next_id, int) and not isinstance(raw_next_id, bool) and raw_next_id > 0:
             self._next_id = max(raw_next_id, max_numeric_id + 1)
         else:
             self._next_id = max(1, max_numeric_id + 1)
@@ -145,7 +137,6 @@ class SharedTaskStore:
         self._load()
         return self._tasks.get(task_id)
 
-
     def list_tasks(
         self,
         status: str | None = None,
@@ -158,7 +149,6 @@ class SharedTaskStore:
         if assignee:
             result = [t for t in result if t.assignee == assignee]
         return result
-
 
     def update(
         self,
@@ -175,9 +165,7 @@ class SharedTaskStore:
             return None
         if status is not None:
             if status not in VALID_TASK_STATUSES:
-                raise ValueError(
-                    f"status must be one of: {', '.join(sorted(VALID_TASK_STATUSES))}"
-                )
+                raise ValueError(f"status must be one of: {', '.join(sorted(VALID_TASK_STATUSES))}")
             task.status = status
         if assignee is not None:
             task.assignee = assignee

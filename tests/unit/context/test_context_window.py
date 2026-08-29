@@ -41,6 +41,7 @@ def _provider(**overrides) -> ProviderConfig:
 # 第 1 层 —— 配置中提供的值优先级最高
 # ---------------------------------------------------------------------------
 
+
 class TestConfigPriority:
     def test_explicit_config_wins_over_mapping_table(self):
         # claude 默认映射到 200000，但显式配置的 window 必须覆盖它。
@@ -62,6 +63,7 @@ class TestConfigPriority:
 # ---------------------------------------------------------------------------
 # 第 3 层 —— 内置映射表，对每类模型做子串匹配
 # ---------------------------------------------------------------------------
+
 
 class TestMappingTable:
     def test_validator_reexports_model_context_policy(self):
@@ -106,6 +108,7 @@ class TestMappingTable:
 # 第 4 层 —— 保守默认值
 # ---------------------------------------------------------------------------
 
+
 class TestDefaults:
     def test_claude_default(self):
         # 没有其它线索的 claude 名称会命中 "claude" 映射表项。
@@ -118,6 +121,7 @@ class TestDefaults:
 # ---------------------------------------------------------------------------
 # 第 2 层 —— 自动获取 + 缓存 + 优雅降级
 # ---------------------------------------------------------------------------
+
 
 class TestAutoFetch:
     @pytest.mark.asyncio
@@ -147,9 +151,7 @@ class TestAutoFetch:
     async def test_fetch_raises_degrades_to_mapping_table(self):
         p = _provider(model="claude-sonnet-4-6")
         fake = AsyncMock()
-        fake.fetch_model_context_window = AsyncMock(
-            side_effect=RuntimeError("boom")
-        )
+        fake.fetch_model_context_window = AsyncMock(side_effect=RuntimeError("boom"))
         with patch("flowcoder.client.core.create_client", return_value=fake):
             # 不应抛出异常。
             await resolve_context_window(p)
@@ -209,6 +211,7 @@ class TestAutoFetch:
 # ---------------------------------------------------------------------------
 # Validator —— 未设置的 context_window 保持为 0（表示「未设置」），并校验取值
 # ---------------------------------------------------------------------------
+
 
 class TestValidator:
     def test_unset_context_window_defaults_to_zero(self):

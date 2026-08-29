@@ -24,8 +24,6 @@ PLUGIN_AGENTS_DIR = "agents"
 
 
 class AgentLoader:
-
-
     def __init__(
         self,
         work_dir: str,
@@ -38,7 +36,6 @@ class AgentLoader:
         self._plugin_sources: list[Path] = []
         for source in plugin_sources or []:
             self.register_plugin_source(source)
-
 
     def _scan_directory(self, path: Path, source: str) -> list[AgentDef]:
         results: list[AgentDef] = []
@@ -80,7 +77,6 @@ class AgentLoader:
             if agent_def.agent_type not in seen:
                 seen[agent_def.agent_type] = agent_def
 
-
     def _load_builtins(self) -> list[AgentDef]:
         results: list[AgentDef] = []
         try:
@@ -102,10 +98,7 @@ class AgentLoader:
                     source="builtin",
                 )
 
-                if (
-                    agent_def.agent_type == "Verification"
-                    and not self._enable_verification
-                ):
+                if agent_def.agent_type == "Verification" and not self._enable_verification:
                     continue
 
                 results.append(agent_def)
@@ -134,7 +127,6 @@ class AgentLoader:
         self._agents = seen
         return seen
 
-
     def get(self, agent_type: str) -> AgentDef | None:
         cached = self._agents.get(agent_type)
         if cached is None:
@@ -155,11 +147,8 @@ class AgentLoader:
                 )
         return cached
 
-
     def list_agents(self) -> list[tuple[str, str]]:
-        return [
-            (ad.agent_type, ad.when_to_use) for ad in self._agents.values()
-        ]
+        return [(ad.agent_type, ad.when_to_use) for ad in self._agents.values()]
 
     def register_plugin_source(self, path: str | Path) -> None:
         normalized = Path(path).expanduser()

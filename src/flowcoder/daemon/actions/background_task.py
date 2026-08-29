@@ -20,12 +20,7 @@ async def list_session_background_tasks(
         return error
     assert deps is not None
     return DaemonActionResult(
-        {
-            "tasks": [
-                task_to_dict(task)
-                for task in deps.task_manager.list_tasks()
-            ]
-        }
+        {"tasks": [task_to_dict(task) for task in deps.task_manager.list_tasks()]}
     )
 
 

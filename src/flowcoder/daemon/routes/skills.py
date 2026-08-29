@@ -153,6 +153,7 @@ async def delete_skill(request: Request) -> JSONResponse:
         skill_path.unlink()
     elif skill_path.is_dir():
         import shutil
+
         shutil.rmtree(skill_path)
 
     return JSONResponse({"name": name, "deleted": True})

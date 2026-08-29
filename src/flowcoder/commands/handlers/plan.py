@@ -20,4 +20,3 @@ PLAN_COMMAND = Command(
     type=CommandType.LOCAL_UI,
     handler=handle_plan,
 )
-

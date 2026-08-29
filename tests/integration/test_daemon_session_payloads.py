@@ -47,9 +47,7 @@ def test_parse_permission_resolution_body_defaults_to_deny() -> None:
 
 
 def test_parse_askuser_resolution_body_preserves_string_answers() -> None:
-    body = parse_askuser_resolution_body(
-        {"request_id": "ask-1", "answers": {"choice": "yes"}}
-    )
+    body = parse_askuser_resolution_body({"request_id": "ask-1", "answers": {"choice": "yes"}})
 
     assert body == AskUserResolutionBody(
         request_id="ask-1",

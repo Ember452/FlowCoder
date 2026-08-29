@@ -86,9 +86,7 @@ def handle_output_token_limit(
                 max_tokens_escalated=True,
                 output_recoveries=output_recoveries,
             ),
-            RetryEvent(
-                reason=f"max_tokens recovery {output_recoveries}/{max_recoveries}"
-            ),
+            RetryEvent(reason=f"max_tokens recovery {output_recoveries}/{max_recoveries}"),
         )
 
     return OutputRecoveryDecision(state)

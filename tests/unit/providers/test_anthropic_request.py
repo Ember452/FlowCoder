@@ -96,10 +96,7 @@ def test_build_anthropic_request_kwargs_applies_cache_and_thinking_policy() -> N
     assert kwargs["model"] == "claude-sonnet-4-6"
     assert kwargs["max_tokens"] == 4096
     assert kwargs["messages"] is messages
-    assert (
-        kwargs["messages"][0]["content"][0]["cache_control"]
-        == EPHEMERAL_CACHE_CONTROL
-    )
+    assert kwargs["messages"][0]["content"][0]["cache_control"] == EPHEMERAL_CACHE_CONTROL
     assert kwargs["system"][0]["cache_control"] == EPHEMERAL_CACHE_CONTROL
     assert kwargs["tools"][0]["cache_control"] == EPHEMERAL_CACHE_CONTROL
     assert "cache_control" not in tools[0]

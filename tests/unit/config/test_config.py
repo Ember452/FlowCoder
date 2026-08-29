@@ -32,9 +32,7 @@ def _write_config(path: Path, extra: str = "", provider_name: str = "test") -> N
     )
 
 
-def test_project_config_can_explicitly_disable_home_booleans(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_project_config_can_explicitly_disable_home_booleans(tmp_path: Path, monkeypatch) -> None:
     home = tmp_path / "home"
     project = tmp_path / "project"
 
@@ -70,9 +68,7 @@ def test_project_config_can_explicitly_disable_home_booleans(
     assert cfg.enable_coordinator_mode is False
 
 
-def test_project_config_without_team_fields_keeps_home_values(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_project_config_without_team_fields_keeps_home_values(tmp_path: Path, monkeypatch) -> None:
     home = tmp_path / "home"
     project = tmp_path / "project"
 
@@ -100,9 +96,7 @@ def test_project_config_without_team_fields_keeps_home_values(
     assert cfg.enable_coordinator_mode is True
 
 
-def test_project_worktree_config_overrides_home_worktree(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_project_worktree_config_overrides_home_worktree(tmp_path: Path, monkeypatch) -> None:
     home = tmp_path / "home"
     project = tmp_path / "project"
 
@@ -142,10 +136,7 @@ def test_local_config_can_override_without_redeclaring_providers(
 
     _write_config(
         project / ".flowcoder" / "config.yaml",
-        "permission_mode: default\n"
-        "mcp_servers:\n"
-        "  - name: local-tools\n"
-        "    command: old-command\n",
+        "permission_mode: default\nmcp_servers:\n  - name: local-tools\n    command: old-command\n",
         provider_name="project",
     )
     (project / ".flowcoder" / "config.local.yaml").write_text(
@@ -171,9 +162,7 @@ def test_local_config_can_override_without_redeclaring_providers(
     assert cfg.memory.enabled is False
 
 
-def test_merged_config_still_requires_at_least_one_provider(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_merged_config_still_requires_at_least_one_provider(tmp_path: Path, monkeypatch) -> None:
     project = tmp_path / "project"
     local_config = project / ".flowcoder" / "config.local.yaml"
     local_config.parent.mkdir(parents=True, exist_ok=True)
@@ -221,9 +210,7 @@ def test_removed_route_guard_rejects_product_surfaces() -> None:
 
 
 @pytest.mark.parametrize("section", sorted(REMOVED_CONFIG_SECTIONS))
-def test_removed_gui_cloud_bot_config_sections_are_rejected(
-    tmp_path: Path, section: str
-) -> None:
+def test_removed_gui_cloud_bot_config_sections_are_rejected(tmp_path: Path, section: str) -> None:
     config_path = tmp_path / "config.yaml"
     _write_config(config_path, f"{section}:\n  enabled: true\n")
 

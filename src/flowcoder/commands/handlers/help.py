@@ -48,4 +48,3 @@ HELP_COMMAND = Command(
     type=CommandType.LOCAL,
     handler=handle_help,
 )
-

@@ -24,6 +24,7 @@ MEMORY_EVENT_SESSION_END = "session_end"
 @dataclass
 class MemoryScope:
     """记忆操作的上下文范围信息（查询内容 / 会话 / 用户 / 项目根目录等）。"""
+
     query: str = ""
     session_id: str = ""
     user_id: str = ""
@@ -36,19 +37,21 @@ class MemoryScope:
 class MemoryEvent:
     """记忆事件：Agent 循环中发生的事件（如轮次完成 / 轮次提交 / 会话结束），
     传递给 Provider 的 observe() 方法进行观察处理。"""
-    type: str       # 事件类型（对应上面的 3 个常量）
+
+    type: str  # 事件类型（对应上面的 3 个常量）
     source: str = ""
     session_id: str = ""
     query: str = ""
     conversation: Any = None  # ConversationManager 引用
-    client: Any = None         # LLM 客户端引用（提取记忆时需要）
-    protocol: str = ""         # LLM 协议名
+    client: Any = None  # LLM 客户端引用（提取记忆时需要）
+    protocol: str = ""  # LLM 协议名
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class MemoryItem:
     """单条记忆项（内容 + 作用域 + 元数据）。"""
+
     content: str
     scope: str = "project"  # 作用域："user" / "project"
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -60,30 +63,24 @@ class MemoryProvider(Protocol):
     所有方法都是 async 的，Hub 会通过 asyncio.wait_for 加超时保护。
     内置实现：MarkdownMemoryProvider。可扩展为向量数据库等后端。
     """
-    name: str      # Provider 名称
-    kind: str       # Provider 类型标识
-    version: str   # 版本号
 
-    async def initialize(self) -> None:
-        ...
+    name: str  # Provider 名称
+    kind: str  # Provider 类型标识
+    version: str  # 版本号
 
-    async def load_context(self, query: str, scope: MemoryScope) -> str:
-        ...
+    async def initialize(self) -> None: ...
 
-    async def observe(self, event: MemoryEvent) -> None:
-        ...
+    async def load_context(self, query: str, scope: MemoryScope) -> str: ...
 
-    async def search(self, query: str, limit: int = 5) -> list[MemoryItem]:
-        ...
+    async def observe(self, event: MemoryEvent) -> None: ...
 
-    async def write(self, item: MemoryItem) -> None:
-        ...
+    async def search(self, query: str, limit: int = 5) -> list[MemoryItem]: ...
 
-    async def clear(self, scope: MemoryScope | None = None) -> None:
-        ...
+    async def write(self, item: MemoryItem) -> None: ...
 
-    async def shutdown(self) -> None:
-        ...
+    async def clear(self, scope: MemoryScope | None = None) -> None: ...
+
+    async def shutdown(self) -> None: ...
 
 
 class BaseMemoryProvider:
@@ -92,6 +89,7 @@ class BaseMemoryProvider:
     自定义 Provider 继承此类后，只需实现需要的方法（如 load_context / observe），
     其余方法保持空实现即可。
     """
+
     name = "base"
     kind = "base"
     version = "1.0"

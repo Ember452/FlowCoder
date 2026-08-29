@@ -28,6 +28,7 @@ log = logging.getLogger(__name__)
 @dataclass
 class MemoryProviderStatus:
     """Provider 状态信息（用于 status() 报告）。"""
+
     name: str
     kind: str
     version: str
@@ -49,9 +50,10 @@ class MemoryHub:
     错误隔离：单个 Provider 失败不会影响其他 Provider，错误记录在 _errors 中。
     超时保护：load_timeout=3s / observe_timeout=10s，防止 Provider 卡死。
     """
+
     providers: list[MemoryProvider] = field(default_factory=list)
-    load_timeout: float = 3.0    # 加载上下文的超时时间
-    observe_timeout: float = 10.0 # 观察事件的超时时间
+    load_timeout: float = 3.0  # 加载上下文的超时时间
+    observe_timeout: float = 10.0  # 观察事件的超时时间
     _errors: dict[str, str] = field(default_factory=dict)  # Provider 错误记录
     _initialized: bool = False
 
@@ -183,4 +185,5 @@ class MemoryHub:
 
     @staticmethod
     def _provider_key(provider: MemoryProvider) -> str:
+        """定义provider的name"""
         return getattr(provider, "name", provider.__class__.__name__)

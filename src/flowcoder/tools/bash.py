@@ -16,14 +16,14 @@ MAX_TIMEOUT = 600
 # 这些命令的 exit code 1 不代表错误，只有 >= 阈值才算真正的错误
 # 例如 grep 返回 1 仅表示"没有匹配行"，不是执行出错
 _COMMAND_ERROR_THRESHOLDS: dict[str, int] = {
-    "grep": 2,   # exit 1 = 没有匹配到内容
+    "grep": 2,  # exit 1 = 没有匹配到内容
     "egrep": 2,
     "fgrep": 2,
-    "rg": 2,     # ripgrep，与 grep 语义一致
-    "diff": 2,   # exit 1 = 文件内容有差异
-    "find": 2,   # exit 1 = 部分成功（如权限不足跳过某些目录）
-    "test": 2,   # exit 1 = 条件为假
-    "[": 2,      # test 的别名形式
+    "rg": 2,  # ripgrep，与 grep 语义一致
+    "diff": 2,  # exit 1 = 文件内容有差异
+    "find": 2,  # exit 1 = 部分成功（如权限不足跳过某些目录）
+    "test": 2,  # exit 1 = 条件为假
+    "[": 2,  # test 的别名形式
 }
 
 
@@ -85,7 +85,6 @@ class Bash(Tool):
     params_model = Params
     category = "command"
 
-
     async def execute(self, params: Params) -> ToolResult:
         timeout = min(params.timeout, MAX_TIMEOUT)
 
@@ -116,4 +115,3 @@ class Bash(Tool):
             output=output,
             is_error=_interpret_exit_code(params.command, proc.returncode or 0),
         )
-

@@ -11,7 +11,7 @@ import os
 import random
 import time as _time
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -19,6 +19,11 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.message import Message as TMessage
 from textual.widgets import Markdown, OptionList, Static, TextArea
 from textual.widgets.option_list import Option
+
+if TYPE_CHECKING:
+    from flowcoder.ui.askuser_dialog import InlineAskUserWidget
+    from flowcoder.ui.permission_dialog import InlinePermissionWidget
+    from flowcoder.ui.plan_dialog import InlinePlanWidget
 
 from flowcoder.agent import (
     Agent,
@@ -29,7 +34,6 @@ from flowcoder.agent import (
     HookEvent,
     LoopComplete,
     PermissionRequest,
-    PermissionResponse,
     RetryEvent,
     StreamText,
     ThinkingText,
@@ -54,7 +58,7 @@ from flowcoder.commands import (
 from flowcoder.commands.completion import CompletionPopup
 from flowcoder.commands.handlers import register_all_commands
 from flowcoder.config import MCPServerConfig, ProviderConfig
-from flowcoder.hooks import HookContext, HookEngine, load_hooks
+from flowcoder.hooks import HookContext, HookEngine
 from flowcoder.conversation import ConversationManager, Message
 from flowcoder.mcp import MCPManager
 from flowcoder.memory import (
@@ -139,6 +143,7 @@ def expand_at_refs(text: str, work_dir: str) -> str:
             return f"[File: {rel_path}]\n```\n{content}\n```"
         except Exception:
             return m.group(0)
+
     return _AT_REF_RE.sub(_replace, text)
 
 
@@ -176,7 +181,7 @@ class ChatInput(TextArea):
         if self._history_file.exists():
             try:
                 lines = self._history_file.read_text(encoding="utf-8").splitlines()
-                self._history = [l for l in lines if l.strip()]
+                self._history = [line for line in lines if line.strip()]
             except Exception:
                 pass
 
@@ -298,7 +303,7 @@ class ChatInput(TextArea):
         at_idx = text.rfind("@")
         if at_idx < 0:
             return
-        after = text[at_idx + 1:]
+        after = text[at_idx + 1 :]
         if " " in after or "\n" in after:
             return
         if after:
@@ -362,7 +367,6 @@ def _format_detail(tool_name: str, arguments: dict[str, Any], output: str) -> st
 
 
 class ToolCallBlock(Static, can_focus=True):
-
     def __init__(self, tool_name: str, arguments: dict[str, Any], **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.tool_name = tool_name
@@ -444,33 +448,114 @@ def _to_past_tense(verb: str) -> str:
 
 
 THINKING_VERBS = [
-    "Accomplishing", "Architecting", "Baking", "Beboppin'", "Befuddling",
-    "Bloviating", "Boogieing", "Boondoggling", "Bootstrapping", "Brewing",
-    "Calculating", "Canoodling", "Caramelizing", "Cascading", "Cerebrating",
-    "Choreographing", "Churning", "Coalescing", "Cogitating", "Combobulating",
-    "Composing", "Computing", "Concocting", "Considering", "Contemplating",
-    "Cooking", "Crafting", "Creating", "Crunching", "Crystallizing",
-    "Cultivating", "Deciphering", "Deliberating", "Dilly-dallying",
-    "Discombobulating", "Doodling", "Elucidating", "Enchanting", "Envisioning",
-    "Fermenting", "Finagling", "Flambéing", "Flibbertigibbeting", "Flummoxing",
-    "Forging", "Frolicking", "Gallivanting", "Garnishing", "Generating",
-    "Germinating", "Grooving", "Harmonizing", "Hatching", "Honking",
-    "Hullaballooing", "Ideating", "Imagining", "Improvising", "Incubating",
-    "Inferring", "Infusing", "Kneading", "Lollygagging", "Manifesting",
-    "Marinating", "Meandering", "Metamorphosing", "Mewing", "Moonwalking",
-    "Moseying", "Mulling", "Musing", "Noodling", "Orbiting",
-    "Orchestrating", "Percolating", "Philosophising", "Pondering",
-    "Pontificating", "Pouncing", "Purring", "Puzzling", "Razzle-dazzling",
-    "Ruminating", "Scampering", "Simmering", "Sketching", "Spelunking",
-    "Spinning", "Sprouting", "Synthesizing", "Thinking", "Tinkering",
-    "Transfiguring", "Transmuting", "Undulating", "Unfurling", "Unravelling",
-    "Vibing", "Wandering", "Whisking", "Working", "Wrangling", "Zigzagging",
+    "Accomplishing",
+    "Architecting",
+    "Baking",
+    "Beboppin'",
+    "Befuddling",
+    "Bloviating",
+    "Boogieing",
+    "Boondoggling",
+    "Bootstrapping",
+    "Brewing",
+    "Calculating",
+    "Canoodling",
+    "Caramelizing",
+    "Cascading",
+    "Cerebrating",
+    "Choreographing",
+    "Churning",
+    "Coalescing",
+    "Cogitating",
+    "Combobulating",
+    "Composing",
+    "Computing",
+    "Concocting",
+    "Considering",
+    "Contemplating",
+    "Cooking",
+    "Crafting",
+    "Creating",
+    "Crunching",
+    "Crystallizing",
+    "Cultivating",
+    "Deciphering",
+    "Deliberating",
+    "Dilly-dallying",
+    "Discombobulating",
+    "Doodling",
+    "Elucidating",
+    "Enchanting",
+    "Envisioning",
+    "Fermenting",
+    "Finagling",
+    "Flambéing",
+    "Flibbertigibbeting",
+    "Flummoxing",
+    "Forging",
+    "Frolicking",
+    "Gallivanting",
+    "Garnishing",
+    "Generating",
+    "Germinating",
+    "Grooving",
+    "Harmonizing",
+    "Hatching",
+    "Honking",
+    "Hullaballooing",
+    "Ideating",
+    "Imagining",
+    "Improvising",
+    "Incubating",
+    "Inferring",
+    "Infusing",
+    "Kneading",
+    "Lollygagging",
+    "Manifesting",
+    "Marinating",
+    "Meandering",
+    "Metamorphosing",
+    "Mewing",
+    "Moonwalking",
+    "Moseying",
+    "Mulling",
+    "Musing",
+    "Noodling",
+    "Orbiting",
+    "Orchestrating",
+    "Percolating",
+    "Philosophising",
+    "Pondering",
+    "Pontificating",
+    "Pouncing",
+    "Purring",
+    "Puzzling",
+    "Razzle-dazzling",
+    "Ruminating",
+    "Scampering",
+    "Simmering",
+    "Sketching",
+    "Spelunking",
+    "Spinning",
+    "Sprouting",
+    "Synthesizing",
+    "Thinking",
+    "Tinkering",
+    "Transfiguring",
+    "Transmuting",
+    "Undulating",
+    "Unfurling",
+    "Unravelling",
+    "Vibing",
+    "Wandering",
+    "Whisking",
+    "Working",
+    "Wrangling",
+    "Zigzagging",
 ]  # 共 105 个动词，与 Go 版 internal/tui/verbs.go 完全一致
 
 
 class ToolGroupSummary(Static, can_focus=True):
-
-
     def __init__(self, count: int, total_elapsed: float, **kwargs: Any) -> None:
         label = f"● Done ({count} tool uses · {total_elapsed:.1f}s)  (ctrl+o to expand)"
         super().__init__(label, **kwargs)
@@ -483,21 +568,18 @@ class ToolGroupSummary(Static, can_focus=True):
             self.update(f"▼ Done ({self._count} tool uses · {self._total:.1f}s)")
         else:
             self.update(
-                f"● Done ({self._count} tool uses · {self._total:.1f}s)"
-                "  (ctrl+o to expand)"
+                f"● Done ({self._count} tool uses · {self._total:.1f}s)  (ctrl+o to expand)"
             )
 
     def toggle(self) -> None:
         self._expanded = not self._expanded
         self._refresh_display()
 
-
     def on_click(self) -> None:
         self.toggle()
 
 
 class SubAgentBlock(Static, can_focus=True):
-
     def __init__(self, agent_type: str, description: str, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._agent_type = agent_type or "agent"
@@ -524,6 +606,7 @@ class SubAgentBlock(Static, can_focus=True):
 
     def _parse_stats(self, output: str) -> None:
         import re
+
         m = re.search(r"(\d+)\s+tool", output[:200])
         if m:
             self._tool_count = int(m.group(1))
@@ -571,7 +654,6 @@ class FlowCoderApp(App):
         Binding("shift+tab", "cycle_mode", "Cycle mode", priority=True),
         Binding("ctrl+o", "toggle_tool_blocks", "Toggle tools", priority=True),
     ]
-
 
     def __init__(
         self,
@@ -658,10 +740,7 @@ class FlowCoderApp(App):
             with Vertical(id="provider-select"):
                 yield Static("Select a Provider", id="select-label")
                 yield OptionList(
-                    *[
-                        Option(f"{p.name}  [{p.model}]", id=p.name)
-                        for p in self.providers
-                    ],
+                    *[Option(f"{p.name}  [{p.model}]", id=p.name) for p in self.providers],
                     id="provider-list",
                 )
         yield VerticalScroll(id="chat-area")
@@ -715,6 +794,7 @@ class FlowCoderApp(App):
         self.session = self.session_manager.create()
 
         from flowcoder.filehistory import FileHistory
+
         self.file_history = FileHistory(work_dir, self.session.session_id)
         for tool in self.registry.list_tools():
             if hasattr(tool, "file_history"):
@@ -724,12 +804,11 @@ class FlowCoderApp(App):
         self.registry.register(load_skill_tool)
         self._load_skill_tool = load_skill_tool
 
-        self.registry.register(
-            ToolSearchTool(self.registry, protocol=provider.protocol)
-        )
+        self.registry.register(ToolSearchTool(self.registry, protocol=provider.protocol))
         self.registry.register(AskUserTool())
 
         from flowcoder.tools.exit_plan_mode import ExitPlanModeTool
+
         self._exit_plan_tool = ExitPlanModeTool()
         self.registry.register(self._exit_plan_tool)
 
@@ -754,9 +833,7 @@ class FlowCoderApp(App):
         # Layer 2: 在后台异步拉取模型的 context window，不阻塞启动流程。
         # agent 已经有一个同步解析的窗口值（来自配置 / 映射表 / 默认值）；
         # 如果异步拉取成功，就原地升级为更准确的值。
-        self.run_worker(
-            self._resolve_context_window(provider), exclusive=False
-        )
+        self.run_worker(self._resolve_context_window(provider), exclusive=False)
 
         self.skill_loader = SkillLoader(work_dir)
         self.skill_loader.load_all()
@@ -779,17 +856,14 @@ class FlowCoderApp(App):
             for name, desc in catalog:
                 lines.append(f"- {name}: {desc}")
             lines.append("")
-            lines.append(
-                "If the user's request matches a Skill, call LoadSkill to activate it."
-            )
+            lines.append("If the user's request matches a Skill, call LoadSkill to activate it.")
             self.agent.set_skill_catalog("\n".join(lines))
 
-        register_skill_commands(
-            self.command_registry, self.skill_loader, self.skill_executor
-        )
+        register_skill_commands(self.command_registry, self.skill_loader, self.skill_executor)
 
         # --- Worktree 系统初始化 ---
         from flowcoder.config import WorktreeConfig
+
         wt_cfg = self._worktree_config or WorktreeConfig()
         self.worktree_manager = WorktreeManager(
             repo_root=work_dir,
@@ -804,6 +878,7 @@ class FlowCoderApp(App):
 
         from flowcoder.tools.enter_worktree import EnterWorktreeTool
         from flowcoder.tools.exit_worktree import ExitWorktreeTool
+
         self.registry.register(EnterWorktreeTool(worktree_manager=self.worktree_manager))
         self.registry.register(ExitWorktreeTool(worktree_manager=self.worktree_manager))
 
@@ -826,7 +901,9 @@ class FlowCoderApp(App):
         from flowcoder.tools.team_create import TeamCreateTool
         from flowcoder.tools.team_delete import TeamDeleteTool
 
-        self.team_manager = TeamManager(worktree_manager=self.worktree_manager, trace_manager=self.trace_manager)
+        self.team_manager = TeamManager(
+            worktree_manager=self.worktree_manager, trace_manager=self.trace_manager
+        )
 
         agent_tool = AgentTool(
             agent_loader=self.agent_loader,
@@ -885,6 +962,7 @@ class FlowCoderApp(App):
         self.command_registry.register_sync(tasks_cmd)
 
         from flowcoder.commands.handlers.trace import create_trace_command
+
         trace_cmd = create_trace_command(self.trace_manager, self.agent.agent_id)
         self.command_registry.register_sync(trace_cmd)
 
@@ -896,9 +974,7 @@ class FlowCoderApp(App):
 
         if self.hook_engine:
             asyncio.ensure_future(
-                self.hook_engine.run_hooks(
-                    "startup", HookContext(event_name="startup")
-                )
+                self.hook_engine.run_hooks("startup", HookContext(event_name="startup"))
             )
 
         if self._mcp_server_configs:
@@ -906,9 +982,7 @@ class FlowCoderApp(App):
 
         self.query_one("#model-label", Static).update(provider.model)
         work_dir = os.getcwd()
-        self.query_one("#title-bar", Static).update(
-            self._make_banner(provider.model, work_dir)
-        )
+        self.query_one("#title-bar", Static).update(self._make_banner(provider.model, work_dir))
         self._update_mode_label()
 
         select = self.query("#provider-select")
@@ -921,9 +995,7 @@ class FlowCoderApp(App):
         chat_input.load_history(work_dir)
         chat_input.focus()
 
-        self._notification_check_task = asyncio.create_task(
-            self._start_notification_polling()
-        )
+        self._notification_check_task = asyncio.create_task(self._start_notification_polling())
 
     async def _resolve_context_window(self, provider: ProviderConfig) -> None:
         """Layer 2 后台 worker：异步拉取模型的 context window，
@@ -975,7 +1047,6 @@ class FlowCoderApp(App):
     # -----------------------------------------------------------------
     # 命令分发
     # -----------------------------------------------------------------
-
 
     def _build_command_context(self, args: str) -> CommandContext:
         return CommandContext(
@@ -1145,7 +1216,6 @@ class FlowCoderApp(App):
                 block._render_expanded()
 
         for summary in self.query(ToolGroupSummary):
-            was_expanded = summary._expanded
             summary.toggle()
             parent = summary.parent
             if parent:
@@ -1166,13 +1236,13 @@ class FlowCoderApp(App):
             return
         if self._agent_task and not self._agent_task.done():
             if self._subagent_task and not self._subagent_task.done():
-                task_id = self.task_manager.adopt_running(
-                    self._subagent_task, "background task"
-                ) if hasattr(self.task_manager, 'adopt_running') else None
+                task_id = (
+                    self.task_manager.adopt_running(self._subagent_task, "background task")
+                    if hasattr(self.task_manager, "adopt_running")
+                    else None
+                )
                 if task_id:
-                    self._show_system_message(
-                        f"Task moved to background (id: {task_id})"
-                    )
+                    self._show_system_message(f"Task moved to background (id: {task_id})")
                     return
             self._agent_task.cancel()
 
@@ -1235,14 +1305,15 @@ class FlowCoderApp(App):
             text = expand_at_refs(text, self.agent.work_dir)
 
         # Start memory recall prefetch before UI work.
-        prefetch_task = asyncio.create_task(
-            self._prefetch_relevant_memories(text)
-        ) if text else None
+        prefetch_task = (
+            asyncio.create_task(self._prefetch_relevant_memories(text)) if text else None
+        )
 
         if text:
             user_row = Vertical(classes="user-row")
             await chat.mount(user_row)
             from rich.text import Text as RichText
+
             user_rich = RichText()
             user_rich.append("❯ ", style="bold color(80)")
             user_rich.append(text, style="bold color(255)")
@@ -1311,6 +1382,7 @@ class FlowCoderApp(App):
                         await ai_row.mount(streaming_label)
                     accumulated_text += event.text
                     from rich.text import Text as RichText
+
                     t = RichText()
                     t.append("● ", style="bold color(99)")
                     t.append(accumulated_text)
@@ -1325,6 +1397,7 @@ class FlowCoderApp(App):
                         if streaming_label is not None:
                             await streaming_label.remove()
                         from rich.text import Text as RichText
+
                         prefix = Static(RichText("●  ", style="bold color(99)"), classes="message")
                         await ai_row.mount(prefix)
                         md = Markdown(accumulated_text, classes="message ai-message")
@@ -1370,7 +1443,8 @@ class FlowCoderApp(App):
                         history_cursor = len(self.conversation.history)
 
                     collapsible = [
-                        (tid, blk) for tid, blk in tool_blocks.items()
+                        (tid, blk)
+                        for tid, blk in tool_blocks.items()
                         if isinstance(blk, ToolCallBlock)
                         and blk.tool_name in COLLAPSIBLE_TOOLS
                         and not blk._loading
@@ -1378,7 +1452,8 @@ class FlowCoderApp(App):
                     if len(collapsible) >= 2:
                         total_elapsed = sum(b._elapsed for _, b in collapsible)
                         summary = ToolGroupSummary(
-                            len(collapsible), total_elapsed,
+                            len(collapsible),
+                            total_elapsed,
                             classes="tool-block tool-group-summary",
                         )
                         for _, blk in collapsible:
@@ -1398,9 +1473,7 @@ class FlowCoderApp(App):
 
                 elif isinstance(event, HookEvent):
                     status = "✓" if event.success else "✗"
-                    self._show_system_message(
-                        f"Hook [{event.hook_id}] {status} {event.output}"
-                    )
+                    self._show_system_message(f"Hook [{event.hook_id}] {status} {event.output}")
 
                 elif isinstance(event, CompactStarted):
                     self._show_system_message(event.message)
@@ -1430,16 +1503,11 @@ class FlowCoderApp(App):
                             self.session.append(msg)
                         history_cursor = len(self.conversation.history)
                         self.session.meta.total_tokens = (
-                            self.agent.total_input_tokens
-                            + self.agent.total_output_tokens
+                            self.agent.total_input_tokens + self.agent.total_output_tokens
                         )
-                        asyncio.ensure_future(
-                            self._update_session_summary()
-                        )
+                        asyncio.ensure_future(self._update_session_summary())
                     if self.agent.plan_mode:
-                        asyncio.ensure_future(
-                            self._show_plan_approval()
-                        )
+                        asyncio.ensure_future(self._show_plan_approval())
 
             # 收尾：渲染剩余的累积文本
             if accumulated_text and streaming_label is not None:
@@ -1482,12 +1550,10 @@ class FlowCoderApp(App):
                 f"{status_icon} 后台任务完成: [{task.id}] {task.name} — {task.status}"
             )
 
-            if hasattr(self, 'team_manager'):
+            if hasattr(self, "team_manager"):
                 self.team_manager.on_teammate_completed(task.agent.agent_id)
 
-        self._agent_task = asyncio.create_task(
-            self._send_message("", is_notification=True)
-        )
+        self._agent_task = asyncio.create_task(self._send_message("", is_notification=True))
 
     async def _start_notification_polling(self) -> None:
         while True:
@@ -1506,9 +1572,7 @@ class FlowCoderApp(App):
             return
         for note in notes:
             self.conversation.add_system_reminder(note)
-        self._agent_task = asyncio.create_task(
-            self._send_message("", is_notification=True)
-        )
+        self._agent_task = asyncio.create_task(self._send_message("", is_notification=True))
 
     async def _show_plan_approval(self) -> None:
         from flowcoder.ui.plan_dialog import InlinePlanWidget
@@ -1522,9 +1586,7 @@ class FlowCoderApp(App):
         except Exception:
             pass
 
-    def on_inline_plan_widget_responded(
-        self, event: "InlinePlanWidget.Responded"
-    ) -> None:
+    def on_inline_plan_widget_responded(self, event: "InlinePlanWidget.Responded") -> None:
         from flowcoder.ui.plan_dialog import InlinePlanWidget, PlanChoice
 
         try:
@@ -1581,9 +1643,7 @@ class FlowCoderApp(App):
         except Exception:
             pass
 
-    def on_inline_ask_user_widget_responded(
-        self, event: "InlineAskUserWidget.Responded"
-    ) -> None:
+    def on_inline_ask_user_widget_responded(self, event: "InlineAskUserWidget.Responded") -> None:
         from flowcoder.ui.askuser_dialog import InlineAskUserWidget
 
         req = getattr(self, "_pending_askuser_event", None)
@@ -1631,9 +1691,7 @@ class FlowCoderApp(App):
         frame = SPINNER_FRAMES[self._spinner_idx % len(SPINNER_FRAMES)]
         elapsed = _time.monotonic() - self._thinking_start
         if self._spinner_label is not None:
-            self._spinner_label.update(
-                f"  {frame} {self._thinking_verb}…  ({elapsed:.0f}s)"
-            )
+            self._spinner_label.update(f"  {frame} {self._thinking_verb}…  ({elapsed:.0f}s)")
             if self._spinner_idx % 5 == 0:
                 try:
                     self.query_one("#chat-area", VerticalScroll).scroll_end(animate=False)
@@ -1798,9 +1856,10 @@ class FlowCoderApp(App):
         if server_count > 0 and mcp_tools > 0:
             parts = []
             for cfg in self._mcp_server_configs:
-                srv_name = cfg.name if hasattr(cfg, 'name') else str(cfg)
+                srv_name = cfg.name if hasattr(cfg, "name") else str(cfg)
                 tool_names = [
-                    t.name for t in self.registry.list_tools()
+                    t.name
+                    for t in self.registry.list_tools()
                     if t.name.startswith(f"mcp__{srv_name}__")
                 ]
                 section = f"## {srv_name}\n"
@@ -1810,8 +1869,7 @@ class FlowCoderApp(App):
             self._mcp_instructions = (
                 "# MCP Server Instructions\n\n"
                 "The following MCP servers are connected. "
-                "Use their tools when the user asks.\n\n"
-                + "\n\n".join(parts)
+                "Use their tools when the user asks.\n\n" + "\n\n".join(parts)
             )
 
     async def _shutdown_mcp(self) -> None:
@@ -1853,16 +1911,14 @@ class FlowCoderApp(App):
             tasks: list[asyncio.Task] = []
 
             if self.agent and self.agent.memory_hub:
-                tasks.append(asyncio.create_task(
-                    self.agent._extract_memories(self.conversation)
-                ))
+                tasks.append(asyncio.create_task(self.agent._extract_memories(self.conversation)))
                 tasks.append(asyncio.create_task(self.agent.memory_hub.shutdown()))
             if self.hook_engine:
-                tasks.append(asyncio.create_task(
-                    self.hook_engine.run_hooks(
-                        "shutdown", HookContext(event_name="shutdown")
+                tasks.append(
+                    asyncio.create_task(
+                        self.hook_engine.run_hooks("shutdown", HookContext(event_name="shutdown"))
                     )
-                ))
+                )
             tasks.append(asyncio.create_task(self._shutdown_mcp()))
 
             if tasks:
@@ -1874,7 +1930,7 @@ class FlowCoderApp(App):
             if self._stale_cleanup_task and not self._stale_cleanup_task.done():
                 self._stale_cleanup_task.cancel()
 
-            if hasattr(self, 'team_manager'):
+            if hasattr(self, "team_manager"):
                 for name in list(self.team_manager._teams):
                     try:
                         team = self.team_manager._teams[name]

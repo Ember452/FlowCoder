@@ -43,9 +43,7 @@ def _normalize_input_schema(input_schema: Any) -> dict[str, Any]:
     raw_required = schema.get("required", [])
     if isinstance(raw_required, list):
         schema["required"] = [
-            item
-            for item in raw_required
-            if isinstance(item, str) and item in properties
+            item for item in raw_required if isinstance(item, str) and item in properties
         ]
     else:
         schema["required"] = []
@@ -71,9 +69,7 @@ def build_public_tool_name(server_name: str, tool_name: str) -> str:
     return f"{base}{suffix}"
 
 
-def _build_params_model(
-    tool_name: str, input_schema: dict[str, Any]
-) -> type[BaseModel]:
+def _build_params_model(tool_name: str, input_schema: dict[str, Any]) -> type[BaseModel]:
     properties = input_schema.get("properties", {})
     required = set(input_schema.get("required", []))
 
@@ -137,14 +133,11 @@ class MCPToolWrapper(Tool):
         self.category = "command"
         self.is_concurrency_safe = False
         self.should_defer = True
-        self.params_model = _build_params_model(
-            self.name, self._input_schema
-        )
+        self.params_model = _build_params_model(self.name, self._input_schema)
 
     @property
     def mcp_tool_name(self) -> str:
         return self._tool_def.name
-
 
     def get_schema(self) -> dict[str, Any]:
         return {
@@ -152,7 +145,6 @@ class MCPToolWrapper(Tool):
             "description": self.description,
             "input_schema": self._input_schema,
         }
-
 
     async def execute(self, params: BaseModel) -> ToolResult:
         if not self._client.is_alive:

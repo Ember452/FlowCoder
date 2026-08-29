@@ -57,10 +57,7 @@ def interactive_sign_in(stream_in=None, stream_out=None) -> bool:
         return False
 
     if not models:
-        write(
-            f"已登录 {session.email}，但云端暂无可用模型。\n"
-            "请管理员在 /ops 启用模型后再试。"
-        )
+        write(f"已登录 {session.email}，但云端暂无可用模型。\n请管理员在 /ops 启用模型后再试。")
         return False
 
     write("可用模型:")

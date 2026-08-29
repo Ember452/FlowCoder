@@ -23,9 +23,7 @@ VALID_MESSAGE_TYPES = {"text", "shutdown_request", "shutdown_response"}
 
 def validate_mailbox_id(value: str, field_name: str = "agent_id") -> str:
     if not isinstance(value, str) or not MAILBOX_ID_PATTERN.fullmatch(value):
-        raise ValueError(
-            f"{field_name} must be 1-64 characters of letters, digits, '_' or '-'"
-        )
+        raise ValueError(f"{field_name} must be 1-64 characters of letters, digits, '_' or '-'")
     return value
 
 
@@ -49,7 +47,6 @@ class MailboxMessage:
     timestamp: float = 0.0
     metadata: dict[str, Any] = field(default_factory=dict)
 
-
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
@@ -61,13 +58,10 @@ class MailboxMessage:
             _message_string_field(data, "id"),
             "message.id",
         )
-        message_type = (
-            _message_string_field(data, "message_type", required=False) or "text"
-        )
+        message_type = _message_string_field(data, "message_type", required=False) or "text"
         if message_type not in VALID_MESSAGE_TYPES:
             raise ValueError(
-                f"message.message_type must be one of: "
-                f"{', '.join(sorted(VALID_MESSAGE_TYPES))}"
+                f"message.message_type must be one of: {', '.join(sorted(VALID_MESSAGE_TYPES))}"
             )
         metadata = object_field(data, "metadata", prefix="message")
         return cls(
@@ -92,7 +86,6 @@ class Mailbox:
 
     def _agent_dir(self, agent_id: str) -> Path:
         return self._base_dir / validate_mailbox_id(agent_id)
-
 
     def write(self, agent_id: str, message: MailboxMessage) -> None:
         message = MailboxMessage.from_dict(message.to_dict())
@@ -145,7 +138,6 @@ class Mailbox:
             if agent_id == exclude:
                 continue
             self.write(agent_id, message)
-
 
     def cleanup(self, agent_id: str) -> None:
         d = self._agent_dir(agent_id)

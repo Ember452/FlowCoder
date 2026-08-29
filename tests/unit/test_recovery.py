@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-import time
-
-import pytest
 
 from flowcoder.context.manager import (
     RECOVERY_FILE_LIMIT,
-    RECOVERY_SKILLS_BUDGET,
     RECOVERY_TOKENS_PER_FILE,
     RECOVERY_TOKENS_PER_SKILL,
     RecoveryState,
@@ -16,9 +12,11 @@ from flowcoder.context.manager import (
     build_recovery_attachment,
 )
 
+
 def test_recovery_attachment_empty_when_nothing_recorded():
     assert build_recovery_attachment(None, None) == ""
     assert build_recovery_attachment(RecoveryState(), None) == ""
+
 
 def test_recovery_attachment_emits_all_sections():
     state = RecoveryState()
@@ -34,6 +32,7 @@ def test_recovery_attachment_emits_all_sections():
     assert "- ReadFile — Read a file and return contents." in out
     assert "- Bash" in out
     assert "提示" in out  # 结尾提示部分的标题
+
 
 def test_recovery_attachment_reads_chat_completion_tool_schema():
     schemas = [
@@ -52,10 +51,12 @@ def test_recovery_attachment_reads_chat_completion_tool_schema():
     assert "- ReadFile — Read a file." in out
     assert "Second line" not in out
 
+
 def test_recovery_attachment_skips_invalid_tool_schemas():
     out = build_recovery_attachment(None, [{"type": "function"}, object()])
 
     assert out == ""
+
 
 def test_recovery_file_limit_and_order():
     state = RecoveryState()
@@ -71,12 +72,14 @@ def test_recovery_file_limit_and_order():
     assert files[0].path == "/f6"  # 最新的排在最前
     assert files[-1].path == "/f2"
 
+
 def test_recovery_truncates_per_file():
     huge = "x" * int(RECOVERY_TOKENS_PER_FILE * _RECOVERY_CHARS_PER_TOKEN * 3)
     state = RecoveryState()
     state.record_file_read("/big", huge)
     out = build_recovery_attachment(state, None)
     assert "内容已截断" in out
+
 
 def test_recovery_skills_budget():
     state = RecoveryState()

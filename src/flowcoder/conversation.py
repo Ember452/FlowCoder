@@ -25,24 +25,27 @@ from typing import Any
 @dataclass
 class ToolUseBlock:
     """LLM 请求调用工具的完整描述（工具名 + 参数）。"""
-    tool_use_id: str          # 工具调用唯一 ID（用于关联结果）
-    tool_name: str            # 工具名称
-    arguments: dict[str, Any] # 工具参数
+
+    tool_use_id: str  # 工具调用唯一 ID（用于关联结果）
+    tool_name: str  # 工具名称
+    arguments: dict[str, Any]  # 工具参数
 
 
 @dataclass
 class ToolResultBlock:
     """工具执行结果（关联到对应的 ToolUseBlock）。"""
-    tool_use_id: str    # 关联的工具调用 ID
-    content: str        # 结果内容（文本）
+
+    tool_use_id: str  # 关联的工具调用 ID
+    content: str  # 结果内容（文本）
     is_error: bool = False  # 是否为错误结果
 
 
 @dataclass
 class ThinkingBlock:
     """LLM 的思考过程块（extended thinking），包含思考和签名。"""
-    thinking: str    # 思考内容
-    signature: str   # 思考签名（用于 API 验证）
+
+    thinking: str  # 思考内容
+    signature: str  # 思考签名（用于 API 验证）
 
 
 @dataclass
@@ -52,11 +55,12 @@ class Message:
     采用 Anthropic 风格的多块结构：一条消息可同时包含文本内容、
     工具调用请求（assistant）、工具执行结果（user）和思考块（assistant）。
     """
+
     role: str  # "user" | "assistant"
     content: str
-    tool_uses: list[ToolUseBlock] = field(default_factory=list)        # 工具调用
+    tool_uses: list[ToolUseBlock] = field(default_factory=list)  # 工具调用
     tool_results: list[ToolResultBlock] = field(default_factory=list)  # 工具结果
-    thinking_blocks: list[ThinkingBlock] = field(default_factory=list) # 思考块
+    thinking_blocks: list[ThinkingBlock] = field(default_factory=list)  # 思考块
 
 
 # 估算最后一次 API 用量锚点之后追加的消息 token 开销时使用的字符/token 比率。
@@ -96,9 +100,10 @@ class ConversationManager:
     3. token 用量估算（基于 API 锚点 + 字符估算的混合策略）
     4. 上下文压缩后替换历史（replace_history）
     """
+
     history: list[Message] = field(default_factory=list)
     env_injected: bool = field(default=False, init=False)  # 环境上下文是否已注入
-    ltm_injected: bool = field(default=False, init=False)   # 长期记忆是否已注入
+    ltm_injected: bool = field(default=False, init=False)  # 长期记忆是否已注入
     # API 报告的每轮真实 prompt 大小，保留用于向后兼容。
     # 现在与 baseline_tokens 一致（input + cache_read + cache_creation + output）。
     last_input_tokens: int = field(default=0, init=False)
@@ -124,9 +129,7 @@ class ConversationManager:
         assistant 的回复此刻已成为历史的一部分。anchor_count 对齐到当前的消息
         数量，这样后续新追加的消息就成了唯一需要估算的部分。
         """
-        self.baseline_tokens = (
-            input_tokens + cache_read + cache_creation + output_tokens
-        )
+        self.baseline_tokens = input_tokens + cache_read + cache_creation + output_tokens
         self.anchor_count = len(self.history)
         # 保持旧字段同步，兼容仍在使用它的读取方。
         self.last_input_tokens = self.baseline_tokens
@@ -140,7 +143,7 @@ class ConversationManager:
         """
         if self.baseline_tokens <= 0:
             return estimate_tokens(self.history)
-        tail = self.history[self.anchor_count:]
+        tail = self.history[self.anchor_count :]
         return self.baseline_tokens + estimate_tokens(tail)
 
     def add_user_message(self, content: str) -> None:
@@ -178,10 +181,7 @@ class ConversationManager:
 
     def add_tool_results_message(self, tool_results: list[ToolResultBlock]) -> None:
         """追加一条携带工具结果的用户消息（content 为空，结果在 tool_results 中）。"""
-        self.history.append(
-            Message(role="user", content="", tool_results=tool_results)
-        )
-
+        self.history.append(Message(role="user", content="", tool_results=tool_results))
 
     def inject_environment(self, context: str) -> None:
         """在历史最前面插入环境上下文（只注入一次）。
@@ -192,9 +192,7 @@ class ConversationManager:
             self.history.insert(0, Message(role="user", content=context))
             self.env_injected = True
 
-    def inject_long_term_memory(
-        self, instructions: str, memories: str
-    ) -> None:
+    def inject_long_term_memory(self, instructions: str, memories: str) -> None:
         """在环境上下文之后插入长期记忆（只注入一次）。
 
         包含两部分：
@@ -248,7 +246,6 @@ class ConversationManager:
         self.baseline_tokens = 0
         self.anchor_count = 0
         self.last_input_tokens = 0
-
 
     def get_messages(self) -> list[Message]:
         """返回历史消息的副本。"""

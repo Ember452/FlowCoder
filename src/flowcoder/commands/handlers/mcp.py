@@ -19,7 +19,8 @@ async def handle_mcp(ctx: CommandContext) -> None:
     if mcp_mgr and hasattr(mcp_mgr, "_clients"):
         for name, client in mcp_mgr._clients.items():
             tool_names = [
-                t.name for t in ctx.agent.registry.list_tools()
+                t.name
+                for t in ctx.agent.registry.list_tools()
                 if t.name.startswith(f"mcp__{name}__")
             ]
             lines.append(f"\n  {name}: {len(tool_names)} tools")

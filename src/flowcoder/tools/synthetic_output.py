@@ -26,10 +26,8 @@ class SyntheticOutputTool(Tool):
     is_concurrency_safe = True
     is_system_tool = True
 
-
     def __init__(self, json_schema: dict[str, Any] | None = None) -> None:
         self._json_schema = json_schema
-
 
     async def execute(self, params: BaseModel) -> ToolResult:
         p: SyntheticOutputParams = params  # type: ignore[assignment]
@@ -37,13 +35,14 @@ class SyntheticOutputTool(Tool):
         if self._json_schema is not None:
             error = self._validate_schema(p.output)
             if error:
-                return ToolResult(output=f"Output does not match required schema: {error}", is_error=True)
+                return ToolResult(
+                    output=f"Output does not match required schema: {error}", is_error=True
+                )
 
         if isinstance(p.output, str):
             return ToolResult(output=p.output)
 
         return ToolResult(output=json.dumps(p.output, ensure_ascii=False, indent=2))
-
 
     def _validate_schema(self, data: Any) -> str | None:
         schema = self._json_schema

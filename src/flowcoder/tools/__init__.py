@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from flowcoder.tools.base import Tool
-from flowcoder.tools.registry import ToolRegistry, ToolRegistryError
+from flowcoder.tools.registry import ToolRegistry
+from flowcoder.tools.registry import ToolRegistryError as ToolRegistryError
 
 if TYPE_CHECKING:
     from flowcoder.core.cache import FileCache

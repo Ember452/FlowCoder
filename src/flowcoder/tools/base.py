@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, TypeAlias
 
 from pydantic import BaseModel
 
@@ -33,7 +33,6 @@ class Tool(ABC):
     @property
     def is_read_only(self) -> bool:
         return self.category == "read"
-
 
     def get_schema(self) -> dict[str, Any]:
         schema = self.params_model.model_json_schema()
@@ -100,4 +99,13 @@ class StreamEnd:
     cache_creation: int = 0
 
 
-StreamEvent = TextDelta | ThinkingDelta | ThinkingComplete | ToolCallStart | ToolCallDelta | ToolCallComplete | StreamEnd
+# 声明任意一种StreamEvent，都必须是这几种的一种
+StreamEvent: TypeAlias = (
+    TextDelta
+    | ThinkingDelta
+    | ThinkingComplete
+    | ToolCallStart
+    | ToolCallDelta
+    | ToolCallComplete
+    | StreamEnd
+)

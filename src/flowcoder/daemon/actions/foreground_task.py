@@ -20,8 +20,7 @@ class ForegroundTaskRunner(Protocol):
         prompt: str,
         agent: Any,
         conversation: Any,
-    ) -> str:
-        ...
+    ) -> str: ...
 
 
 async def start_session_task(

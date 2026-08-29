@@ -42,15 +42,19 @@ class OriginGuardMiddleware:
             if scope["type"] == "websocket":
                 await send({"type": "websocket.close", "code": 1008})
             else:
-                await send({
-                    "type": "http.response.start",
-                    "status": 403,
-                    "headers": [(b"content-type", b"application/json")],
-                })
-                await send({
-                    "type": "http.response.body",
-                    "body": b'{"error":"origin is not allowed"}',
-                })
+                await send(
+                    {
+                        "type": "http.response.start",
+                        "status": 403,
+                        "headers": [(b"content-type", b"application/json")],
+                    }
+                )
+                await send(
+                    {
+                        "type": "http.response.body",
+                        "body": b'{"error":"origin is not allowed"}',
+                    }
+                )
             return
 
         await self.app(scope, receive, send)
@@ -59,12 +63,14 @@ class OriginGuardMiddleware:
 class DaemonTokenAuthMiddleware:
     """Protect daemon HTTP and WebSocket APIs with one local bearer token."""
 
-    PUBLIC_PATHS = frozenset({
-        "/",
-        "/api/health",
-        "/.well-known/agent-card.json",
-        "/a2a/agent-card.json",
-    })
+    PUBLIC_PATHS = frozenset(
+        {
+            "/",
+            "/api/health",
+            "/.well-known/agent-card.json",
+            "/a2a/agent-card.json",
+        }
+    )
 
     def __init__(self, app, token: str):
         self.app = app
@@ -84,15 +90,19 @@ class DaemonTokenAuthMiddleware:
             if scope_type == "websocket":
                 await send({"type": "websocket.close", "code": 1008})
             else:
-                await send({
-                    "type": "http.response.start",
-                    "status": 401,
-                    "headers": [(b"content-type", b"application/json")],
-                })
-                await send({
-                    "type": "http.response.body",
-                    "body": b'{"error":"daemon authentication required"}',
-                })
+                await send(
+                    {
+                        "type": "http.response.start",
+                        "status": 401,
+                        "headers": [(b"content-type", b"application/json")],
+                    }
+                )
+                await send(
+                    {
+                        "type": "http.response.body",
+                        "body": b'{"error":"daemon authentication required"}',
+                    }
+                )
             return
 
         await self.app(scope, receive, send)
@@ -110,9 +120,11 @@ class DaemonTokenAuthMiddleware:
         values = query.get("token", [])
         return values[0] if values else ""
 
+
 # ---------------------------------------------------------------------------
 # App factory
 # ---------------------------------------------------------------------------
+
 
 def create_app(
     config: AppConfig | None,
@@ -181,9 +193,7 @@ def run_daemon(host: str = "127.0.0.1", port: int = 7800, work_dir: str | None =
     hook_engine = HookEngine(hooks) if hooks else None
     auth_token = os.environ.get("FLOWCODER_DAEMON_TOKEN", "").strip()
     if not _is_loopback_host(host) and not auth_token:
-        raise RuntimeError(
-            "FLOWCODER_DAEMON_TOKEN is required when daemon host is not localhost"
-        )
+        raise RuntimeError("FLOWCODER_DAEMON_TOKEN is required when daemon host is not localhost")
 
     origins = os.environ.get(
         "FLOWCODER_CORS_ORIGINS",

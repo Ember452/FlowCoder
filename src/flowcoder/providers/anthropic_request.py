@@ -50,7 +50,7 @@ def mark_last_tool_for_cache(tools: list[dict[str, Any]]) -> list[dict[str, Any]
 def supports_adaptive_thinking(model: str) -> bool:
     for family in ("claude-opus-4-", "claude-sonnet-4-"):
         if model.startswith(family):
-            rest = model[len(family):]
+            rest = model[len(family) :]
             if rest and rest[0].isdigit() and int(rest[0]) >= 6:
                 return True
     return False

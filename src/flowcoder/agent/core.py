@@ -24,12 +24,6 @@ from flowcoder.agent.events import (
     HookEvent,
     LoopComplete,
     PermissionRequest,
-    PermissionResponse,
-    RetryEvent,
-    StreamText,
-    ThinkingText,
-    ToolResultEvent,
-    ToolUseEvent,
     TurnComplete,
     UsageEvent,
 )
@@ -39,7 +33,7 @@ from flowcoder.agent.compaction import (
     inject_agent_context,
     reinject_after_compact,
 )
-from flowcoder.agent.stream import LLMResponse, StreamCollector, ThinkingBlock
+from flowcoder.agent.stream import StreamCollector
 from flowcoder.agent.helpers import (
     build_hook_context,
     build_permission_description,
@@ -72,12 +66,9 @@ from flowcoder.agent.response_history import (
     snapshot_file_history,
 )
 from flowcoder.agent.tool_execution import (
-    StreamingExecutor,
-    ToolBatch,
     _AuthResult,
     _ToolExecResult,
     execute_direct_tool_call,
-    execute_validated_tool,
     partition_tool_calls,
 )
 from flowcoder.agent.tool_authorization import authorize_tool_call
@@ -102,8 +93,6 @@ from flowcoder.context import (
     compute_compact_threshold,
     create_replacement_state,
     ensure_session_dir,
-    load_replacement_records,
-    reconstruct_replacement_state,
     should_auto_compact,
 )
 from flowcoder.conversation import ConversationManager, ToolResultBlock
@@ -114,13 +103,16 @@ from flowcoder.memory.providers import (
     MarkdownMemoryProvider,
 )
 from flowcoder.permissions import (
-    Decision,
     PermissionChecker,
     PermissionMode,
 )
 from flowcoder.ui.plan_paths import create_plan_path
 from flowcoder.hooks import HookContext, HookEngine
-from flowcoder.prompts import build_environment_context, build_plan_mode_reminder, build_system_prompt
+from flowcoder.prompts import (
+    build_environment_context,
+    build_plan_mode_reminder,
+    build_system_prompt,
+)
 from flowcoder.tools import ToolRegistry
 from flowcoder.tools.base import (
     ToolCallComplete,
@@ -136,20 +128,19 @@ MEMORY_EXTRACTION_INTERVAL = 5
 class Agent:
     """AI 编码助手核心引擎：循环调用 LLM + 工具，直到收敛或达上限。"""
 
-
     def __init__(
         self,
-        client: LLMClient,              # LLM 客户端（Anthropic / OpenAI 统一接口）
-        registry: ToolRegistry,          # 工具注册表（23 个内置工具 + MCP/Skills 扩展）
-        protocol: str,                   # LLM 协议（anthropic / openai / openai-compat）
-        work_dir: str = ".",            # 工作目录（文件操作的基础路径）
-        max_iterations: int = 50,       # 最大循环次数（防止无限循环）
+        client: LLMClient,  # LLM 客户端（Anthropic / OpenAI 统一接口）
+        registry: ToolRegistry,  # 工具注册表（23 个内置工具 + MCP/Skills 扩展）
+        protocol: str,  # LLM 协议（anthropic / openai / openai-compat）
+        work_dir: str = ".",  # 工作目录（文件操作的基础路径）
+        max_iterations: int = 50,  # 最大循环次数（防止无限循环）
         permission_checker: PermissionChecker | None = None,  # 权限检查器
         context_window: int = 200_000,  # LLM 上下文窗口大小（tokens）
         instructions_content: str = "",  # FLOWCODER.md 中的项目指令
-        memory_manager: MemoryManager | None = None,   # 旧版记忆管理器
-        memory_hub: MemoryHub | None = None,            # 新版可插拔记忆中心
-        hook_engine: HookEngine | None = None,          # Hook 引擎（生命周期钩子）
+        memory_manager: MemoryManager | None = None,  # 旧版记忆管理器
+        memory_hub: MemoryHub | None = None,  # 新版可插拔记忆中心
+        hook_engine: HookEngine | None = None,  # Hook 引擎（生命周期钩子）
     ) -> None:
         self.client = client
         self.registry = registry
@@ -161,13 +152,15 @@ class Agent:
             permission_checker.mode if permission_checker else PermissionMode.DEFAULT
         )
         self.context_window = context_window
-        self.session_dir = ensure_session_dir(work_dir)           # 会话持久化目录
-        self.compact_breaker = CompactCircuitBreaker()            # 上下文压缩熔断器（防频繁压缩）
-        self.replacement_state: ContentReplacementState = create_replacement_state()  # Layer 1 替换状态
+        self.session_dir = ensure_session_dir(work_dir)  # 会话持久化目录
+        self.compact_breaker = CompactCircuitBreaker()  # 上下文压缩熔断器（防频繁压缩）
+        self.replacement_state: ContentReplacementState = (
+            create_replacement_state()
+        )  # Layer 1 替换状态
         # Layer2 压缩后用于恢复近期读文件/skill 快照
         self.recovery_state: RecoveryState = RecoveryState()
-        self.total_input_tokens = 0                                # 累计输入 token
-        self.total_output_tokens = 0                               # 累计输出 token
+        self.total_input_tokens = 0  # 累计输入 token
+        self.total_output_tokens = 0  # 累计输出 token
         self.instructions_content = instructions_content
         self.memory_manager = memory_manager
         self.memory_hub = memory_hub
@@ -184,20 +177,20 @@ class Agent:
             project_root=self.work_dir,
         )
         self.hook_engine = hook_engine
-        self._loop_count = 0                                       # 已完成的循环数（用于记忆提取间隔控制）
+        self._loop_count = 0  # 已完成的循环数（用于记忆提取间隔控制）
         self.session_id: str = ""
-        self.active_skills: dict[str, str] = {}                    # 当前激活的 Skill 提示体
-        self._skill_catalog: str = ""                              # 可用 Skill 清单（注入 system prompt）
-        self._agent_catalog: str = ""                              # 可用子 Agent 类型清单
+        self.active_skills: dict[str, str] = {}  # 当前激活的 Skill 提示体
+        self._skill_catalog: str = ""  # 可用 Skill 清单（注入 system prompt）
+        self._agent_catalog: str = ""  # 可用子 Agent 类型清单
         self._agent_catalog_list: list[tuple[str, str]] = []
-        self.agent_id: str = uuid.uuid4().hex[:12]                # Agent 唯一 ID
-        self.parent_id: str | None = None                          # 父 Agent ID（子 Agent 模式时设置）
-        self.trace_id: str | None = None                           # 追踪 ID（用于 trace 树）
-        self.coordinator_mode: bool = False                       # 协调者模式（只调度不执行）
-        self.team_name: str = ""                                  # 所属 Team 名称
-        self._team_manager: Any = None                             # Team 管理器
+        self.agent_id: str = uuid.uuid4().hex[:12]  # Agent 唯一 ID
+        self.parent_id: str | None = None  # 父 Agent ID（子 Agent 模式时设置）
+        self.trace_id: str | None = None  # 追踪 ID（用于 trace 树）
+        self.coordinator_mode: bool = False  # 协调者模式（只调度不执行）
+        self.team_name: str = ""  # 所属 Team 名称
+        self._team_manager: Any = None  # Team 管理器
         self.notification_fn: Callable[[], list[str]] | None = None  # 外部通知回调
-        self.file_history: Any = None                             # 文件历史快照管理器
+        self.file_history: Any = None  # 文件历史快照管理器
 
     @property
     def _transcript_path(self) -> str:
@@ -232,8 +225,9 @@ class Agent:
     def set_skill_catalog(self, catalog: str) -> None:
         self._skill_catalog = catalog
 
-
-    def set_agent_catalog(self, catalog: str, catalog_list: list[tuple[str, str]] | None = None) -> None:
+    def set_agent_catalog(
+        self, catalog: str, catalog_list: list[tuple[str, str]] | None = None
+    ) -> None:
         self._agent_catalog = catalog
         if catalog_list is not None:
             self._agent_catalog_list = catalog_list
@@ -264,6 +258,7 @@ class Agent:
         )
 
     async def _load_memory_context(self, query: str = "") -> str:
+        """从多个数据源加载记忆信息"""
         self.memory_bridge.memory_hub = self.memory_hub
         return await self.memory_bridge.load_context(
             query=query,
@@ -275,18 +270,20 @@ class Agent:
         return latest_user_query(conversation)
 
     async def run(self, conversation: ConversationManager) -> AsyncIterator[AgentEvent]:
-        """主循环：注入上下文后反复 LLM↔工具，直到无 tool_call 或达上限。"""
+        """主循环：注入上下文后反复 LLM↔工具，直到无 tool_call 或达上限。
+        这个是主要的ReAct循环"""
+        # 初始化对话管理器；
         self._current_conversation = conversation
-        # 构建环境上下文（工作目录、激活的 Skill、可用 Agent 类型清单）
+        # 构建环境上下文（工作目录、激活的 Skill、可用 Agent 类型清单）告诉大模型现在处于什么环境
         env_context = build_environment_context(
             self.work_dir,
             self.active_skills,
             self._skill_catalog,
             self._agent_catalog,
         )
-        # 用最近真实 user 消息做记忆检索 query
+        # 用最近真实 user 消息做记忆检索 query 拿用户的一句话，去检索记忆TODO 看看是怎么根据用户一句话检索记忆的
         memory_content = await self._load_memory_context(self._latest_user_query(conversation))
-        # 将环境上下文、项目指令、记忆内容注入对话开头
+        # 将环境上下文、项目指令、记忆内容注入对话开头 相当于给LLM的前置背景
         inject_agent_context(
             conversation,
             environment_context=env_context,
@@ -298,15 +295,15 @@ class Agent:
         for he in await self._run_lifecycle_hook("session_start"):
             yield he
 
-        iteration = 0
-        consecutive_unknown = 0          # 连续未知工具调用计数（超过 3 次终止）
+        iteration = 0  # 本轮循环次数，每一轮大模型交互和工具执行算一轮。防止无限死循环
+        consecutive_unknown = 0  # 连续未知工具调用计数（超过 3 次终止）
         output_recovery_state = OutputRecoveryState()  # max_tokens 触顶恢复状态
 
-        while True:
+        while True:  #  无限循环，一轮一轮的跑
             iteration += 1
 
             # 迭代次数保护：超过最大限制则终止
-            if iteration > self.max_iterations:
+            if iteration > self.max_iterations:  # 最大循环50轮
                 yield ErrorEvent(
                     message=f"Agent reached maximum iterations ({self.max_iterations})"
                 )
@@ -316,12 +313,15 @@ class Agent:
             for he in await self._run_lifecycle_hook("turn_start"):
                 yield he
 
-            # 注入外部通知（Team mailbox / notification_fn），供本轮 LLM 可见
+            # 注入外部通知（Team mailbox / notification_fn），供本轮 LLM 可见。比如团队其他Agent发来的消息。
             self._inject_external_notifications(conversation)
 
             # ② Layer 2: 接近 context window 上限时自动 compact（摘要历史对话）
+            # 当前对话占用了多少 token 的估算值（整数），如果有上一轮调用返回的token，就用token+新增字段。如果没有，刚启动会话，history估算。
             current_tokens = conversation.current_tokens()
-            compact_threshold = compute_compact_threshold(self.context_window) # 当前对话占用了多少 token 的估算值（整数）
+            compact_threshold = compute_compact_threshold(
+                self.context_window
+            )  # 当前对话占用了多少 token 的估算值（整数）
             compact_started = should_auto_compact(current_tokens, self.context_window)
             if compact_started:
                 yield CompactStarted(
@@ -329,6 +329,8 @@ class Agent:
                     threshold=compact_threshold,
                     context_window=self.context_window,
                 )
+            # 调用LLM将旧历史压缩成简短摘要。
+            # 这个摘要是摘要的对话历史，系统提示词不做摘要。
             compact_result = await auto_compact(
                 conversation,
                 self.client,
@@ -340,15 +342,18 @@ class Agent:
                 tool_schemas=self.registry.get_all_schemas(self.protocol),
                 transcript_path=self._transcript_path,
             )
+            # 判断compact_result摘要结果是不是CompactEvent类型。
             if isinstance(compact_result, CompactEvent):
                 # 压缩成功后重新注入环境上下文和记忆，保证工作集不丢失
                 mem = await self._load_memory_context()
+                # 重新注入环境上下文和记忆
                 after_tokens = reinject_after_compact(
                     conversation,
                     environment_context=env_context,
                     instructions_content=self.instructions_content,
                     memory_content=mem,
                 )
+                # 压缩成功通知，采用yield推送前端
                 yield compact_success_notification(compact_result, after_tokens)
                 yield UsageEvent(
                     input_tokens=self.total_input_tokens,
@@ -371,25 +376,32 @@ class Agent:
                 yield he
 
             # 收集 Hook 产生的 prompt 注入消息（prompt 类型 action 的输出）
-            hook_prompts = (
-                self.hook_engine.get_prompt_messages() if self.hook_engine else None
-            )
+            hook_prompts = self.hook_engine.get_prompt_messages() if self.hook_engine else None
             # 构建 system prompt（包含环境信息、Hook 提示、协调者模式等）
             system = build_system_prompt(
                 hook_prompts=hook_prompts,
+                # 是否为协调者模式
                 coordinator_mode=self.coordinator_mode,
+                # 可用的子Agent目录（名称加描述），配合协调者模式用。分派任务
+                # 每轮循环调用 build_system_prompt 生成发给 LLM 的
+                # system prompt：普通模式下按优先级把身份、规则、环境等 section
+                # 拼起来，再把 Hook 注入的消息追加为 Hook Injected Context 区块
+                # ；若开启协调者模式，则整个提示词替换为多 Agent 协调者专属提示词，
+                # 并附上子 Agent 目录供其分派任务。
                 agent_catalog=self._agent_catalog_list or None,
             )
 
             # Plan 模式：仅允许改计划文件，并注入计划提醒
             if self.plan_mode:
+                # 获取计划文件路径
                 plan_path = str(self._get_plan_path())
+                # 如果有权限检查器，设置计划文件路径
                 if self.permission_checker:
                     self.permission_checker.plan_file_path = plan_path
                 plan_exists = self._get_plan_path().exists()
-                plan_reminder = build_plan_mode_reminder(
-                    plan_path, plan_exists, iteration
-                )
+                # 构建计划提醒消息。
+                plan_reminder = build_plan_mode_reminder(plan_path, plan_exists, iteration)
+                # 将计划模式的提示词注入到会话中
                 conversation.add_system_reminder(plan_reminder)
 
             # 兜底残留 hook 通知 → system-reminder（pre_send 通常已 drain 过）
@@ -400,6 +412,9 @@ class Agent:
                     )
 
             # 提醒 LLM 还有可 ToolSearch 加载的 deferred 工具
+            # 采用延迟加载工具。当工具数量多时，不把全部schema塞进LLM
+            # 这个发给LLM一个system-reminder：列出可以用但未加载的工具。引导模型用
+            # ToolSearch按照名称加载工具
             inject_deferred_tool_reminder(
                 conversation,
                 self.registry.get_deferred_tool_names(),
@@ -468,10 +483,7 @@ class Agent:
                     )
                 self._loop_count += 1
                 # 每 5 轮触发一次记忆提取（重量级，用 LLM 从对话中提取值得记忆的信息）
-                if (
-                    self._loop_count % MEMORY_EXTRACTION_INTERVAL == 0
-                    and self.memory_hub
-                ):
+                if self._loop_count % MEMORY_EXTRACTION_INTERVAL == 0 and self.memory_hub:
                     asyncio.ensure_future(self._extract_memories(conversation))
                 # 触发 turn_end 和 session_end 生命周期 Hook
                 for he in await self._run_lifecycle_hook("turn_end"):
@@ -494,7 +506,7 @@ class Agent:
                 response,
                 thinking_blocks=conv_thinking,
             )
-            
+
             tool_results: list[ToolResultBlock] = []
             # 按并发安全对工具调用分区（只读安全工具可批量并行，写/执行类串行）
             batches = partition_tool_calls(response.tool_calls, self.registry)
@@ -561,9 +573,7 @@ class Agent:
                             br = exec_results[tc.tool_id]
                             result = br.result
                             elapsed = br.elapsed
-                        tool_results.append(
-                            tool_result_block(tc, result, self.session_dir)
-                        )
+                        tool_results.append(tool_result_block(tc, result, self.session_dir))
                         yield tool_result_event(tc, result, elapsed)
                 else:
                     # 串行路径
@@ -584,9 +594,7 @@ class Agent:
                             yield he
                         if hook_result.rejection is not None:
                             result = hook_rejected_result(hook_result.rejection.reason)
-                            tool_results.append(
-                                tool_result_block(tc, result, self.session_dir)
-                            )
+                            tool_results.append(tool_result_block(tc, result, self.session_dir))
                             yield tool_result_event(tc, result, 0.0)
                             continue
 
@@ -615,9 +623,7 @@ class Agent:
                         ):
                             yield he
 
-                        tool_results.append(
-                            tool_result_block(tc, result, self.session_dir)
-                        )
+                        tool_results.append(tool_result_block(tc, result, self.session_dir))
                         yield tool_result_event(tc, result, elapsed)
 
             if consecutive_unknown >= 3:
@@ -626,9 +632,7 @@ class Agent:
                 )
                 break
 
-            exit_plan_called = any(
-                tc.tool_name == "ExitPlanMode" for tc in response.tool_calls
-            )
+            exit_plan_called = any(tc.tool_name == "ExitPlanMode" for tc in response.tool_calls)
             conversation.add_tool_results_message(tool_results)
             if exit_plan_called:
                 yield TurnComplete(turn=iteration)
@@ -638,7 +642,6 @@ class Agent:
             for he in await self._run_lifecycle_hook("turn_end"):
                 yield he
             yield TurnComplete(turn=iteration)
-
 
     def _consume_mailbox(self, conversation: ConversationManager) -> None:
         consume_team_mailbox(
@@ -661,17 +664,13 @@ class Agent:
     def _build_permission_description(self, tc: ToolCallComplete) -> str:
         return build_permission_description(tc)
 
-    async def _execute_single_tool_direct(
-        self, tc: ToolCallComplete
-    ) -> _ToolExecResult:
+    async def _execute_single_tool_direct(self, tc: ToolCallComplete) -> _ToolExecResult:
         # 仅执行工具（无权限/hooks）；调用方须先完成授权预检
         exec_result = await execute_direct_tool_call(self.registry, tc)
         self._snapshot_for_recovery(tc, exec_result.result)
         return exec_result
 
-    async def _execute_batch_parallel(
-        self, calls: list[ToolCallComplete]
-    ) -> list[_ToolExecResult]:
+    async def _execute_batch_parallel(self, calls: list[ToolCallComplete]) -> list[_ToolExecResult]:
         """并行执行多个安全工具调用（asyncio.gather）。"""
         tasks = [self._execute_single_tool_direct(tc) for tc in calls]
         return list(await asyncio.gather(*tasks))
@@ -710,9 +709,7 @@ class Agent:
 
         tool = self.registry.get(tc.tool_name)
         if tool is None:
-            result = ToolResult(
-                output=f"Error: unknown tool '{tc.tool_name}'", is_error=True
-            )
+            result = ToolResult(output=f"Error: unknown tool '{tc.tool_name}'", is_error=True)
             elapsed = time.monotonic() - start
             yield result, elapsed, True
             return
@@ -755,22 +752,16 @@ class Agent:
             else:
                 result = await tool.execute(params)
         except ValidationError as e:
-            result = ToolResult(
-                output=f"Parameter validation error: {e}", is_error=True
-            )
+            result = ToolResult(output=f"Parameter validation error: {e}", is_error=True)
         except Exception as e:
-            result = ToolResult(
-                output=f"Tool execution error: {e}", is_error=True
-            )
+            result = ToolResult(output=f"Tool execution error: {e}", is_error=True)
 
         self._snapshot_for_recovery(tc, result)
 
         elapsed = time.monotonic() - start
         yield result, elapsed, False
 
-    def _snapshot_for_recovery(
-        self, tc: ToolCallComplete, result: ToolResult
-    ) -> None:
+    def _snapshot_for_recovery(self, tc: ToolCallComplete, result: ToolResult) -> None:
         record_tool_recovery_snapshot(
             recovery_state=self.recovery_state,
             tool_call=tc,
@@ -778,9 +769,7 @@ class Agent:
             work_dir=self.work_dir,
         )
 
-    async def _extract_memories(
-        self, conversation: ConversationManager
-    ) -> None:
+    async def _extract_memories(self, conversation: ConversationManager) -> None:
         """后台提取记忆：用 LLM 从对话中提取值得长期记忆的信息，写入 memories.md。"""
         self.memory_bridge.memory_hub = self.memory_hub
         await self.memory_bridge.extract_memories(
@@ -843,7 +832,9 @@ class Agent:
         )
 
     async def run_to_completion(
-        self, task: str, conversation: ConversationManager | None = None,
+        self,
+        task: str,
+        conversation: ConversationManager | None = None,
         event_callback: Callable[[dict[str, Any]], None] | None = None,
     ) -> str:
         """子 Agent 非交互执行到完成；不 yield 事件，返回最终文本。"""
@@ -864,9 +855,7 @@ class Agent:
         if task:
             conversation.add_user_message(task)
 
-        hook_prompts = (
-            self.hook_engine.get_prompt_messages() if self.hook_engine else None
-        )
+        hook_prompts = self.hook_engine.get_prompt_messages() if self.hook_engine else None
         system = build_system_prompt(
             hook_prompts=hook_prompts,
             coordinator_mode=self.coordinator_mode,
@@ -941,15 +930,20 @@ class Agent:
             if response.text:
                 last_text = response.text
                 if event_callback:
-                    event_callback({
-                        "type": "stream_text",
-                        "text": response.text,
-                    })
+                    event_callback(
+                        {
+                            "type": "stream_text",
+                            "text": response.text,
+                        }
+                    )
 
             log.info(
                 "[run_to_completion] agent=%s iter=%d tool_calls=%d text_len=%d stop=%s",
-                self.agent_id, iteration, len(response.tool_calls),
-                len(response.text), response.stop_reason,
+                self.agent_id,
+                iteration,
+                len(response.tool_calls),
+                len(response.text),
+                response.stop_reason,
             )
 
             if not response.tool_calls:
@@ -975,15 +969,15 @@ class Agent:
             tool_results: list[ToolResultBlock] = []
             for tc in response.tool_calls:
                 if event_callback:
-                    event_callback({
-                        "type": "tool_use",
-                        "toolName": tc.tool_name,
-                        "args": tc.arguments,
-                    })
+                    event_callback(
+                        {
+                            "type": "tool_use",
+                            "toolName": tc.tool_name,
+                            "args": tc.arguments,
+                        }
+                    )
                 result = await self._execute_tool_noninteractive(tc)
-                tool_results.append(
-                    tool_result_block(tc, result, self.session_dir)
-                )
+                tool_results.append(tool_result_block(tc, result, self.session_dir))
 
             conversation.add_tool_results_message(tool_results)
 
@@ -993,9 +987,7 @@ class Agent:
 
         return last_text
 
-    async def _execute_tool_noninteractive(
-        self, tc: ToolCallComplete
-    ) -> ToolResult:
+    async def _execute_tool_noninteractive(self, tc: ToolCallComplete) -> ToolResult:
         return await execute_noninteractive_tool_call(
             registry=self.registry,
             permission_checker=self.permission_checker,

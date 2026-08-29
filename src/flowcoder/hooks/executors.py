@@ -45,9 +45,7 @@ async def execute_command(action: Action, ctx: HookContext) -> ActionResult:
             stderr=asyncio.subprocess.STDOUT,
         )
         try:
-            stdout, _ = await asyncio.wait_for(
-                proc.communicate(), timeout=action.timeout
-            )
+            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=action.timeout)
         except asyncio.TimeoutError:
             proc.kill()
             await proc.wait()
@@ -87,7 +85,6 @@ async def execute_http(action: Action, ctx: HookContext) -> ActionResult:
         headers[k] = ctx.expand(v)
     if body and "Content-Type" not in headers:
         headers["Content-Type"] = "application/json"
-
 
     def _do_request() -> ActionResult:
         try:

@@ -29,7 +29,6 @@ class WriteFile(Tool):
     params_model = Params
     category = "write"
 
-
     def __init__(
         self,
         file_cache: FileCache | None = None,
@@ -41,7 +40,6 @@ class WriteFile(Tool):
         self.file_history = file_history
         self._state_cache = file_state_cache
         self._base_dir = base_dir
-
 
     async def execute(self, params: Params) -> ToolResult:
         path = resolve_tool_path(params.file_path, self._base_dir)

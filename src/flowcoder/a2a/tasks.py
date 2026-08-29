@@ -75,7 +75,7 @@ def refresh_task_from_log(task: A2ATask, log_list: list[dict | None] | None) -> 
         task.cursor = len(log_list)
         return
 
-    for event in log_list[task.cursor:]:
+    for event in log_list[task.cursor :]:
         apply_task_log_event(task, event)
     task.cursor = len(log_list)
 
@@ -121,10 +121,7 @@ def apply_task_log_event(task: A2ATask, event: object) -> None:
         set_task_state(
             task,
             TASK_INPUT_REQUIRED,
-            status_message=(
-                "The task requires interactive input from a "
-                "FlowCoder daemon client."
-            ),
+            status_message=("The task requires interactive input from a FlowCoder daemon client."),
         )
     elif event_type == "LoopComplete":
         set_task_state(task, TASK_COMPLETED, status_message="")

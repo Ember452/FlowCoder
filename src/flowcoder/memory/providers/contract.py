@@ -78,8 +78,7 @@ def provider_constructor_kwargs(
     unsupported_required = [
         param.name
         for param in params
-        if param.kind not in supported_kinds
-        and param.default is inspect.Parameter.empty
+        if param.kind not in supported_kinds and param.default is inspect.Parameter.empty
     ]
     if unsupported_required:
         raise MemoryProviderLoadError(
@@ -89,9 +88,7 @@ def provider_constructor_kwargs(
         )
 
     accepted = {
-        param.name
-        for param in params
-        if param.kind in supported_kinds and param.name in available
+        param.name for param in params if param.kind in supported_kinds and param.name in available
     }
     missing = [
         param.name

@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import os
 import shutil
 import tempfile
-import time
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -17,11 +15,10 @@ from flowcoder.teams.models import (
     AgentTeam,
     BackendType,
     TeammateInfo,
-    resolve_team_dir,
     unique_team_name,
 )
 from flowcoder.teams.manager import TeamManager
-from flowcoder.teams.shared_task import SharedTask, SharedTaskStore
+from flowcoder.teams.shared_task import SharedTaskStore
 from flowcoder.teams.mailbox import Mailbox, MailboxMessage, create_message
 from flowcoder.teams.registry import AgentNameRegistry
 from flowcoder.teams.backend_detect import (
@@ -39,7 +36,6 @@ from flowcoder.agents.tool_filter import (
     COORDINATOR_MODE_ALLOWED_TOOLS,
     IN_PROCESS_TEAMMATE_ALLOWED_TOOLS,
     TEAMMATE_COORDINATION_TOOLS,
-    build_teammate_tools,
     apply_coordinator_filter,
 )
 from flowcoder.tools import ToolRegistry
@@ -48,6 +44,7 @@ from flowcoder.tools.base import Tool, ToolResult
 # =====================================================================
 # 辅助工具
 # =====================================================================
+
 
 class DummyTool(Tool):
     params_model = MagicMock
@@ -65,11 +62,13 @@ class DummyTool(Tool):
     async def execute(self, params):
         return ToolResult(output=f"{self.name} executed")
 
+
 def make_registry(*tool_names: str) -> ToolRegistry:
     reg = ToolRegistry()
     for name in tool_names:
         reg.register(DummyTool(name))
     return reg
+
 
 @pytest.fixture(autouse=True)
 def _reset_registry():
@@ -77,15 +76,18 @@ def _reset_registry():
     yield
     AgentNameRegistry.reset()
 
+
 @pytest.fixture
 def tmp_dir():
     d = tempfile.mkdtemp()
     yield d
     shutil.rmtree(d, ignore_errors=True)
 
+
 # =====================================================================
 # 1. AgentTeam / TeammateInfo
 # =====================================================================
+
 
 class TestModels:
     def test_teammate_info_roundtrip(self):
@@ -112,10 +114,16 @@ class TestModels:
             config_path=config_path,
             description="Test team",
         )
-        team.add_member(TeammateInfo(
-            name="alice", agent_id="a1", agent_type="worker",
-            model="sonnet", worktree_path="/tmp/wt1", backend_type="tmux",
-        ))
+        team.add_member(
+            TeammateInfo(
+                name="alice",
+                agent_id="a1",
+                agent_type="worker",
+                model="sonnet",
+                worktree_path="/tmp/wt1",
+                backend_type="tmux",
+            )
+        )
         team.save()
 
         loaded = AgentTeam.load(config_path)
@@ -184,47 +192,77 @@ class TestModels:
 
     def test_get_member(self):
         team = AgentTeam(name="t", lead_agent_id="l")
-        team.add_member(TeammateInfo(
-            name="bob", agent_id="b1", agent_type="w",
-            model="", worktree_path="", backend_type="in-process",
-        ))
+        team.add_member(
+            TeammateInfo(
+                name="bob",
+                agent_id="b1",
+                agent_type="w",
+                model="",
+                worktree_path="",
+                backend_type="in-process",
+            )
+        )
         assert team.get_member("bob") is not None
         assert team.get_member("b1") is not None
         assert team.get_member("nonexistent") is None
 
     def test_remove_member(self):
         team = AgentTeam(name="t", lead_agent_id="l")
-        team.add_member(TeammateInfo(
-            name="bob", agent_id="b1", agent_type="w",
-            model="", worktree_path="", backend_type="in-process",
-        ))
+        team.add_member(
+            TeammateInfo(
+                name="bob",
+                agent_id="b1",
+                agent_type="w",
+                model="",
+                worktree_path="",
+                backend_type="in-process",
+            )
+        )
         assert team.remove_member("bob") is True
         assert len(team.members) == 0
         assert team.remove_member("bob") is False
 
     def test_set_member_active(self):
         team = AgentTeam(name="t", lead_agent_id="l")
-        team.add_member(TeammateInfo(
-            name="alice", agent_id="a1", agent_type="w",
-            model="", worktree_path="", backend_type="in-process",
-            is_active=True,
-        ))
+        team.add_member(
+            TeammateInfo(
+                name="alice",
+                agent_id="a1",
+                agent_type="w",
+                model="",
+                worktree_path="",
+                backend_type="in-process",
+                is_active=True,
+            )
+        )
         team.set_member_active("alice", False)
         assert team.members[0].is_active is False
         assert team.all_idle() is True
 
     def test_all_idle(self):
         team = AgentTeam(name="t", lead_agent_id="l")
-        team.add_member(TeammateInfo(
-            name="alice", agent_id="a1", agent_type="w",
-            model="", worktree_path="", backend_type="in-process",
-            is_active=False,
-        ))
-        team.add_member(TeammateInfo(
-            name="bob", agent_id="b1", agent_type="w",
-            model="", worktree_path="", backend_type="in-process",
-            is_active=True,
-        ))
+        team.add_member(
+            TeammateInfo(
+                name="alice",
+                agent_id="a1",
+                agent_type="w",
+                model="",
+                worktree_path="",
+                backend_type="in-process",
+                is_active=False,
+            )
+        )
+        team.add_member(
+            TeammateInfo(
+                name="bob",
+                agent_id="b1",
+                agent_type="w",
+                model="",
+                worktree_path="",
+                backend_type="in-process",
+                is_active=True,
+            )
+        )
         assert team.all_idle() is False
 
     def test_unique_team_name(self, tmp_dir):
@@ -258,9 +296,11 @@ class TestTeamManager:
 
             assert manager.get_team("broken") is None
 
+
 # =====================================================================
 # 2. SharedTaskStore
 # =====================================================================
+
 
 class TestSharedTaskStore:
     def test_create_and_get(self, tmp_dir):
@@ -381,9 +421,11 @@ class TestSharedTaskStore:
         with pytest.raises(ValueError, match="status must be one of"):
             store.update(task.id, status="done")
 
+
 # =====================================================================
 # 3. Mailbox
 # =====================================================================
+
 
 class TestMailbox:
     def test_write_and_consume(self, tmp_dir):
@@ -518,12 +560,13 @@ class TestMailbox:
         assert not valid_path.exists()
         assert bad_path.exists()
 
+
 # =====================================================================
 # 4. AgentNameRegistry
 # =====================================================================
 
-class TestAgentNameRegistry:
 
+class TestAgentNameRegistry:
     def test_register_and_resolve(self):
         reg = AgentNameRegistry.instance()
         reg.register("alice", "agent-abc")
@@ -549,9 +592,11 @@ class TestAgentNameRegistry:
         r2 = AgentNameRegistry.instance()
         assert r1 is r2
 
+
 # =====================================================================
 # 5. Backend Detection（后端探测）
 # =====================================================================
+
 
 class TestBackendDetect:
     def test_in_process_mode(self):
@@ -571,12 +616,14 @@ class TestBackendDetect:
         env = {"TERM_PROGRAM": "iTerm.app"}
         with patch.dict(os.environ, env, clear=False):
             with patch("flowcoder.teams.backend_detect.shutil.which") as mock_which:
+
                 def which_side_effect(cmd):
                     if cmd == "it2":
                         return "/usr/local/bin/it2"
                     if cmd == "tmux":
                         return None
                     return None
+
                 mock_which.side_effect = which_side_effect
                 with patch.dict(os.environ, {"TMUX": ""}, clear=False):
                     os.environ.pop("TMUX", None)
@@ -601,9 +648,11 @@ class TestBackendDetect:
                 with pytest.raises(BackendDetectionError):
                     detect_pane_backend()
 
+
 # =====================================================================
 # 6. Tool Filtering（工具过滤）
 # =====================================================================
+
 
 class TestToolFilter:
     def test_teammate_coordination_tools_in_allowed(self):
@@ -621,8 +670,15 @@ class TestToolFilter:
 
     def test_apply_coordinator_filter(self):
         reg = make_registry(
-            "Agent", "ReadFile", "WriteFile", "Bash", "SendMessage",
-            "TaskStop", "SyntheticOutput", "TeamCreate", "TeamDelete",
+            "Agent",
+            "ReadFile",
+            "WriteFile",
+            "Bash",
+            "SendMessage",
+            "TaskStop",
+            "SyntheticOutput",
+            "TeamCreate",
+            "TeamDelete",
         )
         filtered = apply_coordinator_filter(reg)
         names = {t.name for t in filtered.list_tools()}
@@ -632,9 +688,11 @@ class TestToolFilter:
         assert "ReadFile" not in names
         assert "Bash" not in names
 
+
 # =====================================================================
 # 7. Coordinator Mode（协调者模式）
 # =====================================================================
+
 
 class TestCoordinatorMode:
     def test_disabled_by_default(self):
@@ -697,19 +755,23 @@ class TestCoordinatorMode:
         assert "workerToolsContext" in ctx
         assert "Workers" in ctx["workerToolsContext"]
 
+
 # =====================================================================
 # 8. Config Extensions（配置项扩展）
 # =====================================================================
 
+
 class TestConfigExtensions:
     def test_teammate_mode_defaults(self):
         from flowcoder.config import AppConfig
+
         cfg = AppConfig(providers=[])
         assert cfg.teammate_mode == ""
         assert cfg.enable_coordinator_mode is False
 
     def test_load_config_with_team_fields(self, tmp_dir):
         from flowcoder.config import load_config
+
         config_path = Path(tmp_dir) / "config.yaml"
         config_path.write_text(
             "providers:\n"
@@ -726,6 +788,7 @@ class TestConfigExtensions:
 
     def test_invalid_teammate_mode(self, tmp_dir):
         from flowcoder.config import ConfigError, load_config
+
         config_path = Path(tmp_dir) / "config.yaml"
         config_path.write_text(
             "providers:\n"
@@ -738,12 +801,13 @@ class TestConfigExtensions:
         with pytest.raises(ConfigError):
             load_config(config_path)
 
+
 # =====================================================================
 # 9. Transcript Persistence（会话记录持久化）
 # =====================================================================
 
-class TestTranscript:
 
+class TestTranscript:
     def test_save_and_load(self, tmp_dir):
         from flowcoder.conversation import ConversationManager
         from flowcoder.teams.transcript import load_transcript, save_transcript
@@ -764,6 +828,7 @@ class TestTranscript:
 
     def test_load_nonexistent(self, tmp_dir):
         from flowcoder.teams.transcript import load_transcript
+
         with patch("flowcoder.teams.models.Path.home", return_value=Path(tmp_dir)):
             result = load_transcript("no-team", "no-agent")
         assert result is None
@@ -781,13 +846,7 @@ class TestTranscript:
     def test_load_malformed_transcript_returns_none(self, tmp_dir):
         from flowcoder.teams.transcript import load_transcript
 
-        transcript_dir = (
-            Path(tmp_dir)
-            / ".flowcoder"
-            / "teams"
-            / "test-team"
-            / "transcripts"
-        )
+        transcript_dir = Path(tmp_dir) / ".flowcoder" / "teams" / "test-team" / "transcripts"
         transcript_dir.mkdir(parents=True)
 
         with patch("flowcoder.teams.models.Path.home", return_value=Path(tmp_dir)):
@@ -800,13 +859,7 @@ class TestTranscript:
     def test_load_transcript_skips_malformed_messages(self, tmp_dir):
         from flowcoder.teams.transcript import load_transcript
 
-        transcript_dir = (
-            Path(tmp_dir)
-            / ".flowcoder"
-            / "teams"
-            / "test-team"
-            / "transcripts"
-        )
+        transcript_dir = Path(tmp_dir) / ".flowcoder" / "teams" / "test-team" / "transcripts"
         transcript_dir.mkdir(parents=True)
         (transcript_dir / "agent-001.json").write_text(
             json.dumps(
@@ -850,19 +903,23 @@ class TestTranscript:
         assert len(restored.history) == 1
         assert restored.history[0].content == "valid"
 
+
 # =====================================================================
 # 10. Agent build_system_prompt 集成测试
 # =====================================================================
 
+
 class TestAgentCoordinatorIntegration:
     def test_normal_prompt(self):
         from flowcoder.prompts import build_system_prompt
+
         prompt = build_system_prompt()
         assert "You are FlowCoder" in prompt
         assert "# System" in prompt
 
     def test_coordinator_prompt(self):
         from flowcoder.prompts import build_system_prompt
+
         prompt = build_system_prompt(coordinator_mode=True)
         assert "coordinator" in prompt.lower()
         assert "Research" in prompt
@@ -870,6 +927,7 @@ class TestAgentCoordinatorIntegration:
 
     def test_coordinator_overrides_plan(self):
         from flowcoder.prompts import build_system_prompt
+
         prompt = build_system_prompt(coordinator_mode=True)
         assert "# System" not in prompt
         assert "coordinator" in prompt.lower()

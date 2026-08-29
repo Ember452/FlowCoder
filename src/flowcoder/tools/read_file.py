@@ -36,7 +36,6 @@ class ReadFile(Tool):
     category = "read"
     is_concurrency_safe = True
 
-
     def __init__(
         self,
         file_cache: FileCache | None = None,
@@ -46,7 +45,6 @@ class ReadFile(Tool):
         self._cache = file_cache
         self._state_cache = file_state_cache
         self._base_dir = base_dir
-
 
     async def execute(self, params: Params) -> ToolResult:
         if params.offset < 0:

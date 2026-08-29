@@ -28,8 +28,7 @@ def list_worktrees_payload(manager: Any) -> dict:
     return {
         "current": current_name,
         "worktrees": [
-            worktree_to_dict(worktree, current_name)
-            for worktree in manager.list_worktrees()
+            worktree_to_dict(worktree, current_name) for worktree in manager.list_worktrees()
         ],
     }
 

@@ -10,13 +10,15 @@ from flowcoder.core.frontmatter import FrontmatterParseError, parse_yaml_frontma
 
 
 def test_parse_yaml_frontmatter_accepts_delimiter_text_inside_values() -> None:
-    meta, body = parse_yaml_frontmatter(textwrap.dedent("""\
+    meta, body = parse_yaml_frontmatter(
+        textwrap.dedent("""\
         ---
         name: delimiter
         description: "Use --- as text"
         ---
         Body
-    """))
+    """)
+    )
 
     assert meta == {
         "name": "delimiter",

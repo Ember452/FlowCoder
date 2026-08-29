@@ -42,9 +42,7 @@ def add_final_response(
     conversation.add_assistant_message(
         response.text,
         thinking_blocks=(
-            response_thinking_blocks(response)
-            if thinking_blocks is None
-            else thinking_blocks
+            response_thinking_blocks(response) if thinking_blocks is None else thinking_blocks
         ),
     )
 
@@ -60,9 +58,7 @@ def add_tool_call_response(
         response.text,
         tool_uses,
         thinking_blocks=(
-            response_thinking_blocks(response)
-            if thinking_blocks is None
-            else thinking_blocks
+            response_thinking_blocks(response) if thinking_blocks is None else thinking_blocks
         ),
     )
     conversation.record_usage_anchor(

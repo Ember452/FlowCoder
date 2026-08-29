@@ -19,21 +19,73 @@ _DANGEROUS_PATTERNS: list[tuple[re.Pattern[str], str]] = [
 ]
 
 
-_SAFE_EXACT_COMMANDS = frozenset({
-    "pwd", "whoami", "hostname", "date", "cal", "uptime", "env", "printenv",
-    "true", "false", "go version", "node -v", "npm -v", "python --version",
-    "cargo --version", "rustc --version", "java -version", "java --version",
-})
+_SAFE_EXACT_COMMANDS = frozenset(
+    {
+        "pwd",
+        "whoami",
+        "hostname",
+        "date",
+        "cal",
+        "uptime",
+        "env",
+        "printenv",
+        "true",
+        "false",
+        "go version",
+        "node -v",
+        "npm -v",
+        "python --version",
+        "cargo --version",
+        "rustc --version",
+        "java -version",
+        "java --version",
+    }
+)
 
-_SAFE_PREFIX_COMMANDS = frozenset({
-    "ls", "dir", "echo", "cat", "head", "tail", "wc",
-    "which", "whereis", "uname", "df", "du", "free",
-    "file", "stat", "readlink", "realpath", "basename", "dirname",
-    "uniq", "tr", "cut", "grep", "egrep", "fgrep", "diff", "comm", "test",
-    "git status", "git log", "git diff", "git show", "git branch",
-    "git tag", "git remote", "git rev-parse", "git ls-files",
-    "git blame", "git stash list", "pip list",
-})
+_SAFE_PREFIX_COMMANDS = frozenset(
+    {
+        "ls",
+        "dir",
+        "echo",
+        "cat",
+        "head",
+        "tail",
+        "wc",
+        "which",
+        "whereis",
+        "uname",
+        "df",
+        "du",
+        "free",
+        "file",
+        "stat",
+        "readlink",
+        "realpath",
+        "basename",
+        "dirname",
+        "uniq",
+        "tr",
+        "cut",
+        "grep",
+        "egrep",
+        "fgrep",
+        "diff",
+        "comm",
+        "test",
+        "git status",
+        "git log",
+        "git diff",
+        "git show",
+        "git branch",
+        "git tag",
+        "git remote",
+        "git rev-parse",
+        "git ls-files",
+        "git blame",
+        "git stash list",
+        "pip list",
+    }
+)
 
 
 def _tokenize_command(command: str) -> list[str]:
@@ -58,7 +110,7 @@ def _detect_rm_root(command: str) -> bool:
 
         recursive = False
         force = False
-        for arg in tokens[index + 1:]:
+        for arg in tokens[index + 1 :]:
             if arg in {";", "&&", "||", "|"}:
                 break
             short_recursive, short_force = _short_rm_flags(arg)
@@ -95,14 +147,11 @@ def is_safe_command(command: str) -> bool:
 
 
 class DangerousCommandDetector:
-
-
     def __init__(self, extra_patterns: list[tuple[str, str]] | None = None) -> None:
         self._patterns = list(_DANGEROUS_PATTERNS)
         if extra_patterns:
             for regex_str, reason in extra_patterns:
                 self._patterns.append((re.compile(regex_str), reason))
-
 
     def detect(self, command: str) -> tuple[bool, str]:
         if _detect_rm_root(command):

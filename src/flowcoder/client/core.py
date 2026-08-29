@@ -13,9 +13,9 @@ from openai import AsyncOpenAI
 from flowcoder.providers.anthropic_request import (
     ANTHROPIC_MODEL_FETCH_TIMEOUT,
     build_anthropic_request_kwargs,
-    mark_last_tool_for_cache as _mark_last_tool_for_cache,
-    mark_last_user_tail_for_cache as _mark_last_user_tail_for_cache,
-    supports_adaptive_thinking as _supports_adaptive_thinking,
+    mark_last_tool_for_cache as mark_last_tool_for_cache,
+    mark_last_user_tail_for_cache as mark_last_user_tail_for_cache,
+    supports_adaptive_thinking as supports_adaptive_thinking,
 )
 from flowcoder.providers.anthropic_streaming import AnthropicStreamState
 from flowcoder.client.error_mapping import provider_error_mapper
@@ -31,10 +31,10 @@ from flowcoder.core.serialization import (
 )
 from flowcoder.client.errors import (
     AuthenticationError,
-    LLMError,
-    NetworkError,
-    RateLimitError,
-    rate_limit_error as _rate_limit_error,
+    LLMError as LLMError,
+    NetworkError as NetworkError,
+    RateLimitError as RateLimitError,
+    rate_limit_error as rate_limit_error,
 )
 from flowcoder.providers.openai_streaming import (
     OpenAIChatToolCallState,
@@ -51,7 +51,7 @@ from flowcoder.providers.openai_streaming import (
 from flowcoder.providers.openai_compat_request import build_chat_completion_request_kwargs
 from flowcoder.providers.openai_responses_request import build_openai_response_request_kwargs
 from flowcoder.client.auth import (
-    is_local_base_url as _is_local_base_url,
+    is_local_base_url as is_local_base_url,
     resolve_openai_api_key as _resolve_openai_api_key,
 )
 from flowcoder.tools.base import (
@@ -61,7 +61,23 @@ from flowcoder.tools.base import (
 )
 
 
+# 重导出别名：历史公开名，flowcoder.client 与测试从本模块取这些名字
+_mark_last_tool_for_cache = mark_last_tool_for_cache
+_mark_last_user_tail_for_cache = mark_last_user_tail_for_cache
+_rate_limit_error = rate_limit_error
+_is_local_base_url = is_local_base_url
+_supports_adaptive_thinking = supports_adaptive_thinking
+
+
 class LLMClient(ABC):
+    """LLM 客户端统一抽象：屏蔽 Anthropic / OpenAI / OpenAI 兼容三家差异。
+
+    对外只暴露 ``stream()``——把对话 + system prompt + tools 转成统一的
+    ``StreamEvent`` 流（TextDelta / ThinkingDelta / ToolCall* / StreamEnd），
+    Agent 侧无需关心底层用的是哪家协议。子类负责把各自 SDK 的事件
+    翻译成这套统一事件流。
+    """
+
     @abstractmethod
     async def stream(
         self,
@@ -119,6 +135,7 @@ class AnthropicClient(LLMClient):
     ) -> AsyncIterator[StreamEvent]:
         import anthropic as _anthropic
 
+        # error_mapper 把 SDK 原生异常归一成 LLMError 体系（鉴权/限流/网络等）
         error_mapper = provider_error_mapper(_anthropic)
         kwargs = build_anthropic_request_kwargs(
             model=self.model,
@@ -129,30 +146,34 @@ class AnthropicClient(LLMClient):
             thinking=self.thinking,
         )
 
+        # 流式状态机：跟踪当前 content_block 是 thinking 还是 tool_use
         anthropic_state = AnthropicStreamState()
 
         try:
             async with self._client.messages.stream(**kwargs) as stream:
                 async for event in stream:
                     if event.type == "content_block_start":
-                        tool_start = anthropic_state.start_block(
-                            event.content_block
-                        )
+                        # 块开始：tool_use 块产出 ToolCallStart，thinking 块仅记录
+                        tool_start = anthropic_state.start_block(event.content_block)
                         if tool_start is not None:
                             yield tool_start
                     elif event.type == "content_block_delta":
                         delta = event.delta
                         if delta.type == "text_delta":
+                            # 普通文本增量直接转发
                             yield TextDelta(text=delta.text)
                         else:
+                            # thinking / signature / input_json 增量交给状态机
                             for stream_event in anthropic_state.add_delta(delta):
                                 yield stream_event
                     elif event.type == "content_block_stop":
+                        # 块结束：产出 ThinkingComplete / ToolCallComplete
                         for stream_event in anthropic_state.stop_block():
                             yield stream_event
                     elif event.type == "message_stop":
                         pass
 
+                # 流结束后取最终 message，提取真实用量（含 prompt cache 分量）
                 final = await stream.get_final_message()
                 usage = final.usage
                 yield StreamEnd(
@@ -160,9 +181,7 @@ class AnthropicClient(LLMClient):
                     input_tokens=usage.input_tokens,
                     output_tokens=usage.output_tokens,
                     cache_read=getattr(usage, "cache_read_input_tokens", 0) or 0,
-                    cache_creation=getattr(
-                        usage, "cache_creation_input_tokens", 0
-                    ) or 0,
+                    cache_creation=getattr(usage, "cache_creation_input_tokens", 0) or 0,
                 )
 
         except error_mapper.handled_errors as e:
@@ -209,35 +228,36 @@ class OpenAIClient(LLMClient):
             response_stream = await self._client.responses.create(**kwargs)
             async for event in response_stream:
                 if event.type == "response.output_text.delta":
+                    # 正文文本增量
                     yield TextDelta(text=event.delta)
                 elif event.type in _RESPONSE_REASONING_DELTA_EVENTS:
+                    # 推理增量：交给 reasoning_state 聚合并转发
                     text = _get_text(event, "delta", "text")
                     for reasoning_event in reasoning_state.add_delta(text):
                         yield reasoning_event
                 elif event.type in _RESPONSE_REASONING_DONE_EVENTS:
+                    # 推理完成事件：补齐尾巴并产出 ThinkingComplete
                     text = _get_text(event, "text")
-                    for reasoning_event in reasoning_state.complete_from_done_text(
-                        text
-                    ):
+                    for reasoning_event in reasoning_state.complete_from_done_text(text):
                         yield reasoning_event
                 elif event.type == "response.function_call_arguments.delta":
+                    # 工具参数 JSON 分片
                     for tool_event in response_tool_call.add_arguments_delta(event):
                         yield tool_event
                 elif event.type == "response.function_call_arguments.done":
+                    # 工具参数流结束：产出 ToolCallComplete
                     yield response_tool_call.complete(event)
                 elif event.type == "response.output_item.added":
-                    tool_start = response_tool_call.add_output_item(
-                        getattr(event, "item", None)
-                    )
+                    # 工具身份出现：产出 ToolCallStart
+                    tool_start = response_tool_call.add_output_item(getattr(event, "item", None))
                     if tool_start is not None:
                         yield tool_start
                 elif event.type == "response.completed":
+                    # 响应整体完成：若只有 summary 没给 delta 则补推理，再产出用量
                     resp = getattr(event, "response", None)
                     if self.thinking:
                         summary = _extract_response_reasoning_summary(resp)
-                        for reasoning_event in reasoning_state.complete_from_summary(
-                            summary
-                        ):
+                        for reasoning_event in reasoning_state.complete_from_summary(summary):
                             yield reasoning_event
                     usage = getattr(resp, "usage", None) if resp else None
                     yield _stream_end_from_openai_response_usage(usage)
@@ -296,15 +316,17 @@ class OpenAICompatClient(LLMClient):
             response = await self._client.chat.completions.create(**kwargs)
             async for chunk in response:
                 if not chunk.choices:
-                    # 最后一个 chunk，只包含 usage 数据。
+                    # 末尾 chunk：choices 为空，只承载 usage（stream_options 而来）
                     if chunk.usage:
                         yield _stream_end_from_openai_chat_usage(chunk.usage)
                     continue
 
+                # Chat Completions 每个 chunk 只有一个 choice（取第 0 个）
                 choice = chunk.choices[0]
                 delta = choice.delta
 
                 if self.thinking and delta:
+                    # 推理增量（各家用不同字段，extract 函数统一适配）
                     reasoning = _extract_chat_reasoning_delta(delta)
                     for reasoning_event in reasoning_state.add_delta(reasoning):
                         yield reasoning_event
@@ -313,15 +335,14 @@ class OpenAICompatClient(LLMClient):
                 if delta and delta.content:
                     yield TextDelta(text=delta.content)
 
-                # --- tool call 增量 ---
+                # --- tool call 增量（可能并发多个，按 index 关联）---
                 if delta and delta.tool_calls:
-                    for tool_event in chat_tool_call.add_tool_call_deltas(
-                        delta.tool_calls
-                    ):
+                    for tool_event in chat_tool_call.add_tool_call_deltas(delta.tool_calls):
                         yield tool_event
 
                 # --- 结束原因 ---
                 if choice.finish_reason in ("tool_calls", "stop"):
+                    # 先把挂起的推理收尾，再按 finish_reason 决定是否收尾工具调用
                     complete = reasoning_state.complete_if_pending()
                     if complete is not None:
                         yield complete
@@ -334,6 +355,7 @@ class OpenAICompatClient(LLMClient):
 
 
 def create_client(config: ProviderConfig) -> LLMClient:
+    # 协议工厂：根据 config.protocol 选用对应客户端，对外返回统一的 LLMClient
     if config.protocol == "anthropic":
         return AnthropicClient(config)
     elif config.protocol == "openai":

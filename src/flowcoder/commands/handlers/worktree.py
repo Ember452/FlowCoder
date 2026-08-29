@@ -12,7 +12,6 @@ if TYPE_CHECKING:
 
 def create_worktree_command(manager: WorktreeManager) -> Command:
 
-
     async def handle_worktree(ctx: CommandContext) -> None:
         args = ctx.args.strip()
         if not args:
@@ -72,20 +71,15 @@ async def _handle_create(
         return
 
     try:
-        session = await manager.enter(name)
+        await manager.enter(name)
         if ctx.agent:
             ctx.agent.work_dir = wt.path
     except Exception as e:
-        ctx.ui.add_system_message(
-            f"Worktree 已创建但进入失败: {e}\n路径: {wt.path}"
-        )
+        ctx.ui.add_system_message(f"Worktree 已创建但进入失败: {e}\n路径: {wt.path}")
         return
 
     ctx.ui.add_system_message(
-        f"已创建并进入 worktree: {name}\n"
-        f"路径: {wt.path}\n"
-        f"分支: {wt.branch}\n"
-        f"基于: {base_branch}"
+        f"已创建并进入 worktree: {name}\n路径: {wt.path}\n分支: {wt.branch}\n基于: {base_branch}"
     )
 
 

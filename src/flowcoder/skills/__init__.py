@@ -1,6 +1,11 @@
 """技能（Skills）系统包。"""
 
-from flowcoder.skills.parser import SkillDef, SkillParseError, parse_skill_file, substitute_arguments
+from flowcoder.skills.parser import (
+    SkillDef,
+    SkillParseError,
+    parse_skill_file,
+    substitute_arguments,
+)
 from flowcoder.skills.loader import SkillLoader
 from flowcoder.skills.executor import SkillExecutor
 

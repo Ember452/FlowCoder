@@ -25,12 +25,10 @@ def parse_yaml_frontmatter(raw: str) -> tuple[dict, str]:
             break
 
     if closing_line is None:
-        raise FrontmatterParseError(
-            "Unclosed YAML frontmatter (missing closing ---)"
-        )
+        raise FrontmatterParseError("Unclosed YAML frontmatter (missing closing ---)")
 
     yaml_block = "".join(lines[1:closing_line])
-    body = "".join(lines[closing_line + 1:]).lstrip("\n")
+    body = "".join(lines[closing_line + 1 :]).lstrip("\n")
 
     try:
         meta = yaml.safe_load(yaml_block)

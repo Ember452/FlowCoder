@@ -39,18 +39,18 @@ class AgentMemoryBridge:
     """
 
     memory_hub: MemoryHub | None  # 记忆中心（None 表示未启用记忆）
-    client: Any                   # LLM 客户端（提取记忆时使用）
-    protocol: str                 # LLM 协议名
+    client: Any  # LLM 客户端（提取记忆时使用）
+    protocol: str  # LLM 协议名
     project_root: str
-    source: str = "agent"         # 来源标识
-    _extracting: bool = False     # 防重入标记
+    source: str = "agent"  # 来源标识
+    _extracting: bool = False  # 防重入标记
 
     @property
     def enabled(self) -> bool:
         return self.memory_hub is not None
 
     async def load_context(self, query: str = "", session_id: str = "") -> str:
-        """加载记忆上下文。如果未启用记忆，返回空字符串。"""
+        """多层加载记忆上下文。如果未启用记忆，返回空字符串。"""
         if not self.memory_hub:
             return ""
         scope = MemoryScope(

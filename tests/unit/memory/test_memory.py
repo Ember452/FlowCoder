@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -23,12 +22,10 @@ from flowcoder.memory.instructions import (
 )
 from flowcoder.memory.session import (
     RecordType,
-    ResumeResult,
     Session,
     SessionManager,
     SessionMeta,
     SessionRecord,
-
     make_compact_boundary,
     parse_compact_boundary,
     records_to_messages,
@@ -48,6 +45,7 @@ from flowcoder.config.validator import validate_memory
 # =========================================================================
 # A. 指令文件（FLOWCODER.md）
 # =========================================================================
+
 
 class TestProcessIncludes:
     def test_no_includes(self, tmp_path: Path) -> None:
@@ -88,6 +86,7 @@ class TestProcessIncludes:
         result = process_includes(content, tmp_path, tmp_path)
         assert "skipped: file not found" in result
 
+
 class TestLoadInstructions:
     def test_single_layer(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         flowcoder_md = tmp_path / "FLOWCODER.md"
@@ -110,9 +109,11 @@ class TestLoadInstructions:
         result = load_instructions(str(tmp_path))
         assert result == ""
 
+
 # =========================================================================
 # B. 会话记录 SessionRecord
 # =========================================================================
+
 
 class TestSessionRecord:
     def test_user_message_roundtrip(self) -> None:
@@ -160,7 +161,12 @@ class TestSessionRecord:
 
     def test_malformed_jsonl_returns_none(self) -> None:
         assert SessionRecord.from_jsonl("{bad json") is None
-        assert SessionRecord.from_jsonl('{"type":"unknown","content":"x","timestamp":"2025-01-01T00:00:00"}') is None
+        assert (
+            SessionRecord.from_jsonl(
+                '{"type":"unknown","content":"x","timestamp":"2025-01-01T00:00:00"}'
+            )
+            is None
+        )
 
     @pytest.mark.parametrize(
         "line",
@@ -182,9 +188,11 @@ class TestSessionRecord:
         assert len(records) == 1
         assert records[0].content == "done"
 
+
 # =========================================================================
 # C. 会话 Session 与会话管理器 SessionManager
 # =========================================================================
+
 
 class TestSession:
     def test_append_writes_jsonl_and_updates_meta(self, tmp_path: Path) -> None:
@@ -217,8 +225,8 @@ class TestSession:
             session.append(Message(role="user", content="my first question"))
             assert meta.title == "my first question"
 
-class TestSessionManager:
 
+class TestSessionManager:
     def test_create_and_list(self, tmp_path: Path) -> None:
         mgr = SessionManager(str(tmp_path))
         s1 = mgr.create()
@@ -261,9 +269,11 @@ class TestSessionManager:
         assert len(s.session_id.split("_")) == 4
         s.close()
 
+
 # =========================================================================
 # D. 消息链校验与会话恢复
 # =========================================================================
+
 
 class TestValidateMessageChain:
     def test_complete_chain(self) -> None:
@@ -321,6 +331,7 @@ class TestValidateMessageChain:
         ]
 
         assert validate_message_chain(records) == 2
+
 
 class TestRecordsToMessages:
     def test_basic_roundtrip(self) -> None:
@@ -398,6 +409,7 @@ class TestRecordsToMessages:
         assert messages[0].tool_uses[0].tool_use_id == "t2"
         assert messages[0].tool_uses[0].arguments == {}
 
+
 class TestSessionResume:
     def test_resume_restores_messages(self, tmp_path: Path) -> None:
         mgr = SessionManager(str(tmp_path))
@@ -440,9 +452,11 @@ class TestSessionResume:
         assert len(result.messages) == 2
         result.session.close()
 
+
 # =========================================================================
 # D2. 压缩边界的持久化 + 恢复时重新加载压缩后的状态
 # =========================================================================
+
 
 class TestCompactBoundaryRoundTrip:
     def test_make_and_parse_boundary_text_only(self) -> None:
@@ -520,7 +534,8 @@ class TestCompactBoundaryRoundTrip:
 
     def test_parse_malformed_boundary_degrades(self) -> None:
         bad = SessionRecord(
-            type=RecordType.COMPACT_BOUNDARY, content="not a dict",
+            type=RecordType.COMPACT_BOUNDARY,
+            content="not a dict",
             timestamp=datetime.now(timezone.utc),
         )
         summary, keep_msgs = parse_compact_boundary(bad)
@@ -604,9 +619,7 @@ class TestCompactBoundaryRoundTrip:
         assert summary_idx < keep_idx < post_idx
         result.session.close()
 
-    def test_resume_truncates_incomplete_tool_call_inside_boundary(
-        self, tmp_path: Path
-    ) -> None:
+    def test_resume_truncates_incomplete_tool_call_inside_boundary(self, tmp_path: Path) -> None:
         mgr = SessionManager(str(tmp_path))
         s = mgr.create()
         sid = s.session_id
@@ -647,13 +660,23 @@ class TestCompactBoundaryRoundTrip:
         sid = s.session_id
 
         s.append(Message(role="user", content="gen0 raw"))
-        s.append_record(make_compact_boundary("FIRST summary", [
-            Message(role="user", content="gen1 kept"),
-        ]))
+        s.append_record(
+            make_compact_boundary(
+                "FIRST summary",
+                [
+                    Message(role="user", content="gen1 kept"),
+                ],
+            )
+        )
         s.append(Message(role="assistant", content="between boundaries"))
-        s.append_record(make_compact_boundary("SECOND summary", [
-            Message(role="user", content="gen2 kept"),
-        ]))
+        s.append_record(
+            make_compact_boundary(
+                "SECOND summary",
+                [
+                    Message(role="user", content="gen2 kept"),
+                ],
+            )
+        )
         s.append(Message(role="user", content="after second"))
         s.close()
 
@@ -701,6 +724,7 @@ class TestCompactBoundaryRoundTrip:
 # F. 会话元数据 SessionMeta
 # =========================================================================
 
+
 class TestSessionMeta:
     def test_save_and_load(self, tmp_path: Path) -> None:
         meta = SessionMeta(
@@ -728,12 +752,7 @@ class TestSessionMeta:
         now = datetime.now(timezone.utc).isoformat()
         path = tmp_path / "minimal.meta"
         path.write_text(
-            (
-                '{"id":"minimal",'
-                f'"created_at":"{now}",'
-                f'"last_active":"{now}"'
-                "}"
-            ),
+            (f'{{"id":"minimal","created_at":"{now}","last_active":"{now}"}}'),
             encoding="utf-8",
         )
 
@@ -763,9 +782,7 @@ class TestSessionMeta:
             '{"id":"s","created_at":"2025-01-01T00:00:00","last_active":[]}',
         ],
     )
-    def test_load_rejects_bad_field_types(
-        self, tmp_path: Path, content: str
-    ) -> None:
+    def test_load_rejects_bad_field_types(self, tmp_path: Path, content: str) -> None:
         path = tmp_path / "bad.meta"
         path.write_text(content, encoding="utf-8")
 
@@ -782,9 +799,11 @@ class TestSessionMeta:
 
         assert [meta.id for meta in metas] == [good_id]
 
+
 # =========================================================================
 # G. 记忆管理器 MemoryManager
 # =========================================================================
+
 
 class TestMemoryManager:
     def test_load_empty(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -794,7 +813,9 @@ class TestMemoryManager:
         mgr = MemoryManager(str(tmp_path / "project"))
         assert mgr.load() == ""
 
-    def test_load_merges_user_and_project(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_load_merges_user_and_project(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         fake_home = tmp_path / "home"
         fake_home.mkdir()
         monkeypatch.setattr(Path, "home", classmethod(lambda cls: fake_home))
@@ -836,7 +857,9 @@ class TestMemoryManager:
         mgr = MemoryManager(str(tmp_path / "project"))
         assert "没有任何自动记忆" in mgr.get_display_text()
 
-    def test_write_memories_splits_correctly(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_write_memories_splits_correctly(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         fake_home = tmp_path / "home"
         fake_home.mkdir()
         monkeypatch.setattr(Path, "home", classmethod(lambda cls: fake_home))
@@ -859,9 +882,11 @@ class TestMemoryManager:
         assert "docs at example.com" in project_content
         assert "use spaces" not in project_content
 
+
 # =========================================================================
 # H. 会话注入长期记忆 inject_long_term_memory
 # =========================================================================
+
 
 class TestConversationInjection:
     def test_inject_long_term_memory(self) -> None:
@@ -914,9 +939,11 @@ class TestConversationInjection:
         conv.replace_history([])
         assert conv.ltm_injected is False
 
+
 # =========================================================================
 # I. 记忆抽取 prompt 的构造
 # =========================================================================
+
 
 class TestMemoryExtraction:
     def test_extraction_prompt_contains_categories(self, tmp_path: Path) -> None:
@@ -932,6 +959,7 @@ class TestMemoryExtraction:
 # =========================================================================
 # J. 记忆插件 MemoryHub / Provider
 # =========================================================================
+
 
 class _StaticMemoryProvider(BaseMemoryProvider):
     name = "static"
@@ -1316,18 +1344,20 @@ class TestMemoryProviders:
         assert defaults["enabled"] is True
         assert defaults["providers"][0]["type"] == "builtin.markdown"
 
-        cleaned = validate_memory({
-            "enabled": True,
-            "providers": [
-                {
-                    "name": "vector",
-                    "type": "python",
-                    "module": " my_memory.provider ",
-                    "class_name": " VectorMemory ",
-                    "config": {"top_k": 8},
-                }
-            ],
-        })
+        cleaned = validate_memory(
+            {
+                "enabled": True,
+                "providers": [
+                    {
+                        "name": "vector",
+                        "type": "python",
+                        "module": " my_memory.provider ",
+                        "class_name": " VectorMemory ",
+                        "config": {"top_k": 8},
+                    }
+                ],
+            }
+        )
 
         assert cleaned["providers"][0]["module"] == "my_memory.provider"
         assert cleaned["providers"][0]["class"] == "VectorMemory"
@@ -1373,9 +1403,7 @@ class TestMemoryProviders:
             ),
         ],
     )
-    def test_validate_memory_rejects_bad_string_fields(
-        self, provider: dict, message: str
-    ) -> None:
+    def test_validate_memory_rejects_bad_string_fields(self, provider: dict, message: str) -> None:
         with pytest.raises(ConfigError, match=message):
             validate_memory({"providers": [provider]})
 
@@ -1398,9 +1426,7 @@ class TestMemoryProviders:
             },
         ],
     )
-    def test_validate_memory_requires_python_provider_target(
-        self, provider: dict
-    ) -> None:
+    def test_validate_memory_requires_python_provider_target(self, provider: dict) -> None:
         with pytest.raises(
             ConfigError,
             match="python provider requires module and class",
@@ -1409,12 +1435,14 @@ class TestMemoryProviders:
 
     def test_validate_memory_rejects_duplicate_provider_names(self) -> None:
         with pytest.raises(ConfigError, match="duplicate name"):
-            validate_memory({
-                "providers": [
-                    {"name": "dup", "type": "builtin.markdown"},
-                    {"name": "dup", "type": "python", "module": "x", "class": "Y"},
-                ],
-            })
+            validate_memory(
+                {
+                    "providers": [
+                        {"name": "dup", "type": "builtin.markdown"},
+                        {"name": "dup", "type": "python", "module": "x", "class": "Y"},
+                    ],
+                }
+            )
 
 
 class TestMemoryConfig:

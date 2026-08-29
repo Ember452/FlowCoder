@@ -91,7 +91,7 @@ async def post_account_session(request: Request) -> JSONResponse:
         return parsed.error
     body = parsed.unwrap()
     try:
-        session = sign_in(
+        sign_in(
             email=body.email,
             password=body.password,
             base_url=body.base_url or None,

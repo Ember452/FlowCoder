@@ -43,9 +43,7 @@ class MCPManager:
                 logger.info("Skipping disabled MCP server '%s'", name)
                 continue
             try:
-                errors.extend(
-                    await self._register_server_tools(name, config, registry)
-                )
+                errors.extend(await self._register_server_tools(name, config, registry))
             except Exception as e:
                 msg = f"MCP server '{name}': {e}"
                 logger.warning(msg)

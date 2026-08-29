@@ -23,9 +23,7 @@ def resolve_subagent_model_override(
     requested_model: str | None,
     definition_model: str,
 ) -> str | None:
-    model = requested_model or (
-        definition_model if definition_model != "inherit" else None
-    )
+    model = requested_model or (definition_model if definition_model != "inherit" else None)
     if model == "inherit":
         return None
     return model

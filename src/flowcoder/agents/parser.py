@@ -61,9 +61,7 @@ def _optional_string_choice(
     value = value.strip()
     if value not in valid_values:
         allowed = valid_values - {""}
-        raise AgentParseError(
-            f"Invalid {field_name} '{value}'{ctx}: must be one of {allowed}"
-        )
+        raise AgentParseError(f"Invalid {field_name} '{value}'{ctx}: must be one of {allowed}")
     return value
 
 
@@ -83,9 +81,7 @@ def _optional_string_list(
 def _optional_positive_int(meta: dict, field_name: str, default: int, ctx: str) -> int:
     value = meta.get(field_name, default)
     if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
-        raise AgentParseError(
-            f"Invalid {field_name} '{value}'{ctx}: must be a positive integer"
-        )
+        raise AgentParseError(f"Invalid {field_name} '{value}'{ctx}: must be a positive integer")
     return value
 
 

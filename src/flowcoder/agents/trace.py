@@ -27,7 +27,6 @@ class TraceManager:
     def __init__(self) -> None:
         self._nodes: dict[str, TraceNode] = {}
 
-
     def create(
         self,
         agent_type: str,
@@ -55,7 +54,6 @@ class TraceManager:
             if hasattr(node, key):
                 setattr(node, key, value)
 
-
     def complete(self, agent_id: str, status: str = "completed") -> None:
         node = self._nodes.get(agent_id)
         if node is None:
@@ -63,13 +61,11 @@ class TraceManager:
         node.end_time = time.monotonic()
         node.status = status
 
-
     def get(self, agent_id: str) -> TraceNode | None:
         return self._nodes.get(agent_id)
 
     def get_tree(self, trace_id: str) -> list[TraceNode]:
         return [n for n in self._nodes.values() if n.trace_id == trace_id]
-
 
     def remove(self, agent_id: str) -> None:
         self._nodes.pop(agent_id, None)

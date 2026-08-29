@@ -74,9 +74,7 @@ def _optional_string_list(meta: dict, field_name: str, ctx: str) -> list[str]:
     cleaned: list[str] = []
     for item in value:
         if not isinstance(item, str) or not item.strip():
-            raise SkillParseError(
-                f"Field '{field_name}'{ctx} must be a list of non-empty strings"
-            )
+            raise SkillParseError(f"Field '{field_name}'{ctx} must be a list of non-empty strings")
         cleaned.append(item.strip())
     return cleaned
 
@@ -93,9 +91,7 @@ def _optional_choice(
         raise SkillParseError(f"Field '{field_name}'{ctx} must be a string")
     value = value.strip()
     if value not in valid_values:
-        raise SkillParseError(
-            f"Invalid {field_name} '{value}'{ctx}: must be one of {valid_values}"
-        )
+        raise SkillParseError(f"Invalid {field_name} '{value}'{ctx}: must be one of {valid_values}")
     return value
 
 

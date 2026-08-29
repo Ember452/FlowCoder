@@ -49,7 +49,11 @@ def restore_conversation(raw: object) -> ConversationManager:
         if role not in {"user", "assistant"} or not isinstance(content, str):
             continue
         tool_uses = [
-            ToolUseBlock(tool_use_id=entry["id"], tool_name=entry["name"], arguments=entry.get("arguments", {}))
+            ToolUseBlock(
+                tool_use_id=entry["id"],
+                tool_name=entry["name"],
+                arguments=entry.get("arguments", {}),
+            )
             for entry in item.get("tool_uses", [])
             if isinstance(entry, dict)
             and isinstance(entry.get("id"), str)

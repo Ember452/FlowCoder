@@ -125,9 +125,7 @@ async def test_execute_noninteractive_tool_call_blocks_disabled_tool() -> None:
 @pytest.mark.asyncio
 async def test_execute_noninteractive_tool_call_reports_pre_hook_rejection() -> None:
     tool = RecordingWriteTool()
-    hook_engine = FakeHookEngine(
-        ToolRejectedError("WriteFile", "blocked by policy", "hook-1")
-    )
+    hook_engine = FakeHookEngine(ToolRejectedError("WriteFile", "blocked by policy", "hook-1"))
 
     result = await _execute(
         registry=_registry(tool),

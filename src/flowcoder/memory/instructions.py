@@ -21,7 +21,6 @@ def process_includes(
     lines = content.split("\n")
     result: list[str] = []
 
-
     for line in lines:
         stripped = line.strip()
         if not stripped.startswith(INCLUDE_PREFIX):
@@ -66,4 +65,3 @@ def load_instructions(project_root: str) -> str:
             sections.append(processed)
 
     return "\n---\n".join(sections)
-

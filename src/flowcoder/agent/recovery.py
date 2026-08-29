@@ -21,11 +21,7 @@ def record_tool_recovery_snapshot(
     """Record ReadFile content that should survive Layer 2 compaction."""
     if result.is_error or tool_call.tool_name != "ReadFile":
         return
-    path = (
-        tool_call.arguments.get("file_path")
-        if isinstance(tool_call.arguments, dict)
-        else None
-    )
+    path = tool_call.arguments.get("file_path") if isinstance(tool_call.arguments, dict) else None
     if not path:
         return
     resolved = resolve_tool_path(path, work_dir)

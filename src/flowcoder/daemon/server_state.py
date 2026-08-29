@@ -243,9 +243,7 @@ class DaemonServer:
         return status
 
     async def manual_compact(self, sid: str) -> DaemonActionResult:
-        agent, conv, error = (
-            await self._runtime_requirements.require_agent_and_conversation(sid)
-        )
+        agent, conv, error = await self._runtime_requirements.require_agent_and_conversation(sid)
         if error is not None:
             return error
         assert agent is not None and conv is not None
@@ -336,9 +334,7 @@ class DaemonServer:
     def cancel_active_task(self, sid: str) -> bool:
         return self._active_tasks.cancel(sid)
 
-    async def resolve_permission(
-        self, sid: str, request_id: str, response: str
-    ) -> bool:
+    async def resolve_permission(self, sid: str, request_id: str, response: str) -> bool:
         """Resolve a pending permission request. response: allow|deny|allow_always."""
         return await resolve_session_pending_prompt(
             sid,
@@ -350,9 +346,7 @@ class DaemonServer:
             emit_event=self._emit,
         )
 
-    async def resolve_askuser(
-        self, sid: str, request_id: str, answers: dict[str, str]
-    ) -> bool:
+    async def resolve_askuser(self, sid: str, request_id: str, answers: dict[str, str]) -> bool:
         """Resolve a pending ask_user request."""
         return await resolve_session_pending_prompt(
             sid,

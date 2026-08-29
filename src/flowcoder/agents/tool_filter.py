@@ -13,69 +13,83 @@ if TYPE_CHECKING:
     from flowcoder.agents.parser import AgentDef
     from flowcoder.teams.manager import TeamManager
 
-ALL_AGENT_DISALLOWED_TOOLS: frozenset[str] = frozenset({
-    "TaskOutput",
-    "ExitPlanMode",
-    "EnterPlanMode",
-    "Agent",
-    "AskUserQuestion",
-    "TaskStop",
-    "Workflow",
-})
-
-CUSTOM_AGENT_DISALLOWED_TOOLS: frozenset[str] = frozenset({
-    "TaskOutput",
-    "ExitPlanMode",
-    "EnterPlanMode",
-    "Agent",
-    "AskUserQuestion",
-    "TaskStop",
-    "Workflow",
-})
-
-ASYNC_AGENT_ALLOWED_TOOLS: frozenset[str] = frozenset({
-    "ReadFile",
-    "WebSearch",
-    "TodoWrite",
-    "Grep",
-    "WebFetch",
-    "Glob",
-    "Bash",
-    "EditFile",
-    "WriteFile",
-    "NotebookEdit",
-    "Skill",
-    "LoadSkill",
-    "SyntheticOutput",
-    "ToolSearch",
-    "EnterWorktree",
-    "ExitWorktree",
-})
-
-TEAMMATE_COORDINATION_TOOLS: frozenset[str] = frozenset({
-    "TaskCreate",
-    "TaskGet",
-    "TaskList",
-    "TaskUpdate",
-    "SendMessage",
-})
-
-IN_PROCESS_TEAMMATE_ALLOWED_TOOLS: frozenset[str] = (
-    ASYNC_AGENT_ALLOWED_TOOLS | TEAMMATE_COORDINATION_TOOLS | frozenset({
-        "CronCreate",
-        "CronDelete",
-        "CronList",
-    })
+ALL_AGENT_DISALLOWED_TOOLS: frozenset[str] = frozenset(
+    {
+        "TaskOutput",
+        "ExitPlanMode",
+        "EnterPlanMode",
+        "Agent",
+        "AskUserQuestion",
+        "TaskStop",
+        "Workflow",
+    }
 )
 
-COORDINATOR_MODE_ALLOWED_TOOLS: frozenset[str] = frozenset({
-    "Agent",
-    "TaskStop",
-    "SendMessage",
-    "SyntheticOutput",
-    "TeamCreate",
-    "TeamDelete",
-})
+CUSTOM_AGENT_DISALLOWED_TOOLS: frozenset[str] = frozenset(
+    {
+        "TaskOutput",
+        "ExitPlanMode",
+        "EnterPlanMode",
+        "Agent",
+        "AskUserQuestion",
+        "TaskStop",
+        "Workflow",
+    }
+)
+
+ASYNC_AGENT_ALLOWED_TOOLS: frozenset[str] = frozenset(
+    {
+        "ReadFile",
+        "WebSearch",
+        "TodoWrite",
+        "Grep",
+        "WebFetch",
+        "Glob",
+        "Bash",
+        "EditFile",
+        "WriteFile",
+        "NotebookEdit",
+        "Skill",
+        "LoadSkill",
+        "SyntheticOutput",
+        "ToolSearch",
+        "EnterWorktree",
+        "ExitWorktree",
+    }
+)
+
+TEAMMATE_COORDINATION_TOOLS: frozenset[str] = frozenset(
+    {
+        "TaskCreate",
+        "TaskGet",
+        "TaskList",
+        "TaskUpdate",
+        "SendMessage",
+    }
+)
+
+IN_PROCESS_TEAMMATE_ALLOWED_TOOLS: frozenset[str] = (
+    ASYNC_AGENT_ALLOWED_TOOLS
+    | TEAMMATE_COORDINATION_TOOLS
+    | frozenset(
+        {
+            "CronCreate",
+            "CronDelete",
+            "CronList",
+        }
+    )
+)
+
+COORDINATOR_MODE_ALLOWED_TOOLS: frozenset[str] = frozenset(
+    {
+        "Agent",
+        "TaskStop",
+        "SendMessage",
+        "SyntheticOutput",
+        "TeamCreate",
+        "TeamDelete",
+    }
+)
 
 
 def _is_mcp_tool(name: str) -> bool:

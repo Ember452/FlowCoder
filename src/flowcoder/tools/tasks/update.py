@@ -32,11 +32,9 @@ class TaskUpdateTool(Tool):
     category = "command"
     is_concurrency_safe = True
 
-
     def __init__(self, team_manager: TeamManager, team_name: str) -> None:
         self._team_manager = team_manager
         self._team_name = team_name
-
 
     async def execute(self, params: BaseModel) -> ToolResult:
         p: TaskUpdateParams = params  # type: ignore[assignment]
@@ -52,7 +50,9 @@ class TaskUpdateTool(Tool):
 
         store = self._team_manager.get_task_store(self._team_name)
         if store is None:
-            return ToolResult(output=f"Task store not found for team '{self._team_name}'", is_error=True)
+            return ToolResult(
+                output=f"Task store not found for team '{self._team_name}'", is_error=True
+            )
 
         task = store.update(
             task_id=p.task_id,

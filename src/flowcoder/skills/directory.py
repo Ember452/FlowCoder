@@ -30,9 +30,7 @@ def parse_tool_json(path: Path) -> list[dict[str, Any]]:
     return normalize_tool_schemas(raw, path)
 
 
-def load_tool_implementation(
-    references_dir: Path, tool_name: str
-) -> Callable[..., Any] | None:
+def load_tool_implementation(references_dir: Path, tool_name: str) -> Callable[..., Any] | None:
     if not is_valid_tool_name(tool_name):
         log.warning(
             "Refusing to load implementation for invalid tool name '%s'",
@@ -127,7 +125,9 @@ def register_skill_tools(skill_dir: Path, registry: ToolRegistry) -> int:
             continue
 
         description = schema["description"]
-        impl = load_tool_implementation(references_dir, tool_name) if references_dir.is_dir() else None
+        impl = (
+            load_tool_implementation(references_dir, tool_name) if references_dir.is_dir() else None
+        )
 
         if impl is None:
             log.warning("No implementation for tool '%s' in %s", tool_name, references_dir)

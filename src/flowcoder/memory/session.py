@@ -14,14 +14,14 @@ from typing import IO, Any
 
 from flowcoder.conversation import ConversationManager, Message
 from flowcoder.memory.session_records import (
-    RecordType,
     SessionRecord,
-    make_compact_boundary,
-    parse_compact_boundary,
     records_from_last_compact_boundary,
     records_to_messages,
     truncate_to_valid_message_chain,
-    validate_message_chain,
+    RecordType as RecordType,
+    make_compact_boundary as make_compact_boundary,
+    parse_compact_boundary as parse_compact_boundary,
+    validate_message_chain as validate_message_chain,
 )
 
 SESSIONS_DIR = ".flowcoder/sessions"
@@ -91,9 +91,7 @@ class SessionMeta:
             "created_at": self.created_at.isoformat(),
             "last_active": self.last_active.isoformat(),
         }
-        path.write_text(
-            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
     @classmethod
     def load(cls, path: Path) -> SessionMeta | None:
@@ -177,7 +175,6 @@ class Session:
         self.meta.last_active = datetime.now(timezone.utc)
         self.meta.save(self._sessions_dir / f"{self.session_id}.meta")
 
-
     def close(self) -> None:
         if self._file and not self._file.closed:
             self._file.flush()
@@ -220,9 +217,7 @@ async def generate_session_summary(
 
     collected = ""
     try:
-        async for event in client.stream(
-            summary_conv, system=SESSION_SUMMARY_PROMPT
-        ):
+        async for event in client.stream(summary_conv, system=SESSION_SUMMARY_PROMPT):
             if isinstance(event, TextDelta):
                 collected += event.text
             elif isinstance(event, StreamEnd):
@@ -249,7 +244,6 @@ class SessionManager:
         self._sessions_dir = Path(work_dir) / SESSIONS_DIR
         self._sessions_dir.mkdir(parents=True, exist_ok=True)
 
-
     def create(self) -> Session:
         session_id = _generate_session_id()
         jsonl_path = self._sessions_dir / f"{session_id}.jsonl"
@@ -263,7 +257,6 @@ class SessionManager:
             meta=meta,
             sessions_dir=self._sessions_dir,
         )
-
 
     def list(self) -> list[SessionMeta]:
         metas: list[SessionMeta] = []

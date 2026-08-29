@@ -125,7 +125,4 @@ def test_pending_prompt_events_after_replay_keeps_events_without_request_id() ->
         }
     ]
 
-    assert (
-        pending_prompt_events_after_replay(pending_events, {"req-1"})
-        == pending_events
-    )
+    assert pending_prompt_events_after_replay(pending_events, {"req-1"}) == pending_events

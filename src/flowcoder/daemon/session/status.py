@@ -64,10 +64,7 @@ def resolve_mode_transition(
             pre_plan_mode=next_pre_plan_mode,
         )
 
-    if (
-        requested_mode in COMMAND_ACCEPTANCE_MODES
-        and current_mode == PermissionMode.PLAN
-    ):
+    if requested_mode in COMMAND_ACCEPTANCE_MODES and current_mode == PermissionMode.PLAN:
         return ModeTransition(
             next_mode=PermissionMode.PLAN,
             pre_plan_mode=requested_mode,
@@ -104,9 +101,7 @@ def build_session_status(
         context_window = provider.get_context_window()
 
     auto_compact_threshold = (
-        max(0, compute_compact_threshold(context_window))
-        if context_window
-        else 0
+        max(0, compute_compact_threshold(context_window)) if context_window else 0
     )
     if conversation is not None and hasattr(conversation, "current_tokens"):
         input_tokens = conversation.current_tokens()
@@ -119,9 +114,7 @@ def build_session_status(
         "work_dir": meta.get("work_dir", server_work_dir),
         "title": meta.get("title", ""),
         "permission_mode": (
-            agent.permission_mode.value
-            if agent is not None
-            else configured_permission_mode
+            agent.permission_mode.value if agent is not None else configured_permission_mode
         ),
         "command_acceptance_mode": command_mode.value,
         "plan_mode": bool(agent.plan_mode) if agent is not None else False,
@@ -129,11 +122,7 @@ def build_session_status(
         "output_tokens": output_tokens,
         "context_window": context_window,
         "auto_compact_threshold": auto_compact_threshold,
-        "token_percent": (
-            int(input_tokens / context_window * 100)
-            if context_window
-            else 0
-        ),
+        "token_percent": (int(input_tokens / context_window * 100) if context_window else 0),
         "tool_count": len(enabled_tools),
         "tools": enabled_tools,
         "active_task": {

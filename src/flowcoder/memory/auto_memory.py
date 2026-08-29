@@ -65,16 +65,15 @@ class MemoryManager:
 
     记忆提取用 LLM 从对话中提取值得记忆的信息，按 4 个分类分别写入对应文件。
     """
+
     def __init__(self, project_root: str) -> None:
         self._user_path = Path.home() / USER_MEMORIES_RELPATH
         self._project_path = Path(project_root) / PROJECT_MEMORIES_RELPATH
         self._last_extraction_msg_count = 0  # 上次提取时的消息数，用于增量提取
 
-
     @property
     def user_path(self) -> Path:
         return self._user_path
-
 
     @property
     def project_path(self) -> Path:
@@ -163,9 +162,7 @@ class MemoryManager:
 
         collected = ""
         try:
-            async for event in client.stream(
-                extract_conv, system="你是一个记忆提取助手。"
-            ):
+            async for event in client.stream(extract_conv, system="你是一个记忆提取助手。"):
                 if isinstance(event, TextDelta):
                     collected += event.text
                 elif isinstance(event, StreamEnd):
@@ -206,15 +203,11 @@ class MemoryManager:
                 current_lines.append(line)
 
         if current_header:
-            self._assign_section(
-                current_header, current_lines, user_sections, project_sections
-            )
+            self._assign_section(current_header, current_lines, user_sections, project_sections)
 
         if user_sections:
             self._user_path.parent.mkdir(parents=True, exist_ok=True)
-            self._user_path.write_text(
-                "\n".join(user_sections).strip() + "\n", encoding="utf-8"
-            )
+            self._user_path.write_text("\n".join(user_sections).strip() + "\n", encoding="utf-8")
 
         if project_sections:
             self._project_path.parent.mkdir(parents=True, exist_ok=True)
@@ -228,7 +221,6 @@ class MemoryManager:
         stripped = line.strip().lstrip("- ").strip()
         return stripped in {"", "...", "…", "无", "暂无", "N/A"}
 
-
     @staticmethod
     def _assign_section(
         header: str,
@@ -238,7 +230,11 @@ class MemoryManager:
     ) -> None:
         """根据标题关键词将一个分节分配到用户级或项目级列表中。
         只保留非占位符的条目行（以 '- ' 开头）。"""
-        real_lines = [l for l in lines if l.strip().startswith("- ") and not MemoryManager._is_placeholder(l)]
+        real_lines = [
+            line
+            for line in lines
+            if line.strip().startswith("- ") and not MemoryManager._is_placeholder(line)
+        ]
         if not real_lines:
             return
 
@@ -253,7 +249,6 @@ class MemoryManager:
             if keyword in header:
                 project_sections.append(section_text)
                 return
-
 
     def clear(self) -> None:
         """清空用户级和项目级 memories.md 文件。"""

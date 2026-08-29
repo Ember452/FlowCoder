@@ -51,8 +51,7 @@ def main() -> None:
     except ConfigError as e:
         print(f"Error: {e}", file=sys.stderr)
         print(
-            "提示: 配置本地 providers，或运行 TUI 交互登录，"
-            "或用 /account signin 登录云端。",
+            "提示: 配置本地 providers，或运行 TUI 交互登录，或用 /account signin 登录云端。",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -144,10 +143,7 @@ async def _run_prompt_loop(agent, task_manager, team_manager, prompt: str) -> No
 
 
 def _drain_cli_notifications(task_manager, team_manager) -> list[str]:
-    notes = [
-        format_task_notification(task)
-        for task in task_manager.poll_completed()
-    ]
+    notes = [format_task_notification(task) for task in task_manager.poll_completed()]
     notes.extend(team_manager.drain_lead_mailbox())
     return notes
 

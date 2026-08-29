@@ -80,9 +80,7 @@ def _parse_save_config_body(payload: dict[str, Any]) -> SaveConfigBody:
     if not isinstance(raw_providers, list):
         raise BodyFieldError("'providers' must be a list")
     # 账号托管 provider 不写 config.yaml
-    raw_providers = filter_local_providers(
-        [p for p in raw_providers if isinstance(p, dict)]
-    )
+    raw_providers = filter_local_providers([p for p in raw_providers if isinstance(p, dict)])
     if not raw_providers and not get_status().logged_in:
         raise BodyFieldError("At least one provider must be configured")
     providers = [_parse_provider_entry(p, i) for i, p in enumerate(raw_providers)]
@@ -139,9 +137,7 @@ def _read_raw_config(path: Path) -> dict[str, Any]:
 
 def _write_raw_config(path: Path, raw: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    content = yaml.safe_dump(
-        raw, allow_unicode=True, sort_keys=False, default_flow_style=False
-    )
+    content = yaml.safe_dump(raw, allow_unicode=True, sort_keys=False, default_flow_style=False)
     fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
@@ -192,6 +188,7 @@ async def save_config(request: Request) -> JSONResponse:
     try:
         _write_raw_config(config_path, raw)
         from flowcoder.config import load_config
+
         server.config = load_config()
     except Exception as exc:
         if previous_exists:
@@ -222,6 +219,7 @@ async def set_permission_mode(request: Request) -> JSONResponse:
     try:
         _write_raw_config(config_path, raw)
         from flowcoder.config import load_config
+
         server.config = load_config()
     except Exception as exc:
         return bad_request_response(f"Failed to save: {exc}")

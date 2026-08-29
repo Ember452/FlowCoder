@@ -119,11 +119,7 @@ def float_from_config(config: dict[str, Any], key: str, default: float) -> float
     if key not in config:
         return default
     value = config[key]
-    if (
-        not isinstance(value, (int, float))
-        or isinstance(value, bool)
-        or value <= 0
-    ):
+    if not isinstance(value, (int, float)) or isinstance(value, bool) or value <= 0:
         raise A2AError(f"configuration.{key} must be a positive number", -32602)
     return float(value)
 

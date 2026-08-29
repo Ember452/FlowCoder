@@ -103,9 +103,7 @@ async def enter_session_worktree(
     except Exception as e:
         return bad_request_result(str(e))
 
-    return DaemonActionResult(
-        _status_payload(sid, status_provider, entered=True)
-    )
+    return DaemonActionResult(_status_payload(sid, status_provider, entered=True))
 
 
 async def exit_session_worktree(
@@ -132,6 +130,4 @@ async def exit_session_worktree(
     except Exception as e:
         return bad_request_result(str(e))
 
-    return DaemonActionResult(
-        _status_payload(sid, status_provider, exited=True)
-    )
+    return DaemonActionResult(_status_payload(sid, status_provider, exited=True))

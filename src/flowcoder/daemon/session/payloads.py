@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from flowcoder.daemon.request_body import (
+    BodyFieldError,
     choice_field,
     required_choice_field,
     required_string_field,

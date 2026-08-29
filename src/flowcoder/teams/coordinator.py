@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-from typing import Any
 
 
 def is_coordinator_mode(enable_flag: bool = False) -> bool:
@@ -236,6 +235,7 @@ def get_coordinator_user_context(
 ) -> dict[str, str]:
     if worker_tools is None:
         from flowcoder.agents.tool_filter import IN_PROCESS_TEAMMATE_ALLOWED_TOOLS
+
         tools_str = ", ".join(sorted(IN_PROCESS_TEAMMATE_ALLOWED_TOOLS))
     else:
         tools_str = ", ".join(sorted(worker_tools))

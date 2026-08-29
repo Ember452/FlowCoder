@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 from flowcoder.config.model_context import (
-    DEFAULT_CONTEXT_WINDOW,
-    MODEL_CONTEXT_WINDOWS,
-    lookup_model_context_window,
+    lookup_model_context_window as lookup_model_context_window,
 )
+
+from flowcoder.config.model_context import MODEL_CONTEXT_WINDOWS as MODEL_CONTEXT_WINDOWS
+
+from flowcoder.config.model_context import DEFAULT_CONTEXT_WINDOW as DEFAULT_CONTEXT_WINDOW
+
 from flowcoder.config.removed_capabilities import (
-    REMOVED_CONFIG_SECTIONS,
     find_removed_config_sections,
+    REMOVED_CONFIG_SECTIONS as REMOVED_CONFIG_SECTIONS,
 )
 
 VALID_PROTOCOLS = {"anthropic", "openai", "openai-compat"}
@@ -89,16 +92,9 @@ def _string_list_field(entry: dict, field_name: str, item_label: str) -> list[st
 def _string_mapping_field(entry: dict, field_name: str, item_label: str) -> dict[str, str]:
     value = entry.get(field_name, {})
     if not isinstance(value, dict):
-        raise ConfigError(
-            f"{item_label}: {field_name} must be a mapping of strings to strings"
-        )
-    if not all(
-        isinstance(key, str) and isinstance(item, str)
-        for key, item in value.items()
-    ):
-        raise ConfigError(
-            f"{item_label}: {field_name} must be a mapping of strings to strings"
-        )
+        raise ConfigError(f"{item_label}: {field_name} must be a mapping of strings to strings")
+    if not all(isinstance(key, str) and isinstance(item, str) for key, item in value.items()):
+        raise ConfigError(f"{item_label}: {field_name} must be a mapping of strings to strings")
     return value
 
 
@@ -163,7 +159,7 @@ def validate_providers(raw_providers: list) -> list[dict]:
 
         # 默认为 0（"未设置"）而非硬编码的 window 值：0 会让
         # ProviderConfig.get_context_window() 走四层回退链解析
-        #（自动拉取 / 映射表 / 默认值）。配置中显式指定的值仍须为正整数，
+        # （自动拉取 / 映射表 / 默认值）。配置中显式指定的值仍须为正整数，
         # 且作为最高优先级覆盖。
         context_window = entry.get("context_window", 0)
         context_window = _integer_field(
@@ -233,18 +229,10 @@ def validate_mcp_servers(raw_mcp: list | None) -> list[dict]:
         has_command = "command" in entry
         has_url = "url" in entry
         if has_command and has_url:
-            raise ConfigError(
-                f"MCP server '{name}': cannot have both 'command' and 'url'"
-            )
+            raise ConfigError(f"MCP server '{name}': cannot have both 'command' and 'url'")
         if not has_command and not has_url:
-            raise ConfigError(
-                f"MCP server '{name}': must have either 'command' or 'url'"
-            )
-        command = (
-            _required_string_field(entry, "command", item_label)
-            if has_command
-            else None
-        )
+            raise ConfigError(f"MCP server '{name}': must have either 'command' or 'url'")
+        command = _required_string_field(entry, "command", item_label) if has_command else None
         url = _required_string_field(entry, "url", item_label) if has_url else None
         servers.append(
             {

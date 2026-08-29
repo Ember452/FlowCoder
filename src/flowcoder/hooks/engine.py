@@ -39,17 +39,17 @@ class HookEngine:
     3. run_pre_tool_hooks(): 执行 pre_tool_use Hook，可以 reject 拦截工具
     4. _schedule_background_hook(): 异步执行 Hook（不阻塞 Agent 循环）
     """
+
     def __init__(
         self,
         hooks: list[Hook] | None = None,
         agent_runner: AgentActionRunner | None = None,
     ) -> None:
         self.hooks: list[Hook] = hooks or []
-        self.agent_runner = agent_runner       # agent 类型 action 的执行器
-        self._prompt_messages: list[str] = []   # prompt action 产生的注入消息
+        self.agent_runner = agent_runner  # agent 类型 action 的执行器
+        self._prompt_messages: list[str] = []  # prompt action 产生的注入消息
         self._notifications: list[HookNotification] = []  # Hook 执行结果通知
         self._background_tasks: set[asyncio.Task[None]] = set()  # 后台异步任务集
-
 
     def find_matching_hooks(self, event: str, ctx: HookContext) -> list[Hook]:
         """根据事件名和条件匹配 Hook。检查三个条件：
@@ -67,7 +67,6 @@ class HookEngine:
                 continue
             matched.append(hook)
         return matched
-
 
     async def run_hooks(self, event: str, ctx: HookContext) -> None:
         """执行匹配的 Hook。支持同步和异步两种模式。
@@ -116,17 +115,12 @@ class HookEngine:
                 self._prompt_messages.append(result.output)
             self._record_result(hook, hook.event, result)
             if not result.success:
-                log.warning(
-                    "Hook '%s' action failed: %s", hook.id, result.output
-                )
+                log.warning("Hook '%s' action failed: %s", hook.id, result.output)
         except Exception as e:
             log.warning("Hook '%s' execution error: %s", hook.id, e)
             self._record_error(hook, hook.event, e)
 
-
-    async def run_pre_tool_hooks(
-        self, ctx: HookContext
-    ) -> ToolRejectedError | None:
+    async def run_pre_tool_hooks(self, ctx: HookContext) -> ToolRejectedError | None:
         """执行 pre_tool_use Hook，可以拒绝工具执行。
 
         与普通 run_hooks 的区别：
@@ -143,7 +137,7 @@ class HookEngine:
                     self.agent_runner,
                 )
                 self._record_result(hook, "pre_tool_use", result)
-                if hook.reject:                     # 配置了拒绝标记
+                if hook.reject:  # 配置了拒绝标记
                     return ToolRejectedError(
                         tool=ctx.tool_name,
                         reason=result.output,
@@ -185,7 +179,6 @@ class HookEngine:
         messages = list(self._prompt_messages)
         self._prompt_messages.clear()
         return messages
-
 
     def drain_notifications(self) -> list[HookNotification]:
         """取出并清空 Hook 执行结果通知。

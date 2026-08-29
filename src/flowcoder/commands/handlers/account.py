@@ -117,8 +117,7 @@ async def handle_account(ctx: CommandContext) -> None:
             model = parts[1]
             session = select_model(model)
             ctx.ui.add_system_message(
-                f"已选择模型: {session.selected_model}\n"
-                "新会话将走云端 gateway。"
+                f"已选择模型: {session.selected_model}\n新会话将走云端 gateway。"
             )
             return
 

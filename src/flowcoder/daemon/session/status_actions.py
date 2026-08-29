@@ -16,8 +16,7 @@ from flowcoder.permissions import PermissionMode
 
 
 class SessionMetaProvider(Protocol):
-    def meta(self, sid: str) -> dict[str, Any]:
-        ...
+    def meta(self, sid: str) -> dict[str, Any]: ...
 
 
 def configured_provider(config: AppConfig | None) -> ProviderConfig | None:
@@ -33,11 +32,7 @@ def session_command_acceptance_mode(
     config: AppConfig | None,
     pre_plan_modes: Mapping[str, PermissionMode],
 ) -> PermissionMode:
-    configured_mode = (
-        PermissionMode(config.permission_mode)
-        if config is not None
-        else None
-    )
+    configured_mode = PermissionMode(config.permission_mode) if config is not None else None
     return command_acceptance_mode(
         agent.permission_mode if agent is not None else None,
         pre_plan_modes.get(sid),
@@ -66,11 +61,7 @@ def build_daemon_session_status(
         agent=agent,
         provider=provider,
         conversation=conversation,
-        configured_permission_mode=(
-            config.permission_mode
-            if config is not None
-            else "default"
-        ),
+        configured_permission_mode=(config.permission_mode if config is not None else "default"),
         command_mode=session_command_acceptance_mode(
             sid=sid,
             agent=agent,

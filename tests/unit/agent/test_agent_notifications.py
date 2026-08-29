@@ -45,10 +45,7 @@ class FailingTeamManager:
 
 
 def test_format_mailbox_message_uses_text_prefix() -> None:
-    assert (
-        format_mailbox_message(DummyMessage("alice", "hello"))
-        == "[Message from alice] hello"
-    )
+    assert format_mailbox_message(DummyMessage("alice", "hello")) == "[Message from alice] hello"
 
 
 def test_format_mailbox_message_includes_non_text_type() -> None:
@@ -126,9 +123,5 @@ def test_inject_external_notifications_adds_system_reminders_after_mailbox() -> 
 
     messages = conversation.get_messages()
     assert messages[0].content == "[Message from alice] hello"
-    assert messages[1].content == (
-        "<system-reminder>\nnote one\n</system-reminder>"
-    )
-    assert messages[2].content == (
-        "<system-reminder>\nnote two\n</system-reminder>"
-    )
+    assert messages[1].content == ("<system-reminder>\nnote one\n</system-reminder>")
+    assert messages[2].content == ("<system-reminder>\nnote two\n</system-reminder>")

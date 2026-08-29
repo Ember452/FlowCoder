@@ -39,8 +39,6 @@ class InlinePlanWidget(Vertical, can_focus=True):
     ]
 
     class Responded(Message):
-
-
         def __init__(self, choice: PlanChoice, feedback: str = "") -> None:
             super().__init__()
             self.choice = choice
@@ -50,7 +48,6 @@ class InlinePlanWidget(Vertical, can_focus=True):
         super().__init__(id="plan-inline", **kwargs)
         self._cursor = 0
         self._input = ""
-
 
     def compose(self) -> ComposeResult:
         yield Static(self._build_content(), id="plan-content")
@@ -79,12 +76,10 @@ class InlinePlanWidget(Vertical, can_focus=True):
     def _refresh(self) -> None:
         self.query_one("#plan-content", Static).update(self._build_content())
 
-
     def action_cursor_up(self) -> None:
         if self._cursor > 0:
             self._cursor -= 1
             self._refresh()
-
 
     def action_cursor_down(self) -> None:
         if self._cursor < 2:
@@ -105,7 +100,6 @@ class InlinePlanWidget(Vertical, can_focus=True):
     def action_approve_with_feedback(self) -> None:
         if self._cursor == 2 and self._input:
             self.post_message(self.Responded(PlanChoice.FEEDBACK, self._input))
-
 
     def on_key(self, event) -> None:
         if self._cursor != 2:

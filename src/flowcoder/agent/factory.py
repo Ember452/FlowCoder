@@ -70,6 +70,7 @@ async def create_agent_from_config(
     for error in mcp_errors:
         # MCP is optional: a failed external server must not prevent local tools.
         import logging
+
         logging.getLogger(__name__).warning(error)
 
     agent = Agent(

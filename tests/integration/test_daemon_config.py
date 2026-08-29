@@ -255,10 +255,7 @@ def test_route_registry_keeps_local_daemon_surface_only():
 
 
 def test_route_registry_excludes_gui_cloud_and_bot_management():
-    route_paths = [
-        spec.path.lower()
-        for spec in (*HTTP_ROUTES, *WEBSOCKET_ROUTES)
-    ]
+    route_paths = [spec.path.lower() for spec in (*HTTP_ROUTES, *WEBSOCKET_ROUTES)]
 
     assert find_removed_route_paths(route_paths) == ()
 
@@ -288,14 +285,8 @@ def test_build_routes_matches_declared_route_specs():
             methods = tuple(sorted((route.methods or set()) - {"HEAD"}))
             actual_http.append((route.path, route.endpoint, methods))
 
-    assert actual_http == [
-        (spec.path, spec.endpoint, spec.methods)
-        for spec in HTTP_ROUTES
-    ]
-    assert actual_websocket == [
-        (spec.path, spec.endpoint)
-        for spec in WEBSOCKET_ROUTES
-    ]
+    assert actual_http == [(spec.path, spec.endpoint, spec.methods) for spec in HTTP_ROUTES]
+    assert actual_websocket == [(spec.path, spec.endpoint) for spec in WEBSOCKET_ROUTES]
 
 
 def test_create_session_rejects_malformed_json(tmp_path):

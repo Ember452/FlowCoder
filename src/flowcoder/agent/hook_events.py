@@ -22,11 +22,13 @@ DrainHookEvents = Callable[[], list[HookEvent]]
 
 class HookNotificationSource(Protocol):
     """能取出 Hook 通知的对象（如 HookEngine）。"""
+
     def drain_notifications(self) -> list[HookNotification]: ...
 
 
 class LifecycleHookEngine(HookNotificationSource, Protocol):
     """能执行生命周期 Hook 的对象（如 HookEngine）。"""
+
     async def run_hooks(self, event: str, ctx: HookContext) -> None: ...
 
 

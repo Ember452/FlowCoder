@@ -25,11 +25,9 @@ class MCPClient:
         self._stack: AsyncExitStack | None = None
         self._alive = False
 
-
     @property
     def is_alive(self) -> bool:
         return self._alive
-
 
     async def connect(self) -> None:
         if self._alive:
@@ -46,9 +44,7 @@ class MCPClient:
             else:
                 read, write = await self._connect_http()
 
-            session = await self._stack.enter_async_context(
-                ClientSession(read, write)
-            )
+            session = await self._stack.enter_async_context(ClientSession(read, write))
             await session.initialize()
             self._session = session
             self._alive = True
@@ -56,7 +52,6 @@ class MCPClient:
         except Exception:
             await self._cleanup_stack()
             raise
-
 
     async def _connect_stdio(self) -> tuple[Any, Any]:
         stack = self._require_stack()
@@ -70,9 +65,7 @@ class MCPClient:
         )
         devnull = open(os.devnull, "w")
         stack.callback(devnull.close)
-        read, write = await stack.enter_async_context(
-            stdio_client(params, errlog=devnull)
-        )
+        read, write = await stack.enter_async_context(stdio_client(params, errlog=devnull))
         return read, write
 
     async def _connect_http(self) -> tuple[Any, Any]:
@@ -80,9 +73,7 @@ class MCPClient:
         if self.config.url is None:
             raise RuntimeError(f"MCP server '{self.name}' has no HTTP url")
 
-        resolved_headers = {
-            k: resolve_env_vars(v) for k, v in self.config.headers.items()
-        }
+        resolved_headers = {k: resolve_env_vars(v) for k, v in self.config.headers.items()}
         http_client = httpx.AsyncClient(
             headers=resolved_headers,
             follow_redirects=True,
@@ -95,15 +86,11 @@ class MCPClient:
         read, write = result[0], result[1]
         return read, write
 
-
     async def list_tools(self) -> list[types.Tool]:
         result = await self._require_session().list_tools()
         return list(result.tools)
 
-
-    async def call_tool(
-        self, name: str, arguments: dict[str, Any]
-    ) -> types.CallToolResult:
+    async def call_tool(self, name: str, arguments: dict[str, Any]) -> types.CallToolResult:
         return await self._require_session().call_tool(name, arguments)
 
     async def close(self) -> None:

@@ -35,7 +35,6 @@ class InlineAskUserWidget(Vertical, can_focus=True):
             super().__init__()
             self.answers = answers
 
-
     def __init__(self, questions: list[dict], **kwargs) -> None:
         super().__init__(id="askuser-inline", **kwargs)
         self._questions = questions
@@ -47,7 +46,6 @@ class InlineAskUserWidget(Vertical, can_focus=True):
         self._answered: dict[int, str] = {}
         self._on_submit = False
         self._submit_idx = 0
-
 
     def compose(self) -> ComposeResult:
         yield Static(self._build_content(), id="askuser-content")
@@ -118,7 +116,7 @@ class InlineAskUserWidget(Vertical, can_focus=True):
     def _render_nav_bar(self) -> str:
         parts = []
         for i, q in enumerate(self._questions):
-            header = q.get("header", f"Q{i+1}")
+            header = q.get("header", f"Q{i + 1}")
             check = "☑" if i in self._answered else "☐"
             if i == self._q_idx and not self._on_submit:
                 parts.append(f"[bold reverse] {header} {check} [/]")
@@ -133,7 +131,7 @@ class InlineAskUserWidget(Vertical, can_focus=True):
     def _render_submit(self) -> str:
         lines = ["\n [bold color(99)]Review your answers:[/]\n"]
         for i, q in enumerate(self._questions):
-            header = q.get("header", q.get("question", f"Q{i+1}"))
+            header = q.get("header", q.get("question", f"Q{i + 1}"))
             ans = self._answered.get(i, "")
             if ans:
                 lines.append(f"   {header}: {ans}")
@@ -170,7 +168,9 @@ class InlineAskUserWidget(Vertical, can_focus=True):
             self._answered[self._q_idx] = ", ".join(selected)
         else:
             opt = options[cursor]
-            self._answered[self._q_idx] = opt.get("label", str(opt)) if isinstance(opt, dict) else str(opt)
+            self._answered[self._q_idx] = (
+                opt.get("label", str(opt)) if isinstance(opt, dict) else str(opt)
+            )
 
     def action_cursor_up(self) -> None:
         if self._on_submit:
@@ -212,7 +212,6 @@ class InlineAskUserWidget(Vertical, can_focus=True):
             self._q_idx -= 1
             self._refresh()
 
-
     def action_toggle(self) -> None:
         if self._on_submit:
             return
@@ -250,7 +249,6 @@ class InlineAskUserWidget(Vertical, can_focus=True):
                 self._on_submit = True
                 self._submit_idx = 0
                 self._refresh()
-
 
     def action_cancel(self) -> None:
         self.post_message(self.Responded(None))

@@ -11,7 +11,6 @@ async def handle_memory(ctx: CommandContext) -> None:
         ctx.ui.add_system_message("记忆管理器未初始化")
         return
 
-
     parts = ctx.args.split(None, 1)
     sub = parts[0] if parts else ""
 
@@ -29,15 +28,11 @@ async def handle_memory(ctx: CommandContext) -> None:
 
     elif sub == "edit":
         ctx.ui.add_system_message(
-            f"编辑记忆文件：\n"
-            f"  用户级: {mm.user_path}\n"
-            f"  项目级: {mm.project_path}"
+            f"编辑记忆文件：\n  用户级: {mm.user_path}\n  项目级: {mm.project_path}"
         )
 
     else:
-        ctx.ui.add_system_message(
-            "用法: /memory [list | clear | edit]"
-        )
+        ctx.ui.add_system_message("用法: /memory [list | clear | edit]")
 
 
 MEMORY_COMMAND = Command(
@@ -47,4 +42,3 @@ MEMORY_COMMAND = Command(
     type=CommandType.LOCAL,
     handler=handle_memory,
 )
-

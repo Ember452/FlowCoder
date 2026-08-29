@@ -33,7 +33,9 @@ def test_anthropic_preserves_signed_thinking_at_head():
 
 def test_anthropic_tool_results_become_user_blocks():
     conv = ConversationManager()
-    conv.add_tool_results_message([ToolResultBlock(tool_use_id="tu-1", content="out", is_error=False)])
+    conv.add_tool_results_message(
+        [ToolResultBlock(tool_use_id="tu-1", content="out", is_error=False)]
+    )
     msgs = build_anthropic_messages(conv.get_messages())
     assert msgs[0]["role"] == "user"
     assert msgs[0]["content"][0]["type"] == "tool_result"

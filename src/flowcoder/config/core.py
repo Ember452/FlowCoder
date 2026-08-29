@@ -14,9 +14,6 @@ import yaml
 from .model_context import DEFAULT_CONTEXT_WINDOW, lookup_model_context_window
 from .validator import (
     ConfigError,
-    VALID_PERMISSION_MODES,
-    VALID_PROTOCOLS,
-    VALID_TEAMMATE_MODES,
     validate_config_structure,
 )
 
@@ -65,12 +62,12 @@ class ProviderConfig:
     def get_context_window(self) -> int:
         """通过四层 fallback 解析模型的 context window，按优先级从高到低：
 
-          1. 配置文件提供的 context_window（> 0）——显式覆盖，永远优先。
-          2. 从 provider 的 /v1/models 端点自动拉取并通过 set_fetched_context_window
-             缓存的值（只有 anthropic 协议的 provider 才会设置它；拉取失败或缺失时
-             保持为 0 并跳过）。
-          3. 内置的「模型名 -> window」映射表（按子串匹配）。
-          4. 保守的默认值（claude -> 200000，其他 -> 128000）。
+        1. 配置文件提供的 context_window（> 0）——显式覆盖，永远优先。
+        2. 从 provider 的 /v1/models 端点自动拉取并通过 set_fetched_context_window
+           缓存的值（只有 anthropic 协议的 provider 才会设置它；拉取失败或缺失时
+           保持为 0 并跳过）。
+        3. 内置的「模型名 -> window」映射表（按子串匹配）。
+        4. 保守的默认值（claude -> 200000，其他 -> 128000）。
         """
         if self.context_window > 0:
             return self.context_window
@@ -115,7 +112,6 @@ class MCPServerConfig:
     headers: dict[str, str] = field(default_factory=dict)
     env: dict[str, str] = field(default_factory=dict)
 
-
     @property
     def is_stdio(self) -> bool:
         return self.command is not None
@@ -123,7 +119,9 @@ class MCPServerConfig:
 
 @dataclass
 class WorktreeConfig:
-    symlink_directories: list[str] = field(default_factory=lambda: ["node_modules", ".venv", "vendor"])
+    symlink_directories: list[str] = field(
+        default_factory=lambda: ["node_modules", ".venv", "vendor"]
+    )
     stale_cleanup_interval: int = 3600
     stale_cutoff_hours: int = 24
 
@@ -362,7 +360,6 @@ def load_config(path: Path | None = None) -> AppConfig:
         )
     if not merged.providers:
         raise ConfigError(
-            "At least one provider must be configured "
-            "(local providers or cloud account models)"
+            "At least one provider must be configured (local providers or cloud account models)"
         )
     return merged

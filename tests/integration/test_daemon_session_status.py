@@ -47,13 +47,9 @@ class _Conversation:
 
 
 def test_command_acceptance_mode_excludes_plan_mode() -> None:
+    assert command_acceptance_mode(PermissionMode.ACCEPT_EDITS) == PermissionMode.ACCEPT_EDITS
     assert (
-        command_acceptance_mode(PermissionMode.ACCEPT_EDITS)
-        == PermissionMode.ACCEPT_EDITS
-    )
-    assert (
-        command_acceptance_mode(PermissionMode.PLAN, PermissionMode.BYPASS)
-        == PermissionMode.BYPASS
+        command_acceptance_mode(PermissionMode.PLAN, PermissionMode.BYPASS) == PermissionMode.BYPASS
     )
     assert command_acceptance_mode(PermissionMode.PLAN) == PermissionMode.DEFAULT
     assert command_acceptance_mode(PermissionMode.CUSTOM) == PermissionMode.DEFAULT

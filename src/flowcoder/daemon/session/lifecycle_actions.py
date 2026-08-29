@@ -253,7 +253,9 @@ async def switch_session_provider(
             try:
                 await mcp_manager.shutdown()
             except Exception:
-                log.warning("Failed to shut down old MCP manager for session %s", sid, exc_info=True)
+                log.warning(
+                    "Failed to shut down old MCP manager for session %s", sid, exc_info=True
+                )
 
     return {
         "session_id": sid,

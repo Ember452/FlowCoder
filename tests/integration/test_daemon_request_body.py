@@ -92,9 +92,7 @@ async def test_parse_json_object_rejects_non_string_mapping_values():
     assert not parsed.ok
     assert parsed.error is not None
     assert parsed.error.status_code == 400
-    assert json.loads(parsed.error.body) == {
-        "error": "'answers' must be an object of strings"
-    }
+    assert json.loads(parsed.error.body) == {"error": "'answers' must be an object of strings"}
 
 
 @pytest.mark.parametrize(

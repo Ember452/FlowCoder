@@ -14,6 +14,8 @@ class ToolRegistryError(ValueError):
 
 
 def schema_for_protocol(tool: Tool, protocol: str) -> dict[str, Any]:
+    # 不同协议的 tools schema 形态不同：Anthropic 用 input_schema 顶层平铺；
+    # OpenAI 系列要求包成 {type:function, name, description, parameters}。
     base = tool.get_schema()
     if protocol in ("openai", "openai-compat"):
         return {
@@ -26,6 +28,16 @@ def schema_for_protocol(tool: Tool, protocol: str) -> dict[str, Any]:
 
 
 class ToolRegistry:
+    """工具注册表：登记所有可用工具，管理启用/禁用与 deferred 懒加载。
+
+    三类状态：
+    - ``_tools``：已注册的工具（name → Tool）
+    - ``_disabled``：被显式禁用的工具名（schema 不下发给 LLM）
+    - ``_discovered``：deferred 工具中被 ToolSearch "发现"过的名字
+      ——deferred 工具默认不暴露给 LLM，只有被发现后才纳入 schema 列表，
+      避免 100+ 工具一次性塞满 context window。
+    """
+
     def __init__(self) -> None:
         self._tools: dict[str, Tool] = {}
         self._disabled: set[str] = set()
@@ -53,6 +65,7 @@ class ToolRegistry:
         self._disabled.clear()
 
     def mark_discovered(self, name: str) -> None:
+        # ToolSearch 命中后调用：把 deferred 工具标记为已发现，之后才会暴露给 LLM
         self._discovered.add(name)
 
     def is_discovered(self, name: str) -> bool:
@@ -60,9 +73,11 @@ class ToolRegistry:
 
     @staticmethod
     def _is_deferred(tool: Tool) -> bool:
+        # should_defer=True 的工具默认不进 schema，需经 ToolSearch 发现后才启用
         return bool(getattr(tool, "should_defer", False))
 
     def get_deferred_tool_names(self) -> list[str]:
+        # 待发现（deferred 且未被禁用且尚未发现）的工具名，用于提醒 LLM 可搜索
         return [
             name
             for name, tool in self._tools.items()
@@ -80,6 +95,8 @@ class ToolRegistry:
         max_results: int,
         protocol: str = "anthropic",
     ) -> list[dict[str, Any]]:
+        # 轻量打分式搜索：用名称/描述的子串与分词命中数排序，无需向量检索。
+        # 评分权重：名称整串命中 +10 > 描述整串命中 +5 > 名称分词命中 +3 > 描述分词命中 +1
         query_lower = query.lower()
         scored: list[tuple[int, str, Tool]] = []
         for name, tool in self._tools.items():
@@ -99,17 +116,16 @@ class ToolRegistry:
                     score += 1
             if score > 0:
                 scored.append((score, name, tool))
+        # 按分数降序取前 max_results，返回对应协议的 schema
         scored.sort(key=lambda x: x[0], reverse=True)
-        return [
-            schema_for_protocol(tool, protocol)
-            for _, _name, tool in scored[:max_results]
-        ]
+        return [schema_for_protocol(tool, protocol) for _, _name, tool in scored[:max_results]]
 
     def find_deferred_by_names(
         self,
         names: list[str],
         protocol: str = "anthropic",
     ) -> list[dict[str, Any]]:
+        # 按精确名字批量加载 deferred 工具的 schema（LLM 用 ToolSearch 指名加载时走这里）
         results: list[dict[str, Any]] = []
         for name in names:
             tool = self._tools.get(name)
@@ -124,6 +140,7 @@ class ToolRegistry:
         return list(self._tools.values())
 
     def get_all_schemas(self, protocol: str = "anthropic") -> list[dict[str, Any]]:
+        # 下发给 LLM 的工具 schema：跳过被禁用的，也跳过 deferred 但尚未被发现的
         schemas: list[dict[str, Any]] = []
         for name, tool in self._tools.items():
             if name in self._disabled:

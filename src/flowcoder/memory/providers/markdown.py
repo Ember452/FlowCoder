@@ -28,6 +28,7 @@ class MarkdownMemoryProvider(BaseMemoryProvider):
     - observe: 只处理 turn_committed 事件（触发 LLM 提取记忆）
     - clear: 清空 memories.md
     """
+
     name = "markdown"
     kind = "builtin.markdown"
     version = "1.0"

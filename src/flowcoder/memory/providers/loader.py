@@ -47,9 +47,7 @@ def build_memory_hub(
         if not name:
             raise MemoryProviderLoadError("Memory provider name is required")
         if name in seen_names:
-            raise MemoryProviderLoadError(
-                f"Duplicate memory provider name: {name}"
-            )
+            raise MemoryProviderLoadError(f"Duplicate memory provider name: {name}")
         seen_names.add(name)
         provider_config = replace(provider_config, name=name)
         provider = _load_provider(
@@ -59,9 +57,7 @@ def build_memory_hub(
         )
         loaded_name = normalized_loaded_provider_name(provider)
         if loaded_name in seen_loaded_names:
-            raise MemoryProviderLoadError(
-                f"Duplicate loaded memory provider name: {loaded_name}"
-            )
+            raise MemoryProviderLoadError(f"Duplicate loaded memory provider name: {loaded_name}")
         seen_loaded_names.add(loaded_name)
         providers.append(provider)
     return MemoryHub(providers=providers) if providers else None
@@ -89,7 +85,9 @@ def _load_provider(
     raise MemoryProviderLoadError(f"Unsupported memory provider type: {provider_config.type}")
 
 
-def _load_python_provider(provider_config: MemoryProviderConfig, project_root: str) -> MemoryProvider:
+def _load_python_provider(
+    provider_config: MemoryProviderConfig, project_root: str
+) -> MemoryProvider:
     module_name = provider_config.module
     class_name = provider_config.class_name
     if not module_name or not class_name:
@@ -135,8 +133,6 @@ def _load_class_provider(
         )
         provider = cls(**kwargs)
     except TypeError as e:
-        raise MemoryProviderLoadError(
-            f"Failed to construct memory provider {target}: {e}"
-        ) from e
+        raise MemoryProviderLoadError(f"Failed to construct memory provider {target}: {e}") from e
     validate_provider_contract(provider, target)
     return provider

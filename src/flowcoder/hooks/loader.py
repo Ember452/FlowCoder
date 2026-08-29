@@ -82,15 +82,11 @@ def load_hooks(raw_hooks: list[object] | None) -> list[Hook]:
 
         reject = _bool_field(entry, "reject", label)
         if reject and event != "pre_tool_use":
-            raise HookConfigError(
-                f"{label}: 'reject' can only be used with 'pre_tool_use' event"
-            )
+            raise HookConfigError(f"{label}: 'reject' can only be used with 'pre_tool_use' event")
 
         async_exec = _bool_field(entry, "async", label)
         if async_exec and event == "pre_tool_use":
-            raise HookConfigError(
-                f"{label}: 'async' cannot be used with 'pre_tool_use' event"
-            )
+            raise HookConfigError(f"{label}: 'async' cannot be used with 'pre_tool_use' event")
 
         condition = None
         raw_if = _optional_top_string(entry, "if", label, allow_empty=True)

@@ -51,9 +51,7 @@ _ROUTE_TERM_RE = re.compile(r"[a-z0-9]+")
 
 def find_removed_config_sections(raw: Mapping[object, object]) -> tuple[str, ...]:
     """Return unsupported top-level config sections in stable order."""
-    return tuple(
-        sorted(k for k in raw if isinstance(k, str) and k in REMOVED_CONFIG_SECTIONS)
-    )
+    return tuple(sorted(k for k in raw if isinstance(k, str) and k in REMOVED_CONFIG_SECTIONS))
 
 
 def removed_route_terms(path: str) -> tuple[str, ...]:
@@ -79,6 +77,5 @@ def assert_no_removed_route_paths(paths: list[str] | tuple[str, ...]) -> None:
     removed = find_removed_route_paths(paths)
     if removed:
         raise RuntimeError(
-            "Removed GUI/cloud/bot route(s) are not supported: "
-            + ", ".join(removed)
+            "Removed GUI/cloud/bot route(s) are not supported: " + ", ".join(removed)
         )

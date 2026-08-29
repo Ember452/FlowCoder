@@ -90,9 +90,7 @@ async def stream_events(websocket: WebSocket) -> None:
 
     log_list = server.get_event_log(sid)
     if log_list is None:
-        await websocket.send_json(
-            {"type": "SessionNotFound", "data": {"session_id": sid}}
-        )
+        await websocket.send_json({"type": "SessionNotFound", "data": {"session_id": sid}})
         await websocket.close(code=4404)
         return
 

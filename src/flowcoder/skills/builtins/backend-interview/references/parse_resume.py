@@ -1,4 +1,5 @@
 """解析简历文件并提取结构化信息。"""
+
 from __future__ import annotations
 
 import re
@@ -18,10 +19,20 @@ SECTION_PATTERNS = {
 }
 
 SECTION_HEADERS = [
-    "工作经历", "工作经验", "work experience", "experience",
-    "项目经历", "项目经验", "projects",
-    "教育", "教育经历", "education",
-    "技能", "技术栈", "skills", "tech stack",
+    "工作经历",
+    "工作经验",
+    "work experience",
+    "experience",
+    "项目经历",
+    "项目经验",
+    "projects",
+    "教育",
+    "教育经历",
+    "education",
+    "技能",
+    "技术栈",
+    "skills",
+    "tech stack",
 ]
 
 
@@ -55,16 +66,53 @@ def _extract_sections(text: str) -> dict[str, str]:
 
 def _extract_tech_keywords(text: str) -> list[str]:
     known_techs = [
-        "Python", "Java", "Go", "Golang", "Rust", "C++", "C#", "TypeScript",
-        "JavaScript", "Ruby", "PHP", "Kotlin", "Swift", "Scala",
-        "MySQL", "PostgreSQL", "MongoDB", "Redis", "Elasticsearch",
-        "Kafka", "RabbitMQ", "gRPC", "REST",
-        "Docker", "Kubernetes", "K8s", "AWS", "GCP", "Azure",
-        "Linux", "Nginx", "Git",
-        "Spring", "Django", "Flask", "FastAPI", "Express", "Gin",
-        "React", "Vue", "Angular", "Next.js",
-        "TensorFlow", "PyTorch",
-        "Microservices", "CI/CD", "DevOps",
+        "Python",
+        "Java",
+        "Go",
+        "Golang",
+        "Rust",
+        "C++",
+        "C#",
+        "TypeScript",
+        "JavaScript",
+        "Ruby",
+        "PHP",
+        "Kotlin",
+        "Swift",
+        "Scala",
+        "MySQL",
+        "PostgreSQL",
+        "MongoDB",
+        "Redis",
+        "Elasticsearch",
+        "Kafka",
+        "RabbitMQ",
+        "gRPC",
+        "REST",
+        "Docker",
+        "Kubernetes",
+        "K8s",
+        "AWS",
+        "GCP",
+        "Azure",
+        "Linux",
+        "Nginx",
+        "Git",
+        "Spring",
+        "Django",
+        "Flask",
+        "FastAPI",
+        "Express",
+        "Gin",
+        "React",
+        "Vue",
+        "Angular",
+        "Next.js",
+        "TensorFlow",
+        "PyTorch",
+        "Microservices",
+        "CI/CD",
+        "DevOps",
     ]
     found = []
     text_lower = text.lower()
@@ -104,12 +152,12 @@ async def execute(file_path: str = "", **kwargs) -> str:
     sections = _extract_sections(content)
 
     lines = [
-        f"## Resume Analysis",
-        f"",
+        "## Resume Analysis",
+        "",
         f"**Name**: {name}",
         f"**Experience**: {years} years",
-        f"",
-        f"### Tech Stack",
+        "",
+        "### Tech Stack",
     ]
 
     if explicit_tech:
@@ -130,4 +178,3 @@ async def execute(file_path: str = "", **kwargs) -> str:
             lines.append(preview)
 
     return "\n".join(lines)
-

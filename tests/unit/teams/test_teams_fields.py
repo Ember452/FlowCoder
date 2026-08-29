@@ -31,9 +31,7 @@ def test_string_list_field_validates_items() -> None:
 
 
 def test_object_field_validates_shape() -> None:
-    assert object_field({"metadata": {"x": 1}}, "metadata", prefix="message") == {
-        "x": 1
-    }
+    assert object_field({"metadata": {"x": 1}}, "metadata", prefix="message") == {"x": 1}
 
     with pytest.raises(ValueError, match="message.metadata must be an object"):
         object_field({"metadata": []}, "metadata", prefix="message")

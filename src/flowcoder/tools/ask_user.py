@@ -21,14 +21,10 @@ class QuestionItem(BaseModel):
 
 
 class AskUserParams(BaseModel):
-    questions: list[QuestionItem] = Field(
-        description="List of questions to ask the user"
-    )
+    questions: list[QuestionItem] = Field(description="List of questions to ask the user")
 
 
 class AskUserEvent:
-
-
     def __init__(
         self,
         questions: list[dict[str, Any]],
@@ -51,7 +47,6 @@ class AskUserTool(Tool):
     is_system_tool = True
     should_defer = True
 
-
     def __init__(self) -> None:
         self._pending_event: AskUserEvent | None = None
 
@@ -66,9 +61,7 @@ class AskUserTool(Tool):
         try:
             answers = await asyncio.wait_for(future, timeout=300)
         except asyncio.TimeoutError:
-            return ToolResult(
-                output="User did not respond within 5 minutes", is_error=True
-            )
+            return ToolResult(output="User did not respond within 5 minutes", is_error=True)
         finally:
             self._pending_event = None
 

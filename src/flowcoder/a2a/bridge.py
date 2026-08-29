@@ -19,19 +19,20 @@ from flowcoder.a2a.protocol import (
     should_wait,
     task_id_from_params,
 )
+
 # Keep task state symbols importable from flowcoder.a2a.bridge for compatibility.
 from flowcoder.a2a.tasks import (
     A2ATask,
     TASK_CANCELED,
-    TASK_COMPLETED,
-    TASK_FAILED,
-    TASK_INPUT_REQUIRED,
-    TASK_SUBMITTED,
     TASK_WORKING,
     TERMINAL_STATES,
     refresh_task_from_log,
     set_task_state,
     task_to_a2a_payload,
+    TASK_COMPLETED as TASK_COMPLETED,
+    TASK_FAILED as TASK_FAILED,
+    TASK_INPUT_REQUIRED as TASK_INPUT_REQUIRED,
+    TASK_SUBMITTED as TASK_SUBMITTED,
 )
 
 
@@ -59,10 +60,7 @@ class A2ABridge:
         base = base_url.rstrip("/")
         endpoint = f"{base}/a2a/rpc" if base else "/a2a/rpc"
         model = ""
-        if (
-            getattr(self._server, "config", None) is not None
-            and self._server.config.providers
-        ):
+        if getattr(self._server, "config", None) is not None and self._server.config.providers:
             model = self._server.config.providers[0].model
         return {
             "protocolVersion": "1.0.0",
@@ -184,20 +182,14 @@ class A2ABridge:
     ) -> A2ATask:
         request = parse_message_request(params)
         context_id = request.context_id
-        if (
-            not context_id
-            and request.task_id_hint
-            and request.task_id_hint in self._tasks
-        ):
+        if not context_id and request.task_id_hint and request.task_id_hint in self._tasks:
             context_id = self._tasks[request.task_id_hint].context_id
         context_id = str(context_id or f"ctx-{uuid.uuid4().hex[:12]}")
 
         session_id = self._contexts.get(context_id)
         if session_id is None:
             try:
-                session_id = await self._server.init_session(
-                    work_dir=request.work_dir
-                )
+                session_id = await self._server.init_session(work_dir=request.work_dir)
             except ValueError as e:
                 raise A2AError(str(e), -32001) from e
             self._contexts[context_id] = session_id
@@ -212,11 +204,7 @@ class A2ABridge:
         except ValueError as e:
             raise A2AError(str(e), -32002) from e
 
-        task_id = str(
-            request.task_id_hint
-            or internal_task_id
-            or uuid.uuid4().hex[:8]
-        )
+        task_id = str(request.task_id_hint or internal_task_id or uuid.uuid4().hex[:8])
         if task_id in self._tasks:
             task_id = f"{task_id}-{uuid.uuid4().hex[:4]}"
         task = A2ATask(
@@ -254,9 +242,7 @@ class A2ABridge:
 
     async def wait_for_task(self, task_id: str, timeout: float | None = None) -> A2ATask:
         task = self.get_task(task_id)
-        timeout_seconds = (
-            timeout if timeout is not None else self._default_wait_timeout
-        )
+        timeout_seconds = timeout if timeout is not None else self._default_wait_timeout
         deadline = time.monotonic() + timeout_seconds
         while task.state not in TERMINAL_STATES:
             if time.monotonic() >= deadline:

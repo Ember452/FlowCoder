@@ -75,9 +75,7 @@ def test_serialize_task_event_marks_askuser_request_pending() -> None:
     loop, future = _future()
     try:
         event = AskUserRequest(
-            questions=[
-                {"name": "language", "message": "Language?", "options": ["Python"]}
-            ],
+            questions=[{"name": "language", "message": "Language?", "options": ["Python"]}],
             future=future,
         )
 
@@ -109,8 +107,6 @@ def test_pending_prompt_request_id_ignores_non_prompt_events() -> None:
     assert pending_prompt_request_id({"type": "StreamText", "data": {}}) == ""
     assert pending_prompt_request_id({"type": "PermissionRequest", "data": {}}) == ""
     assert (
-        pending_prompt_request_id(
-            {"type": "AskUserRequest", "data": {"request_id": "req-1"}}
-        )
+        pending_prompt_request_id({"type": "AskUserRequest", "data": {"request_id": "req-1"}})
         == "req-1"
     )

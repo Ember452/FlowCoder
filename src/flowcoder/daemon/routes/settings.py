@@ -44,9 +44,7 @@ def _read_raw_config() -> dict[str, Any]:
 
 def _write_raw_config(raw: dict[str, Any]) -> None:
     USER_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
-    content = yaml.safe_dump(
-        raw, allow_unicode=True, sort_keys=False, default_flow_style=False
-    )
+    content = yaml.safe_dump(raw, allow_unicode=True, sort_keys=False, default_flow_style=False)
     fd, temporary = tempfile.mkstemp(
         prefix=f".{USER_CONFIG_FILE.name}.",
         suffix=".tmp",
@@ -97,6 +95,7 @@ def _application_status(request: Request) -> dict[str, object]:
 # ---------------------------------------------------------------------------
 # MCP server routes
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class CreateMcpBody:
@@ -151,10 +150,12 @@ async def create_mcp_server(request: Request) -> JSONResponse:
     error = _apply_raw_config(request, raw)
     if error is not None:
         return error
-    return JSONResponse({
-        "servers": [_mcp_server_to_dict(s) for s in servers],
-        **_application_status(request),
-    })
+    return JSONResponse(
+        {
+            "servers": [_mcp_server_to_dict(s) for s in servers],
+            **_application_status(request),
+        }
+    )
 
 
 async def toggle_mcp_server(request: Request) -> JSONResponse:
@@ -176,11 +177,13 @@ async def toggle_mcp_server(request: Request) -> JSONResponse:
     error = _apply_raw_config(request, raw)
     if error is not None:
         return error
-    return JSONResponse({
-        "name": name,
-        "enabled": enabled,
-        **_application_status(request),
-    })
+    return JSONResponse(
+        {
+            "name": name,
+            "enabled": enabled,
+            **_application_status(request),
+        }
+    )
 
 
 async def delete_mcp_server(request: Request) -> JSONResponse:
@@ -196,27 +199,32 @@ async def delete_mcp_server(request: Request) -> JSONResponse:
     error = _apply_raw_config(request, raw)
     if error is not None:
         return error
-    return JSONResponse({
-        "name": name,
-        "deleted": True,
-        **_application_status(request),
-    })
+    return JSONResponse(
+        {
+            "name": name,
+            "deleted": True,
+            **_application_status(request),
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
 # Memory settings routes
 # ---------------------------------------------------------------------------
 
+
 async def get_memory_settings(request: Request) -> JSONResponse:
     raw = _read_raw_config()
     memory = raw.get("memory", {})
     if not isinstance(memory, dict):
         memory = {}
-    return JSONResponse({
-        "enabled": memory.get("enabled", True),
-        "providers": memory.get("providers", []),
-        "config_path": str(USER_CONFIG_FILE),
-    })
+    return JSONResponse(
+        {
+            "enabled": memory.get("enabled", True),
+            "providers": memory.get("providers", []),
+            "config_path": str(USER_CONFIG_FILE),
+        }
+    )
 
 
 async def save_memory_settings(request: Request) -> JSONResponse:
@@ -243,29 +251,34 @@ async def save_memory_settings(request: Request) -> JSONResponse:
     error = _apply_raw_config(request, raw)
     if error is not None:
         return error
-    return JSONResponse({
-        "enabled": enabled,
-        "providers": normalized["providers"],
-        "config_path": str(USER_CONFIG_FILE),
-        **_application_status(request),
-    })
+    return JSONResponse(
+        {
+            "enabled": enabled,
+            "providers": normalized["providers"],
+            "config_path": str(USER_CONFIG_FILE),
+            **_application_status(request),
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
 # QQ Bot stub routes (feature not supported)
 # ---------------------------------------------------------------------------
 
+
 async def get_qqbot_settings(request: Request) -> JSONResponse:
-    return JSONResponse({
-        "enabled": False,
-        "configured": False,
-        "running": False,
-        "session_ready": False,
-        "bot_name": "",
-        "last_error": "",
-        "config_path": "",
-        "error": "QQ Bot is not supported in this build",
-    })
+    return JSONResponse(
+        {
+            "enabled": False,
+            "configured": False,
+            "running": False,
+            "session_ready": False,
+            "bot_name": "",
+            "last_error": "",
+            "config_path": "",
+            "error": "QQ Bot is not supported in this build",
+        }
+    )
 
 
 async def save_qqbot_settings(request: Request) -> JSONResponse:
@@ -276,17 +289,20 @@ async def save_qqbot_settings(request: Request) -> JSONResponse:
 # Telegram Bot stub routes (feature not supported)
 # ---------------------------------------------------------------------------
 
+
 async def get_telegrambot_settings(request: Request) -> JSONResponse:
-    return JSONResponse({
-        "enabled": False,
-        "configured": False,
-        "running": False,
-        "session_ready": False,
-        "bot_username": "",
-        "last_error": "",
-        "config_path": "",
-        "error": "Telegram Bot is not supported in this build",
-    })
+    return JSONResponse(
+        {
+            "enabled": False,
+            "configured": False,
+            "running": False,
+            "session_ready": False,
+            "bot_username": "",
+            "last_error": "",
+            "config_path": "",
+            "error": "Telegram Bot is not supported in this build",
+        }
+    )
 
 
 async def save_telegrambot_settings(request: Request) -> JSONResponse:

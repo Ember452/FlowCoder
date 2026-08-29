@@ -4,6 +4,26 @@
 
 from __future__ import annotations
 
+from flowcoder.context.replacement import (
+    reconstruct_replacement_state as reconstruct_replacement_state,
+)
+
+from flowcoder.context.replacement import load_replacement_records as load_replacement_records
+
+from flowcoder.context.replacement import clone_replacement_state as clone_replacement_state
+
+from flowcoder.context.replacement import append_replacement_records as append_replacement_records
+
+from flowcoder.context.replacement import ContentReplacementState as ContentReplacementState
+
+from flowcoder.context.replacement import ContentReplacementRecord as ContentReplacementRecord
+
+from flowcoder.context.replacement import (
+    REPLACEMENT_RECORDS_FILENAME as REPLACEMENT_RECORDS_FILENAME,
+)
+
+from flowcoder.context.replacement import create_replacement_state as create_replacement_state
+
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
@@ -14,40 +34,30 @@ from flowcoder.conversation import (
     estimate_tokens,
 )
 from flowcoder.context.recovery import (
-    RECOVERY_FILE_LIMIT,
-    RECOVERY_SKILLS_BUDGET,
-    RECOVERY_TOKENS_PER_FILE,
-    RECOVERY_TOKENS_PER_SKILL,
-    FileReadRecord,
     RecoveryState,
-    SkillInvocationRecord,
-    _RECOVERY_CHARS_PER_TOKEN,
     build_recovery_attachment,
-)
-from flowcoder.context.replacement import (
-    REPLACEMENT_RECORDS_FILENAME,
-    ContentReplacementRecord,
-    ContentReplacementState,
-    append_replacement_records,
-    clone_replacement_state,
-    create_replacement_state,
-    load_replacement_records,
-    reconstruct_replacement_state,
+    RECOVERY_FILE_LIMIT as RECOVERY_FILE_LIMIT,
+    RECOVERY_TOKENS_PER_FILE as RECOVERY_TOKENS_PER_FILE,
+    RECOVERY_SKILLS_BUDGET as RECOVERY_SKILLS_BUDGET,
+    RECOVERY_TOKENS_PER_SKILL as RECOVERY_TOKENS_PER_SKILL,
+    FileReadRecord as FileReadRecord,
+    SkillInvocationRecord as SkillInvocationRecord,
+    _RECOVERY_CHARS_PER_TOKEN as _RECOVERY_CHARS_PER_TOKEN,
 )
 from flowcoder.context.tool_results import (
-    AGGREGATE_CHAR_LIMIT,
-    KEEP_RECENT_TURNS,
-    OLD_RESULT_SNIP_CHARS,
-    PERSISTED_TAG,
-    PREVIEW_CHARS,
-    SESSION_SUBDIR,
-    SINGLE_RESULT_CHAR_LIMIT,
-    SNIPPED_TAG,
-    apply_tool_result_budget,
     cleanup_tool_results,
-    ensure_session_dir,
-    make_persisted_preview,
-    persist_tool_result,
+    AGGREGATE_CHAR_LIMIT as AGGREGATE_CHAR_LIMIT,
+    KEEP_RECENT_TURNS as KEEP_RECENT_TURNS,
+    OLD_RESULT_SNIP_CHARS as OLD_RESULT_SNIP_CHARS,
+    PERSISTED_TAG as PERSISTED_TAG,
+    PREVIEW_CHARS as PREVIEW_CHARS,
+    SESSION_SUBDIR as SESSION_SUBDIR,
+    SINGLE_RESULT_CHAR_LIMIT as SINGLE_RESULT_CHAR_LIMIT,
+    SNIPPED_TAG as SNIPPED_TAG,
+    apply_tool_result_budget as apply_tool_result_budget,
+    ensure_session_dir as ensure_session_dir,
+    make_persisted_preview as make_persisted_preview,
+    persist_tool_result as persist_tool_result,
 )
 from flowcoder.core.serialization import build_messages
 
@@ -102,6 +112,7 @@ class CompactEvent:
 # Layer 2：全对话摘要（Auto-Compact）
 # ---------------------------------------------------------------------------
 
+
 def compute_compact_threshold(context_window: int, manual: bool = False) -> int:
     effective = context_window - SUMMARY_OUTPUT_RESERVE
     margin = MANUAL_COMPACT_SAFETY_MARGIN if manual else AUTO_COMPACT_SAFETY_MARGIN
@@ -139,7 +150,7 @@ def extract_summary(llm_output: str) -> str:
     end = llm_output.find("</summary>")
     if start == -1 or end == -1:
         return llm_output
-    return llm_output[start + len("<summary>"):end].strip()
+    return llm_output[start + len("<summary>") : end].strip()
 
 
 def build_compact_messages(
@@ -148,7 +159,9 @@ def build_compact_messages(
     has_keep_tail: bool = False,
     transcript_path: str = "",
 ) -> list[Message]:
-    content = "本次会话延续自之前的对话，因上下文空间不足进行了压缩。以下是早期对话的摘要：\n\n" + summary
+    content = (
+        "本次会话延续自之前的对话，因上下文空间不足进行了压缩。以下是早期对话的摘要：\n\n" + summary
+    )
     if has_keep_tail:
         content += "\n\n近期消息已原样保留。"
     if transcript_path:
@@ -261,7 +274,6 @@ class CompactCircuitBreaker:
     def record_success(self) -> None:
         self.consecutive_failures = 0
 
-
     def is_open(self) -> bool:
         return self.consecutive_failures >= self.max_failures
 
@@ -270,11 +282,12 @@ class CompactCircuitBreaker:
 # Auto-compact 编排器
 # ---------------------------------------------------------------------------
 
+
 async def auto_compact(
     conversation: ConversationManager,
     client: Any,
     context_window: int,
-    session_dir: Path,
+    session_dir: Path,  # 会话工具层目录，用来清理工具临时产物
     protocol: str = "anthropic",
     manual: bool = False,
     breaker: CompactCircuitBreaker | None = None,
@@ -282,6 +295,9 @@ async def auto_compact(
     tool_schemas: list[Mapping[str, Any]] | None = None,
     transcript_path: str = "",
 ) -> CompactEvent | str | None:
+    """把久远的历史消息用LLM做压缩。最近的保持不变。
+    ---
+    """
     threshold = compute_compact_threshold(context_window, manual=manual)
 
     # 以真实 API 用量为锚点做阈值判断：current_tokens() 返回上次计费基准
@@ -334,7 +350,7 @@ async def auto_compact(
 
     for attempt in range(max_retries):
         try:
-            from flowcoder.tools.base import StreamEnd, StreamEvent, TextDelta
+            from flowcoder.tools.base import StreamEnd, TextDelta
 
             collected_text = ""
             async for event in client.stream(summary_conv, system=SUMMARY_PROMPT):

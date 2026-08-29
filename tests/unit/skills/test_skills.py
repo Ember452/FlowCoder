@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import textwrap
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -20,7 +20,6 @@ from flowcoder.skills.parser import (
 from flowcoder.skills.loader import SkillLoader
 from flowcoder.skills.executor import (
     SkillDependencyError,
-    SkillExecutor,
     filter_tool_registry,
 )
 from flowcoder.tools import ToolRegistry
@@ -62,8 +61,8 @@ FORK_SKILL_MD = textwrap.dedent("""\
     $ARGUMENTS
 """)
 
-class FakeTool(Tool):
 
+class FakeTool(Tool):
     def __init__(self, name: str, system: bool = False) -> None:
         self.name = name
         self.description = f"Fake {name}"
@@ -80,9 +79,11 @@ class FakeTool(Tool):
     async def execute(self, params) -> ToolResult:
         return ToolResult(output="ok")
 
+
 # ---------------------------------------------------------------------------
 # Parser 测试
 # ---------------------------------------------------------------------------
+
 
 class TestParseFrontmatter:
     def test_valid(self) -> None:
@@ -92,13 +93,15 @@ class TestParseFrontmatter:
         assert "Do something" in body
 
     def test_yaml_value_can_contain_delimiter_text(self) -> None:
-        meta, body = parse_frontmatter(textwrap.dedent("""\
+        meta, body = parse_frontmatter(
+            textwrap.dedent("""\
             ---
             name: delimiter
             description: "Use --- as a separator"
             ---
             Body
-        """))
+        """)
+        )
 
         assert meta["description"] == "Use --- as a separator"
         assert body == "Body\n"
@@ -122,6 +125,7 @@ class TestParseFrontmatter:
     def test_non_dict_frontmatter(self) -> None:
         with pytest.raises(SkillParseError, match="must be a YAML mapping"):
             parse_frontmatter("---\n- list\n- item\n---\nbody")
+
 
 class TestParseSkillFile:
     def test_valid_file(self, tmp_path: Path) -> None:
@@ -182,14 +186,7 @@ class TestParseSkillFile:
         self, tmp_path: Path, frontmatter: str
     ) -> None:
         f = tmp_path / "bad.md"
-        f.write_text(
-            "---\n"
-            "name: foo\n"
-            "description: x\n"
-            f"{frontmatter}\n"
-            "---\n"
-            "body"
-        )
+        f.write_text(f"---\nname: foo\ndescription: x\n{frontmatter}\n---\nbody")
         with pytest.raises(SkillParseError, match="allowedTools.*list"):
             parse_skill_file(f)
 
@@ -201,7 +198,8 @@ class TestParseSkillFile:
 
     def test_optional_metadata_is_trimmed(self, tmp_path: Path) -> None:
         f = tmp_path / "trimmed.md"
-        f.write_text(textwrap.dedent("""\
+        f.write_text(
+            textwrap.dedent("""\
             ---
             name: custom
             description: "  Custom skill  "
@@ -210,7 +208,8 @@ class TestParseSkillFile:
               - "  ReadFile  "
             ---
             Body
-        """))
+        """)
+        )
 
         skill = parse_skill_file(f)
 
@@ -248,6 +247,7 @@ class TestParseSkillFile:
         assert skill.source_path == path
         assert skill.is_directory is True
 
+
 class TestSubstituteArguments:
     def test_with_args(self) -> None:
         result = substitute_arguments("Do $ARGUMENTS now", "something cool")
@@ -265,9 +265,11 @@ class TestSubstituteArguments:
         result = substitute_arguments("$ARGUMENTS and $ARGUMENTS", "x")
         assert result == "x and x"
 
+
 # ---------------------------------------------------------------------------
 # Loader 测试
 # ---------------------------------------------------------------------------
+
 
 class TestSkillLoader:
     def test_load_builtins(self) -> None:
@@ -283,14 +285,16 @@ class TestSkillLoader:
         skills_dir = tmp_path / ".flowcoder" / "skills"
         skills_dir.mkdir(parents=True)
         custom = skills_dir / "commit.md"
-        custom.write_text(textwrap.dedent("""\
+        custom.write_text(
+            textwrap.dedent("""\
             ---
             name: commit
             description: Custom commit
             mode: inline
             ---
             Custom prompt
-        """))
+        """)
+        )
         loader = SkillLoader(str(tmp_path))
         skills = loader.load_all()
         assert skills["commit"].description == "Custom commit"
@@ -321,24 +325,28 @@ class TestSkillLoader:
         skills_dir = tmp_path / ".flowcoder" / "skills"
         skills_dir.mkdir(parents=True)
         f = skills_dir / "custom.md"
-        f.write_text(textwrap.dedent("""\
+        f.write_text(
+            textwrap.dedent("""\
             ---
             name: custom
             description: v1
             ---
             Prompt v1
-        """))
+        """)
+        )
         loader = SkillLoader(str(tmp_path))
         loader.load_all()
         assert loader.get("custom").description == "v1"
 
-        f.write_text(textwrap.dedent("""\
+        f.write_text(
+            textwrap.dedent("""\
             ---
             name: custom
             description: v2
             ---
             Prompt v2
-        """))
+        """)
+        )
         skill = loader.get("custom")
         assert skill.description == "v2"
         assert "v2" in skill.prompt_body
@@ -348,13 +356,15 @@ class TestSkillLoader:
         skills_dir = tmp_path / ".flowcoder" / "skills"
         skills_dir.mkdir(parents=True)
         f = skills_dir / "custom.md"
-        f.write_text(textwrap.dedent("""\
+        f.write_text(
+            textwrap.dedent("""\
             ---
             name: custom
             description: good
             ---
             Good prompt
-        """))
+        """)
+        )
         loader = SkillLoader(str(tmp_path))
         loader.load_all()
 
@@ -368,13 +378,15 @@ class TestSkillLoader:
         skill_dir = skills_dir / "my-skill"
         skill_dir.mkdir(parents=True)
         skill_md = skill_dir / "SKILL.md"
-        skill_md.write_text(textwrap.dedent("""\
+        skill_md.write_text(
+            textwrap.dedent("""\
             ---
             name: my-skill
             description: A directory skill
             ---
             SOP here
-        """))
+        """)
+        )
         loader = SkillLoader(str(tmp_path))
         skills = loader.load_all()
         assert "my-skill" in skills
@@ -392,13 +404,15 @@ class TestSkillLoader:
         bad = skills_dir / "broken.md"
         bad.write_text("not valid frontmatter")
         good = skills_dir / "valid.md"
-        good.write_text(textwrap.dedent("""\
+        good.write_text(
+            textwrap.dedent("""\
             ---
             name: valid
             description: Works fine
             ---
             Prompt
-        """))
+        """)
+        )
         loader = SkillLoader(str(tmp_path))
         skills = loader.load_all()
         assert "valid" in skills
@@ -410,9 +424,11 @@ class TestSkillLoader:
         skills = loader.reload()
         assert "commit" in skills
 
+
 # ---------------------------------------------------------------------------
 # Executor：filter_tool_registry
 # ---------------------------------------------------------------------------
+
 
 class TestFilterToolRegistry:
     def test_empty_allowed_returns_original(self) -> None:
@@ -444,22 +460,28 @@ class TestFilterToolRegistry:
         with pytest.raises(SkillDependencyError, match="NoSuchTool"):
             filter_tool_registry(registry, ["NoSuchTool"])
 
+
 # ---------------------------------------------------------------------------
 # 目录型 Skill：tool.json 解析
 # ---------------------------------------------------------------------------
+
 
 class TestDirectorySkill:
     def test_parse_tool_json(self, tmp_path: Path) -> None:
         from flowcoder.skills.directory import parse_tool_json
 
         tool_json = tmp_path / "tool.json"
-        tool_json.write_text(json.dumps([
-            {
-                "name": "my_tool",
-                "description": "Does stuff",
-                "parameters": {"type": "object", "properties": {}},
-            }
-        ]))
+        tool_json.write_text(
+            json.dumps(
+                [
+                    {
+                        "name": "my_tool",
+                        "description": "Does stuff",
+                        "parameters": {"type": "object", "properties": {}},
+                    }
+                ]
+            )
+        )
         schemas = parse_tool_json(tool_json)
         assert len(schemas) == 1
         assert schemas[0]["name"] == "my_tool"
@@ -468,11 +490,15 @@ class TestDirectorySkill:
         from flowcoder.skills.directory import parse_tool_json
 
         tool_json = tmp_path / "tool.json"
-        tool_json.write_text(json.dumps({
-            "name": "single",
-            "description": "One tool",
-            "parameters": {},
-        }))
+        tool_json.write_text(
+            json.dumps(
+                {
+                    "name": "single",
+                    "description": "One tool",
+                    "parameters": {},
+                }
+            )
+        )
         schemas = parse_tool_json(tool_json)
         assert len(schemas) == 1
 
@@ -480,65 +506,71 @@ class TestDirectorySkill:
         from flowcoder.skills.directory import parse_tool_json
 
         tool_json = tmp_path / "tool.json"
-        tool_json.write_text(json.dumps([
-            {"name": "valid", "description": "ok", "parameters": {}},
-            "bad",
-            7,
-        ]))
+        tool_json.write_text(
+            json.dumps(
+                [
+                    {"name": "valid", "description": "ok", "parameters": {}},
+                    "bad",
+                    7,
+                ]
+            )
+        )
 
         schemas = parse_tool_json(tool_json)
 
         assert schemas == [{"name": "valid", "description": "ok", "parameters": {}}]
 
-    def test_parse_tool_json_filters_invalid_tool_schema_fields(
-        self, tmp_path: Path
-    ) -> None:
+    def test_parse_tool_json_filters_invalid_tool_schema_fields(self, tmp_path: Path) -> None:
         from flowcoder.skills.directory import parse_tool_json
 
         tool_json = tmp_path / "tool.json"
-        tool_json.write_text(json.dumps([
-            {
-                "name": "valid_tool",
-                "description": "ok",
-                "parameters": {},
-            },
-            {"name": "", "description": "empty name", "parameters": {}},
-            {"name": "../bad", "description": "unsafe", "parameters": {}},
-            {"name": 7, "description": "bad type", "parameters": {}},
-            {"name": "bad_description", "description": ["bad"], "parameters": {}},
-            {"name": "bad_parameters", "description": "bad", "parameters": []},
-            {"name": "bad_input_schema", "description": "bad", "input_schema": []},
-        ]))
+        tool_json.write_text(
+            json.dumps(
+                [
+                    {
+                        "name": "valid_tool",
+                        "description": "ok",
+                        "parameters": {},
+                    },
+                    {"name": "", "description": "empty name", "parameters": {}},
+                    {"name": "../bad", "description": "unsafe", "parameters": {}},
+                    {"name": 7, "description": "bad type", "parameters": {}},
+                    {"name": "bad_description", "description": ["bad"], "parameters": {}},
+                    {"name": "bad_parameters", "description": "bad", "parameters": []},
+                    {"name": "bad_input_schema", "description": "bad", "input_schema": []},
+                ]
+            )
+        )
 
         schemas = parse_tool_json(tool_json)
 
-        assert schemas == [
-            {"name": "valid_tool", "description": "ok", "parameters": {}}
-        ]
+        assert schemas == [{"name": "valid_tool", "description": "ok", "parameters": {}}]
 
-    def test_parse_tool_json_filters_duplicate_tool_names(
-        self, tmp_path: Path
-    ) -> None:
+    def test_parse_tool_json_filters_duplicate_tool_names(self, tmp_path: Path) -> None:
         from flowcoder.skills.directory import parse_tool_json
 
         tool_json = tmp_path / "tool.json"
-        tool_json.write_text(json.dumps([
-            {
-                "name": "same_tool",
-                "description": "first definition",
-                "parameters": {"type": "object"},
-            },
-            {
-                "name": "same_tool",
-                "description": "second definition",
-                "parameters": {"type": "object", "properties": {}},
-            },
-            {
-                "name": "other_tool",
-                "description": "kept",
-                "parameters": {},
-            },
-        ]))
+        tool_json.write_text(
+            json.dumps(
+                [
+                    {
+                        "name": "same_tool",
+                        "description": "first definition",
+                        "parameters": {"type": "object"},
+                    },
+                    {
+                        "name": "same_tool",
+                        "description": "second definition",
+                        "parameters": {"type": "object", "properties": {}},
+                    },
+                    {
+                        "name": "other_tool",
+                        "description": "kept",
+                        "parameters": {},
+                    },
+                ]
+            )
+        )
 
         schemas = parse_tool_json(tool_json)
 
@@ -571,24 +603,26 @@ class TestDirectorySkill:
         refs = skill_dir / "references"
         refs.mkdir()
 
-        (skill_dir / "tool.json").write_text(json.dumps([{
-            "name": "my_tool",
-            "description": "A tool",
-            "parameters": {"type": "object", "properties": {}},
-        }]))
-
-        (refs / "my_tool.py").write_text(
-            "async def execute(**kwargs):\n    return 'hello'\n"
+        (skill_dir / "tool.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "name": "my_tool",
+                        "description": "A tool",
+                        "parameters": {"type": "object", "properties": {}},
+                    }
+                ]
+            )
         )
+
+        (refs / "my_tool.py").write_text("async def execute(**kwargs):\n    return 'hello'\n")
 
         registry = ToolRegistry()
         count = register_skill_tools(skill_dir, registry)
         assert count == 1
         assert registry.get("my_tool") is not None
 
-    def test_register_skill_tools_skips_invalid_tool_names(
-        self, tmp_path: Path
-    ) -> None:
+    def test_register_skill_tools_skips_invalid_tool_names(self, tmp_path: Path) -> None:
         from flowcoder.skills.directory import register_skill_tools
 
         skill_dir = tmp_path / "my-skill"
@@ -596,20 +630,24 @@ class TestDirectorySkill:
         refs = skill_dir / "references"
         refs.mkdir()
 
-        (skill_dir / "tool.json").write_text(json.dumps([
-            {
-                "name": "valid_tool",
-                "description": "A tool",
-                "parameters": {},
-            },
-            {
-                "name": "bad-name",
-                "description": (
-                    "Invalid because implementation names are Python identifiers"
-                ),
-                "parameters": {},
-            },
-        ]))
+        (skill_dir / "tool.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "name": "valid_tool",
+                        "description": "A tool",
+                        "parameters": {},
+                    },
+                    {
+                        "name": "bad-name",
+                        "description": (
+                            "Invalid because implementation names are Python identifiers"
+                        ),
+                        "parameters": {},
+                    },
+                ]
+            )
+        )
         (refs / "valid_tool.py").write_text("def execute(**kwargs):\n    return 'ok'\n")
         (refs / "bad-name.py").write_text("def execute(**kwargs):\n    return 'bad'\n")
 
@@ -620,9 +658,7 @@ class TestDirectorySkill:
         assert registry.get("valid_tool") is not None
         assert registry.get("bad-name") is None
 
-    def test_load_tool_implementation_rejects_invalid_tool_name(
-        self, tmp_path: Path
-    ) -> None:
+    def test_load_tool_implementation_rejects_invalid_tool_name(self, tmp_path: Path) -> None:
         from flowcoder.skills.directory import load_tool_implementation
 
         refs = tmp_path / "references"
@@ -646,17 +682,22 @@ class TestDirectorySkill:
         refs = skill_dir / "references"
         refs.mkdir()
 
-        (skill_dir / "tool.json").write_text(json.dumps([{
-            "name": "greet",
-            "description": "Greet someone",
-            "parameters": {
-                "type": "object",
-                "properties": {"name": {"type": "string"}},
-            },
-        }]))
+        (skill_dir / "tool.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "name": "greet",
+                        "description": "Greet someone",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {"name": {"type": "string"}},
+                        },
+                    }
+                ]
+            )
+        )
         (refs / "greet.py").write_text(
-            "async def execute(**kwargs):\n"
-            "    return f\"Hello {kwargs.get('name', 'world')}!\"\n"
+            "async def execute(**kwargs):\n    return f\"Hello {kwargs.get('name', 'world')}!\"\n"
         )
 
         registry = ToolRegistry()
@@ -673,9 +714,11 @@ class TestDirectorySkill:
         result = await tool.execute(params)
         assert "Hello Alice!" in result.output
 
+
 # ---------------------------------------------------------------------------
 # LoadSkill 工具
 # ---------------------------------------------------------------------------
+
 
 class TestLoadSkillTool:
     @pytest.mark.asyncio
@@ -736,13 +779,14 @@ class TestLoadSkillTool:
         assert tool.is_system_tool is True
         assert tool.category == "read"
 
+
 # ---------------------------------------------------------------------------
 # Agent 集成
 # ---------------------------------------------------------------------------
 
+
 class TestAgentSkillIntegration:
     def test_activate_and_clear(self) -> None:
-        from flowcoder.agent import Agent
         from flowcoder.prompts import build_environment_context
 
         env = build_environment_context(

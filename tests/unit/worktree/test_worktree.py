@@ -22,6 +22,7 @@ from flowcoder.worktree.slug import flatten_slug, validate_slug
 # A. Slug 校验
 # =========================================================================
 
+
 class TestValidateSlug:
     def test_valid_simple(self):
         assert validate_slug("my-feature") is None
@@ -67,6 +68,7 @@ class TestValidateSlug:
     def test_empty_segment(self):
         assert validate_slug("foo//bar") is not None
 
+
 class TestFlattenSlug:
     def test_no_slash(self):
         assert flatten_slug("my-feature") == "my-feature"
@@ -77,9 +79,11 @@ class TestFlattenSlug:
     def test_multiple_slashes(self):
         assert flatten_slug("a/b/c") == "a+b+c"
 
+
 # =========================================================================
 # B. FileCache
 # =========================================================================
+
 
 class TestFileCache:
     def test_put_and_get(self):
@@ -110,9 +114,11 @@ class TestFileCache:
         cache = FileCache()
         cache.invalidate("/nonexistent")  # 不应抛出异常
 
+
 # =========================================================================
 # C. 配置扩展
 # =========================================================================
+
 
 class TestWorktreeConfig:
     def test_defaults(self):
@@ -171,12 +177,13 @@ class TestWorktreeConfig:
         with pytest.raises(ConfigError, match=field):
             load_config(config_file)
 
+
 # =========================================================================
 # H. 会话持久化
 # =========================================================================
 
-class TestSessionPersistence:
 
+class TestSessionPersistence:
     def test_save_and_load(self, tmp_path):
         session = WorktreeSession(
             original_cwd="/original",
@@ -233,9 +240,11 @@ class TestSessionPersistence:
         )
         assert load_worktree_session(tmp_path) is None
 
+
 # =========================================================================
 # 集成辅助函数
 # =========================================================================
+
 
 class TestIntegrationHelpers:
     def test_generate_worktree_name(self):
@@ -249,17 +258,22 @@ class TestIntegrationHelpers:
         assert "/wt/dir" in notice
         assert "WORKTREE CONTEXT" in notice
 
+
 # =========================================================================
 # D. WorktreeManager（需要真实的 git 仓库）
 # =========================================================================
 
+
 def _init_git_repo(path: Path) -> None:
     subprocess.run(["git", "init"], cwd=str(path), capture_output=True)
-    subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=str(path), capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@test.com"], cwd=str(path), capture_output=True
+    )
     subprocess.run(["git", "config", "user.name", "Test"], cwd=str(path), capture_output=True)
     (path / "README.md").write_text("# Test")
     subprocess.run(["git", "add", "."], cwd=str(path), capture_output=True)
     subprocess.run(["git", "commit", "-m", "init"], cwd=str(path), capture_output=True)
+
 
 @pytest.fixture
 def git_repo(tmp_path):
@@ -267,6 +281,7 @@ def git_repo(tmp_path):
     repo.mkdir()
     _init_git_repo(repo)
     return repo
+
 
 @pytest.fixture
 def manager(git_repo):
@@ -362,7 +377,7 @@ class TestWorktreeManager:
             _run(manager.exit("exit-invalid-action", action="archive"))
 
     def test_exit_remove_clean(self, manager):
-        wt = _run(manager.create("exit-rm"))
+        _wt = _run(manager.create("exit-rm"))
         _run(manager.enter("exit-rm"))
         _run(manager.exit("exit-rm", action="remove", discard_changes=True))
         assert "exit-rm" not in manager.active
@@ -421,9 +436,11 @@ class TestWorktreeManager:
         assert manager.restore_session() is None
         assert load_worktree_session(Path(manager.repo_root) / ".flowcoder") is None
 
+
 # =========================================================================
 # F. 变更检测与自动清理
 # =========================================================================
+
 
 class TestChangeDetection:
     def test_clean_worktree(self, manager):
@@ -441,9 +458,10 @@ class TestChangeDetection:
         (Path(wt.path) / "committed.txt").write_text("new")
         subprocess.run(["git", "add", "."], cwd=wt.path, capture_output=True, check=True)
         result = subprocess.run(
-            ["git", "-c", "user.name=Test", "-c", "user.email=t@t",
-             "commit", "-m", "test"],
-            cwd=wt.path, capture_output=True, text=True,
+            ["git", "-c", "user.name=Test", "-c", "user.email=t@t", "commit", "-m", "test"],
+            cwd=wt.path,
+            capture_output=True,
+            text=True,
         )
         assert result.returncode == 0, f"commit failed: {result.stderr}"
         changes = count_worktree_changes(wt.path, wt.head_commit)
@@ -463,9 +481,11 @@ class TestChangeDetection:
         assert result.path == wt.path
         assert "auto-dirty" in manager.active
 
+
 # =========================================================================
 # D4. read_worktree_head_sha
 # =========================================================================
+
 
 class TestReadWorktreeHeadSha:
     def test_valid_worktree(self, manager):

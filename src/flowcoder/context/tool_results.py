@@ -155,9 +155,7 @@ def apply_tool_result_budget(
                 persisted_p1.add(tool_result.tool_use_id)
 
         remaining = [
-            tool_result
-            for tool_result in fresh
-            if tool_result.tool_use_id not in persisted_p1
+            tool_result for tool_result in fresh if tool_result.tool_use_id not in persisted_p1
         ]
         total = sum(len(content) for content in decisions.values()) + sum(
             len(tool_result.content) for tool_result in remaining
@@ -301,10 +299,7 @@ def _snip_stale_messages(
             preview = tool_result.content[:200]
             orig_len = len(tool_result.content)
             new_content = (
-                f"{SNIPPED_TAG}\n"
-                f"(旧结果已裁剪，原始长度 {orig_len} 字符)\n"
-                f"{preview}\n"
-                f"… (snipped)"
+                f"{SNIPPED_TAG}\n(旧结果已裁剪，原始长度 {orig_len} 字符)\n{preview}\n… (snipped)"
             )
             new_results.append(
                 ToolResultBlock(

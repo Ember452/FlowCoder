@@ -28,4 +28,3 @@ REVIEW_COMMAND = Command(
     type=CommandType.PROMPT,
     handler=handle_review,
 )
-

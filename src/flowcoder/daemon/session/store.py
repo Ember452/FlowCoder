@@ -30,9 +30,7 @@ class PersistedSession:
 
 def validate_session_id(sid: str) -> str:
     if not isinstance(sid, str) or not SESSION_ID_PATTERN.fullmatch(sid):
-        raise ValueError(
-            "session_id must be 1-64 characters of letters, digits, '_' or '-'"
-        )
+        raise ValueError("session_id must be 1-64 characters of letters, digits, '_' or '-'")
     return sid
 
 

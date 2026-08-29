@@ -39,9 +39,7 @@ def clone_replacement_state(src: ContentReplacementState) -> ContentReplacementS
     )
 
 
-def append_replacement_records(
-    session_dir: Path, records: list[ContentReplacementRecord]
-) -> None:
+def append_replacement_records(session_dir: Path, records: list[ContentReplacementRecord]) -> None:
     if not records:
         return
     path = session_dir / REPLACEMENT_RECORDS_FILENAME

@@ -145,9 +145,7 @@ class PermissionChecker:
             if plan is not None and target == plan:
                 return True
 
-        plans_dir = (
-            self.sandbox.project_root / ".flowcoder" / "plans"
-        ).resolve(strict=False)
+        plans_dir = (self.sandbox.project_root / ".flowcoder" / "plans").resolve(strict=False)
         try:
             target.relative_to(plans_dir)
             return True

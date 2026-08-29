@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -47,6 +45,7 @@ from flowcoder.conversation import (
 # persist_tool_result
 # ---------------------------------------------------------------------------
 
+
 class TestPersistToolResult:
     def test_writes_file(self, tmp_path: Path) -> None:
         fp = persist_tool_result("toolu_001", "hello world", tmp_path)
@@ -59,9 +58,11 @@ class TestPersistToolResult:
         fp = tmp_path / "toolu_002.txt"
         assert fp.read_text() == "first"
 
+
 # ---------------------------------------------------------------------------
 # make_persisted_preview
 # ---------------------------------------------------------------------------
+
 
 class TestMakePersistedPreview:
     def test_contains_tag_and_path(self, tmp_path: Path) -> None:
@@ -75,13 +76,15 @@ class TestMakePersistedPreview:
         content = "a" * 5_000
         preview = make_persisted_preview(content, tmp_path / "test.txt")
         lines = preview.split("\n")
-        preview_line = [l for l in lines if l.startswith("aaa")]
+        preview_line = [line for line in lines if line.startswith("aaa")]
         assert len(preview_line) == 1
         assert len(preview_line[0]) == 2_000
+
 
 # ---------------------------------------------------------------------------
 # prepare_tool_result_content
 # ---------------------------------------------------------------------------
+
 
 class TestPrepareToolResultContent:
     def test_small_result_unchanged(self, tmp_path: Path) -> None:
@@ -103,9 +106,11 @@ class TestPrepareToolResultContent:
         assert prepared.startswith(PERSISTED_TAG)
         assert (tmp_path / "toolu_large.txt").read_text(encoding="utf-8") == content
 
+
 # ---------------------------------------------------------------------------
 # apply_tool_result_budget
 # ---------------------------------------------------------------------------
+
 
 class TestApplyToolResultBudget:
     def test_single_oversized_persisted(self, tmp_path: Path) -> None:
@@ -140,9 +145,7 @@ class TestApplyToolResultBudget:
             Message(
                 role="user",
                 content="",
-                tool_results=[
-                    ToolResultBlock(tool_use_id="toolu_sm", content=small_content)
-                ],
+                tool_results=[ToolResultBlock(tool_use_id="toolu_sm", content=small_content)],
             )
         )
         state = create_replacement_state()
@@ -184,9 +187,7 @@ class TestApplyToolResultBudget:
             Message(
                 role="user",
                 content="",
-                tool_results=[
-                    ToolResultBlock(tool_use_id="toolu_done", content=persisted_content)
-                ],
+                tool_results=[ToolResultBlock(tool_use_id="toolu_done", content=persisted_content)],
             )
         )
         state = create_replacement_state()
@@ -199,9 +200,11 @@ class TestApplyToolResultBudget:
         # 这样后续重复应用时仍能保持逐字节一致。
         assert state.replacements["toolu_done"] == persisted_content
 
+
 # ---------------------------------------------------------------------------
 # compute_compact_threshold
 # ---------------------------------------------------------------------------
+
 
 class TestComputeCompactThreshold:
     def test_auto_threshold(self) -> None:
@@ -213,9 +216,11 @@ class TestComputeCompactThreshold:
     def test_smaller_window(self) -> None:
         assert compute_compact_threshold(128_000) == 95_000
 
+
 # ---------------------------------------------------------------------------
 # should_auto_compact
 # ---------------------------------------------------------------------------
+
 
 class TestShouldAutoCompact:
     def test_below_threshold(self) -> None:
@@ -227,9 +232,11 @@ class TestShouldAutoCompact:
     def test_above_threshold(self) -> None:
         assert should_auto_compact(180_000, 200_000)
 
+
 # ---------------------------------------------------------------------------
 # extract_summary
 # ---------------------------------------------------------------------------
+
 
 class TestExtractSummary:
     def test_extracts_between_tags(self) -> None:
@@ -244,9 +251,11 @@ class TestExtractSummary:
         output = "<summary>just this</summary>"
         assert extract_summary(output) == "just this"
 
+
 # ---------------------------------------------------------------------------
 # CompactCircuitBreaker
 # ---------------------------------------------------------------------------
+
 
 class TestCompactCircuitBreaker:
     def test_starts_closed(self) -> None:
@@ -270,9 +279,11 @@ class TestCompactCircuitBreaker:
         breaker.record_failure()
         assert not breaker.is_open()
 
+
 # ---------------------------------------------------------------------------
 # build_compact_messages
 # ---------------------------------------------------------------------------
+
 
 class TestBuildCompactMessages:
     def test_basic_structure(self) -> None:
@@ -282,9 +293,11 @@ class TestBuildCompactMessages:
         assert "以下是早期对话的摘要" in msgs[0].content
         assert "the summary" in msgs[0].content
 
+
 # ---------------------------------------------------------------------------
 # 会话目录管理
 # ---------------------------------------------------------------------------
+
 
 class TestSessionDir:
     def test_ensure_creates_dir(self, tmp_path: Path) -> None:
@@ -305,6 +318,7 @@ class TestSessionDir:
 # ---------------------------------------------------------------------------
 # 真实用量锚点 + 增量估算（current_tokens）
 # ---------------------------------------------------------------------------
+
 
 class TestUsageAnchor:
     def test_cold_start_falls_back_to_char_estimate(self) -> None:
@@ -341,12 +355,10 @@ class TestUsageAnchor:
         assert conv.current_tokens() == baseline
 
         # 追加一条 700 个字符的 tool result -> 在基准之上再加 200 个估算 token。
-        conv.add_tool_results_message(
-            [ToolResultBlock(tool_use_id="t1", content="y" * 700)]
-        )
+        conv.add_tool_results_message([ToolResultBlock(tool_use_id="t1", content="y" * 700)])
         assert conv.current_tokens() == baseline + 200
         # 锚点之前的消息通过基准值采信，不再重复计数。
-        increment = estimate_tokens(conv.history[conv.anchor_count:])
+        increment = estimate_tokens(conv.history[conv.anchor_count :])
         assert increment == 200
 
     def test_anchor_beats_char_estimate_after_cache_hit(self) -> None:
@@ -355,9 +367,7 @@ class TestUsageAnchor:
         conv = ConversationManager()
         conv.add_user_message("z" * 35000)  # 按字符估算会得到 10000 个 token
         # 缓存命中：prompt 的大部分是从缓存读取的，真实 input 很小。
-        conv.record_usage_anchor(
-            input_tokens=200, output_tokens=50, cache_read=9000
-        )
+        conv.record_usage_anchor(input_tokens=200, output_tokens=50, cache_read=9000)
         # 锚点反映真实的 9250，而不是被夸大的按字符估算值。
         assert conv.current_tokens() == 9250
         assert conv.current_tokens() < estimate_tokens(conv.history)
@@ -408,6 +418,7 @@ class TestEstimateTokens:
 # 流式用量 -> 锚点流水线（cache 字段透传）
 # ---------------------------------------------------------------------------
 
+
 class TestStreamUsageCacheFields:
     def test_stream_end_carries_cache_fields(self) -> None:
         from flowcoder.tools.base import StreamEnd
@@ -449,8 +460,10 @@ class TestStreamUsageCacheFields:
         # 把这个 response 喂给锚点，能复现出完整的基准值。
         conv = ConversationManager()
         conv.record_usage_anchor(
-            resp.input_tokens, resp.output_tokens,
-            resp.cache_read, resp.cache_creation,
+            resp.input_tokens,
+            resp.output_tokens,
+            resp.cache_read,
+            resp.cache_creation,
         )
         assert conv.baseline_tokens == 1000 + 5000 + 300 + 200
 
@@ -458,6 +471,7 @@ class TestStreamUsageCacheFields:
 # ---------------------------------------------------------------------------
 # 保留最近原文的窗口：keepStartIndex 计算 + 工具配对
 # ---------------------------------------------------------------------------
+
 
 # _CHARS_PER_TOKEN == 3.5，所以一条 N*3.5 个字符的消息估算约为 N 个 token。
 def _user(text_tokens: int) -> Message:
@@ -512,10 +526,10 @@ class TestAlignKeepStartToToolPair:
         msgs = [
             _user(10),
             _assistant(10),
-            Message(role="assistant", content="call",
-                    tool_uses=[ToolUseBlock("t1", "ReadFile", {})]),
-            Message(role="user", content="",
-                    tool_results=[ToolResultBlock("t1", "data")]),
+            Message(
+                role="assistant", content="call", tool_uses=[ToolUseBlock("t1", "ReadFile", {})]
+            ),
+            Message(role="user", content="", tool_results=[ToolResultBlock("t1", "data")]),
         ]
         assert _align_keep_start_to_tool_pair(msgs, 3) == 2
 
@@ -530,28 +544,28 @@ class TestAlignKeepStartToToolPair:
         # tool_use 正好紧挨在它前面。
         msgs[6:6] = []  # 空操作，仅为显式表达意图而保留
         msgs = [
-            _user(4000), _user(4000), _user(4000), _user(4000),
-            Message(role="assistant", content="call",
-                    tool_uses=[ToolUseBlock("tx", "Grep", {})]),
-            Message(role="user", content="",
-                    tool_results=[ToolResultBlock("tx", "y" * (4000 * 3))]),
+            _user(4000),
+            _user(4000),
+            _user(4000),
+            _user(4000),
+            Message(role="assistant", content="call", tool_uses=[ToolUseBlock("tx", "Grep", {})]),
+            Message(
+                role="user", content="", tool_results=[ToolResultBlock("tx", "y" * (4000 * 3))]
+            ),
             _user(4000),
         ]
         keep_start = _compute_keep_start_index(msgs)
         kept = msgs[keep_start:]
         # 如果保留了某个 tool_result，那么它对应的 tool_use 也必须被保留（不留孤儿）。
-        kept_result_ids = {
-            tr.tool_use_id for m in kept for tr in m.tool_results
-        }
-        kept_use_ids = {
-            tu.tool_use_id for m in kept for tu in m.tool_uses
-        }
+        kept_result_ids = {tr.tool_use_id for m in kept for tr in m.tool_results}
+        kept_use_ids = {tu.tool_use_id for m in kept for tu in m.tool_uses}
         assert kept_result_ids <= kept_use_ids
 
 
 # ---------------------------------------------------------------------------
 # auto_compact：原文保留最近消息 + 摘要只覆盖前缀 + 重置锚点
 # ---------------------------------------------------------------------------
+
 
 class _SummaryClient:
     """一个极简的流式客户端：返回固定的摘要，并记录下它被要求去摘要的那段历史。"""
@@ -599,11 +613,15 @@ class TestAutoCompactKeepRecent:
         conv.record_usage_anchor(input_tokens=200_000)
 
         result = await auto_compact(
-            conv, client, context_window=200_000, session_dir=tmp_path,
+            conv,
+            client,
+            context_window=200_000,
+            session_dir=tmp_path,
         )
 
         # 已完成压缩。
         from flowcoder.context.manager import CompactEvent
+
         assert isinstance(result, CompactEvent)
 
         joined = "\n".join(m.content for m in conv.history)
@@ -622,11 +640,14 @@ class TestAutoCompactKeepRecent:
         conv.record_usage_anchor(input_tokens=200_000)
 
         await auto_compact(
-            conv, client, context_window=200_000, session_dir=tmp_path,
+            conv,
+            client,
+            context_window=200_000,
+            session_dir=tmp_path,
         )
 
         # 喂给摘要器的历史绝不能包含任何被保留的尾部消息
-        #（摘要只覆盖 messages[:keep_start]）。
+        # （摘要只覆盖 messages[:keep_start]）。
         assert client.summarized_history is not None
         summarized_contents = {m.content for m in client.summarized_history}
         assert not (kept_contents & summarized_contents)
@@ -638,18 +659,19 @@ class TestAutoCompactKeepRecent:
             conv.history.append(_assistant(3000))
         # 最近的尾部以一对 tool_use/tool_result 结尾。
         conv.history.append(
-            Message(role="assistant", content="calling",
-                    tool_uses=[ToolUseBlock("tk", "Grep", {})])
+            Message(role="assistant", content="calling", tool_uses=[ToolUseBlock("tk", "Grep", {})])
         )
         conv.history.append(
-            Message(role="user", content="",
-                    tool_results=[ToolResultBlock("tk", "RESULT_DATA")])
+            Message(role="user", content="", tool_results=[ToolResultBlock("tk", "RESULT_DATA")])
         )
         conv.record_usage_anchor(input_tokens=200_000)
         client = _SummaryClient()
 
         await auto_compact(
-            conv, client, context_window=200_000, session_dir=tmp_path,
+            conv,
+            client,
+            context_window=200_000,
+            session_dir=tmp_path,
         )
 
         # 如果 tool_result 被保留下来，它对应的 tool_use 也必须一起保留。
@@ -664,7 +686,10 @@ class TestAutoCompactKeepRecent:
         client = _SummaryClient()
 
         await auto_compact(
-            conv, client, context_window=200_000, session_dir=tmp_path,
+            conv,
+            client,
+            context_window=200_000,
+            session_dir=tmp_path,
         )
 
         # replace_history 必须已经把过期的锚点清零。
@@ -672,19 +697,18 @@ class TestAutoCompactKeepRecent:
         assert conv.anchor_count == 0
         assert conv.last_input_tokens == 0
 
-    async def test_too_few_messages_degrades_to_no_compaction(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_too_few_messages_degrades_to_no_compaction(self, tmp_path: Path) -> None:
         conv = ConversationManager()
         for i in range(3):
-            conv.history.append(
-                Message(role="user", content=f"ONLY_{i}_" + "z" * 100)
-            )
+            conv.history.append(Message(role="user", content=f"ONLY_{i}_" + "z" * 100))
         before = list(conv.history)
         client = _SummaryClient()
 
         result = await auto_compact(
-            conv, client, context_window=200_000, session_dir=tmp_path,
+            conv,
+            client,
+            context_window=200_000,
+            session_dir=tmp_path,
             manual=True,
         )
 
@@ -693,9 +717,7 @@ class TestAutoCompactKeepRecent:
         assert conv.history == before
         assert client.summarized_history is None
 
-    async def test_event_carries_boundary_summary_and_keep(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_event_carries_boundary_summary_and_keep(self, tmp_path: Path) -> None:
         # 返回的 CompactEvent 必须把一个结构化的 boundary（摘要 + 精确逐字
         # 保留的尾部）交给会话层，使其能持久化一条 compact_boundary 记录。
         conv = _make_long_conversation()
@@ -705,7 +727,10 @@ class TestAutoCompactKeepRecent:
         conv.record_usage_anchor(input_tokens=200_000)
 
         result = await auto_compact(
-            conv, client, context_window=200_000, session_dir=tmp_path,
+            conv,
+            client,
+            context_window=200_000,
+            session_dir=tmp_path,
         )
 
         from flowcoder.context.manager import CompactEvent

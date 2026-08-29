@@ -77,25 +77,29 @@ def test_response_tool_call_state_allows_identity_on_done_event() -> None:
 def test_chat_tool_call_state_accumulates_by_index_and_completes_sorted() -> None:
     state = OpenAIChatToolCallState()
 
-    events = state.add_tool_call_deltas([
-        SimpleNamespace(
-            index=1,
-            id="call-b",
-            function=SimpleNamespace(name="Grep", arguments='{"pattern":"x"}'),
-        ),
-        SimpleNamespace(
-            index=0,
-            id="call-a",
-            function=SimpleNamespace(name="ReadFile", arguments='{"path":'),
-        ),
-    ])
-    events += state.add_tool_call_deltas([
-        SimpleNamespace(
-            index=0,
-            id="",
-            function=SimpleNamespace(name="", arguments='"README.md"}'),
-        )
-    ])
+    events = state.add_tool_call_deltas(
+        [
+            SimpleNamespace(
+                index=1,
+                id="call-b",
+                function=SimpleNamespace(name="Grep", arguments='{"pattern":"x"}'),
+            ),
+            SimpleNamespace(
+                index=0,
+                id="call-a",
+                function=SimpleNamespace(name="ReadFile", arguments='{"path":'),
+            ),
+        ]
+    )
+    events += state.add_tool_call_deltas(
+        [
+            SimpleNamespace(
+                index=0,
+                id="",
+                function=SimpleNamespace(name="", arguments='"README.md"}'),
+            )
+        ]
+    )
     completed = state.complete()
 
     assert events == [
@@ -123,17 +127,17 @@ def test_chat_tool_call_state_accumulates_by_index_and_completes_sorted() -> Non
 def test_chat_tool_call_state_uses_empty_args_for_invalid_json() -> None:
     state = OpenAIChatToolCallState()
 
-    state.add_tool_call_deltas([
-        SimpleNamespace(
-            index=0,
-            id="call-1",
-            function=SimpleNamespace(name="Bash", arguments="{bad"),
-        )
-    ])
+    state.add_tool_call_deltas(
+        [
+            SimpleNamespace(
+                index=0,
+                id="call-1",
+                function=SimpleNamespace(name="Bash", arguments="{bad"),
+            )
+        ]
+    )
 
-    assert state.complete() == [
-        ToolCallComplete(tool_id="call-1", tool_name="Bash", arguments={})
-    ]
+    assert state.complete() == [ToolCallComplete(tool_id="call-1", tool_name="Bash", arguments={})]
 
 
 def test_openai_reasoning_state_accumulates_and_completes() -> None:

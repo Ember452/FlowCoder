@@ -58,13 +58,14 @@ log = logging.getLogger(__name__)
 
 class AgentToolParams(BaseModel):
     """Agent 工具的参数定义。LLM 调用 Agent 工具时传入这些参数。"""
-    prompt: str                   # 给子 Agent 的任务描述
-    description: str              # 简短描述（用于 UI 展示）
+
+    prompt: str  # 给子 Agent 的任务描述
+    description: str  # 简短描述（用于 UI 展示）
     subagent_type: str | None = None  # 预定义 Agent 类型名（None = fork 当前对话）
-    model: str | None = None     # 指定模型覆盖默认
+    model: str | None = None  # 指定模型覆盖默认
     run_in_background: bool = False  # 是否后台异步执行
-    name: str | None = None      # 自定义 Agent 名称
-    isolation: str | None = None # 隔离模式（如 "worktree"）
+    name: str | None = None  # 自定义 Agent 名称
+    isolation: str | None = None  # 隔离模式（如 "worktree"）
     team_name: str | None = Field(
         default=None,
         description=(
@@ -99,6 +100,7 @@ class AgentTool(Tool):
     2. _execute_with_worktree: subagent_type 的 isolation 为 "worktree" 时，创建 worktree 隔离子 Agent
     3. 默认路径: 创建一次性子 Agent 或 fork 当前对话
     """
+
     name = "Agent"
     description = (
         "Launch a sub-agent to handle a task in an isolated context. "
@@ -109,7 +111,6 @@ class AgentTool(Tool):
     params_model = AgentToolParams
     category = "command"
     is_concurrency_safe = False
-
 
     def __init__(
         self,
@@ -179,7 +180,7 @@ class AgentTool(Tool):
                     is_error=True,
                 )
             try:
-                parent_conv = getattr(self._parent_agent, '_current_conversation', None)
+                parent_conv = getattr(self._parent_agent, "_current_conversation", None)
                 if parent_conv is None:
                     return ToolResult(
                         output="Cannot fork: no active conversation in parent agent.",
@@ -206,9 +207,7 @@ class AgentTool(Tool):
 
         # 过滤工具（coordinator 模式可能缩减了注册表，这里用完整注册表）
         _base_registry = resolve_parent_registry(self._parent_agent)
-        filtered_registry = resolve_agent_tools(
-            _base_registry, definition, is_background
-        )
+        filtered_registry = resolve_agent_tools(_base_registry, definition, is_background)
         filtered_registry = rebase_file_tools(
             filtered_registry,
             self._parent_agent.work_dir,
@@ -227,6 +226,7 @@ class AgentTool(Tool):
         # 决策——这样父子共享的 prompt cache 前缀才能保持字节级一致
         if p.subagent_type is None:
             from flowcoder.context import clone_replacement_state
+
             sub_agent.replacement_state = clone_replacement_state(
                 self._parent_agent.replacement_state
             )
@@ -267,9 +267,7 @@ class AgentTool(Tool):
                 result_text = await sub_agent.run_to_completion(p.prompt)
         except Exception as e:
             self._trace_manager.complete(trace_node.agent_id, "failed")
-            return ToolResult(
-                output=f"Sub-agent failed: {e}", is_error=True
-            )
+            return ToolResult(output=f"Sub-agent failed: {e}", is_error=True)
 
         complete_trace_from_agent(self._trace_manager, trace_node, sub_agent)
 
@@ -291,7 +289,9 @@ class AgentTool(Tool):
         if self._team_manager is None:
             return ToolResult(output="TeamManager not configured.", is_error=True)
         if self._worktree_manager is None:
-            return ToolResult(output="WorktreeManager not configured for team spawn.", is_error=True)
+            return ToolResult(
+                output="WorktreeManager not configured for team spawn.", is_error=True
+            )
 
         from flowcoder.agents.fork import ForkError, build_forked_messages
         from flowcoder.agents.parser import AgentDef
@@ -302,7 +302,10 @@ class AgentTool(Tool):
 
         team = self._team_manager.get_team(p.team_name)
         if team is None:
-            return ToolResult(output=f"Team '{p.team_name}' not found. Create it first with TeamCreate.", is_error=True)
+            return ToolResult(
+                output=f"Team '{p.team_name}' not found. Create it first with TeamCreate.",
+                is_error=True,
+            )
 
         base_name = p.name or p.subagent_type or "worker"
         existing_names = {m.name for m in team.members}
@@ -328,9 +331,11 @@ class AgentTool(Tool):
         else:
             if self._enable_fork:
                 try:
-                    parent_conv = getattr(self._parent_agent, '_current_conversation', None)
+                    parent_conv = getattr(self._parent_agent, "_current_conversation", None)
                     if parent_conv is None:
-                        return ToolResult(output="Cannot fork: no active conversation.", is_error=True)
+                        return ToolResult(
+                            output="Cannot fork: no active conversation.", is_error=True
+                        )
                     conversation = build_forked_messages(parent_conv, p.prompt)
                     is_fork = True
                 except ForkError as e:
@@ -369,10 +374,12 @@ class AgentTool(Tool):
         _full_tools = [t.name for t in full_registry.list_tools()]
         log.info(
             "[teammate] has_full_registry=%s full_tools=%d names=%s backend=%s def_tools=%s def_disallowed=%s",
-            _has_full, len(_full_tools), _full_tools,
+            _has_full,
+            len(_full_tools),
+            _full_tools,
             backend.value,
-            getattr(definition, 'tools', []),
-            getattr(definition, 'disallowed_tools', []),
+            getattr(definition, "tools", []),
+            getattr(definition, "disallowed_tools", []),
         )
         teammate_registry = build_teammate_tools(
             parent_registry=full_registry,
@@ -419,9 +426,7 @@ class AgentTool(Tool):
 
         # 8. 按后端类型启动队友
         if backend in (BackendType.TMUX, BackendType.ITERM2):
-            return self._spawn_pane_teammate(
-                p, team, member, backend, wt, agent_id, teammate_name
-            )
+            return self._spawn_pane_teammate(p, team, member, backend, wt, agent_id, teammate_name)
 
         # 进程内模式：直接用 task_manager 执行并通知结果
         task_id = self._task_manager.launch(
@@ -442,10 +447,15 @@ class AgentTool(Tool):
             )
         )
 
-
     def _spawn_pane_teammate(
-        self, p: Any, team: Any, member: Any, backend: Any, wt: Any,
-        agent_id: str, teammate_name: str,
+        self,
+        p: Any,
+        team: Any,
+        member: Any,
+        backend: Any,
+        wt: Any,
+        agent_id: str,
+        teammate_name: str,
     ) -> ToolResult:
         """在 tmux / iTerm2 中启动队友（开新终端面板）。
         失败时返回错误信息，回退到进程内模式。
@@ -458,6 +468,7 @@ class AgentTool(Tool):
         try:
             if backend == BackendType.TMUX:
                 from flowcoder.teams.spawn_tmux import spawn_tmux_teammate
+
                 pane_info = spawn_tmux_teammate(
                     team_name=p.team_name,
                     teammate_name=teammate_name,
@@ -470,6 +481,7 @@ class AgentTool(Tool):
                 self._team_manager.register_pane_id(agent_id, pane_info.pane_id)
             elif backend == BackendType.ITERM2:
                 from flowcoder.teams.spawn_iterm2 import spawn_iterm2_teammate
+
                 pane_info = spawn_iterm2_teammate(
                     team_name=p.team_name,
                     teammate_name=teammate_name,
@@ -495,7 +507,6 @@ class AgentTool(Tool):
                 worktree_path=wt.path,
             )
         )
-
 
     async def _execute_with_worktree(self, p: AgentToolParams) -> ToolResult:
         """路径 2：创建 worktree 隔离子 Agent。
@@ -551,9 +562,7 @@ class AgentTool(Tool):
         )
 
         _base_registry = resolve_parent_registry(self._parent_agent)
-        filtered_registry = resolve_agent_tools(
-            _base_registry, definition, False
-        )
+        filtered_registry = resolve_agent_tools(_base_registry, definition, False)
         filtered_registry = rebase_file_tools(filtered_registry, wt.path)
 
         sub_agent = create_child_agent(

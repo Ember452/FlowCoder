@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import sys
-from typing import Any, AsyncIterator
 from unittest.mock import patch
 
 import pytest
@@ -30,6 +29,7 @@ from flowcoder.hooks.actions import load_action
 # LifecycleEvent
 # ---------------------------------------------------------------------------
 
+
 class TestLifecycleEvent:
     def test_has_15_events(self):
         assert len(LifecycleEvent) == 15
@@ -41,21 +41,31 @@ class TestLifecycleEvent:
 
     def test_all_values(self):
         expected = {
-            "session_start", "session_end",
-            "turn_start", "turn_end",
-            "pre_tool_use", "post_tool_use",
-            "pre_send", "post_receive",
-            "startup", "shutdown", "error", "compact",
-            "permission_request", "file_change", "command_execute",
+            "session_start",
+            "session_end",
+            "turn_start",
+            "turn_end",
+            "pre_tool_use",
+            "post_tool_use",
+            "pre_send",
+            "post_receive",
+            "startup",
+            "shutdown",
+            "error",
+            "compact",
+            "permission_request",
+            "file_change",
+            "command_execute",
         }
         assert {e.value for e in LifecycleEvent} == expected
+
 
 # ---------------------------------------------------------------------------
 # HookContext
 # ---------------------------------------------------------------------------
 
-class TestHookContext:
 
+class TestHookContext:
     def test_get_field_tool(self):
         ctx = HookContext(tool_name="Bash")
         assert ctx.get_field("tool") == "Bash"
@@ -115,9 +125,11 @@ class TestHookContext:
         ctx = HookContext(tool_args={"path": "short", "path_extra": "long"})
         assert ctx.expand("$TOOL_ARGS.path $TOOL_ARGS.path_extra") == "short long"
 
+
 # ---------------------------------------------------------------------------
 # 条件解析
 # ---------------------------------------------------------------------------
+
 
 class TestParseCondition:
     def test_single_condition(self):
@@ -150,14 +162,14 @@ class TestParseCondition:
         assert parse_condition("   ") is None
 
     def test_regex_format(self):
-        group = parse_condition('args.command =~ /rm\\s+-rf/')
+        group = parse_condition("args.command =~ /rm\\s+-rf/")
         assert group is not None
         c = group.conditions[0]
         assert c.operator == "=~"
         assert c.value == "/rm\\s+-rf/"
 
     def test_operator_in_regex_value_does_not_override_condition_operator(self):
-        group = parse_condition('args.command =~ /foo==bar/')
+        group = parse_condition("args.command =~ /foo==bar/")
         assert group is not None
         c = group.conditions[0]
         assert c.field == "args.command"
@@ -202,9 +214,11 @@ class TestParseCondition:
         assert group is not None
         assert group.conditions[0].value == ""
 
+
 # ---------------------------------------------------------------------------
 # 条件求值
 # ---------------------------------------------------------------------------
+
 
 class TestConditionEvaluate:
     def test_eq(self):
@@ -237,6 +251,7 @@ class TestConditionEvaluate:
         ctx = HookContext(tool_args={"count": 0, "enabled": False})
         assert Condition("args.count", "==", "0").evaluate(ctx) is True
         assert Condition("args.enabled", "==", "False").evaluate(ctx) is True
+
 
 class TestConditionGroupEvaluate:
     def test_and_all_pass(self):
@@ -288,9 +303,11 @@ class TestConditionGroupEvaluate:
         group = ConditionGroup(conditions=[], logic="and")
         assert group.evaluate(ctx) is True
 
+
 # ---------------------------------------------------------------------------
 # Executors
 # ---------------------------------------------------------------------------
+
 
 class TestCommandExecutor:
     @pytest.mark.asyncio
@@ -327,6 +344,7 @@ class TestCommandExecutor:
         assert "timed out" in result.output
         await asyncio.sleep(1.5)
 
+
 class TestPromptExecutor:
     @pytest.mark.asyncio
     async def test_returns_message(self):
@@ -337,6 +355,7 @@ class TestPromptExecutor:
         result = await execute_prompt(action, ctx)
         assert result.success is True
         assert result.output == "Hello WriteFile"
+
 
 class TestHttpExecutor:
     @pytest.mark.asyncio
@@ -359,6 +378,7 @@ class TestHttpExecutor:
             assert result.success is True
             assert "200" in result.output
             assert mock_urlopen.call_args.kwargs["timeout"] == 7
+
 
 class TestAgentExecutor:
     @pytest.mark.asyncio
@@ -422,6 +442,7 @@ class TestAgentExecutor:
         assert result.success is False
         assert "runner unavailable" in result.output
 
+
 class TestExecuteAction:
     @pytest.mark.asyncio
     async def test_dispatch(self):
@@ -441,9 +462,11 @@ class TestExecuteAction:
         result = await execute_action(action, ctx)
         assert result.success is False
 
+
 # ---------------------------------------------------------------------------
 # Loader
 # ---------------------------------------------------------------------------
+
 
 class TestLoadAction:
     def test_command_action_defaults(self):
@@ -499,9 +522,7 @@ class TestLoadHooks:
         assert hooks[0].condition is not None
 
     def test_auto_id(self):
-        raw = [
-            {"event": "session_start", "action": {"type": "prompt", "message": "hello"}}
-        ]
+        raw = [{"event": "session_start", "action": {"type": "prompt", "message": "hello"}}]
         hooks = load_hooks(raw)
         assert hooks[0].id == "session_start_0"
 
@@ -523,85 +544,99 @@ class TestLoadHooks:
 
     def test_hook_id_must_be_string(self):
         with pytest.raises(HookConfigError, match="id.*string"):
-            load_hooks([
-                {
-                    "id": ["bad"],
-                    "event": "startup",
-                    "action": {"type": "command", "command": "x"},
-                }
-            ])
+            load_hooks(
+                [
+                    {
+                        "id": ["bad"],
+                        "event": "startup",
+                        "action": {"type": "command", "command": "x"},
+                    }
+                ]
+            )
 
     def test_hook_id_must_not_be_empty(self):
         with pytest.raises(HookConfigError, match="id.*empty"):
-            load_hooks([
-                {
-                    "id": "   ",
-                    "event": "startup",
-                    "action": {"type": "command", "command": "x"},
-                }
-            ])
+            load_hooks(
+                [
+                    {
+                        "id": "   ",
+                        "event": "startup",
+                        "action": {"type": "command", "command": "x"},
+                    }
+                ]
+            )
 
     def test_duplicate_hook_ids_are_rejected(self):
         with pytest.raises(HookConfigError, match="duplicate hook id 'same'"):
-            load_hooks([
-                {
-                    "id": " same ",
-                    "event": "startup",
-                    "action": {"type": "command", "command": "echo one"},
-                },
-                {
-                    "id": "same",
-                    "event": "shutdown",
-                    "action": {"type": "command", "command": "echo two"},
-                },
-            ])
+            load_hooks(
+                [
+                    {
+                        "id": " same ",
+                        "event": "startup",
+                        "action": {"type": "command", "command": "echo one"},
+                    },
+                    {
+                        "id": "same",
+                        "event": "shutdown",
+                        "action": {"type": "command", "command": "echo two"},
+                    },
+                ]
+            )
 
     def test_auto_generated_hook_id_collisions_are_rejected(self):
         with pytest.raises(
             HookConfigError,
             match="duplicate hook id 'startup_1'",
         ):
-            load_hooks([
-                {
-                    "id": "startup_1",
-                    "event": "startup",
-                    "action": {"type": "command", "command": "echo one"},
-                },
-                {
-                    "event": "startup",
-                    "action": {"type": "command", "command": "echo two"},
-                },
-            ])
+            load_hooks(
+                [
+                    {
+                        "id": "startup_1",
+                        "event": "startup",
+                        "action": {"type": "command", "command": "echo one"},
+                    },
+                    {
+                        "event": "startup",
+                        "action": {"type": "command", "command": "echo two"},
+                    },
+                ]
+            )
 
     def test_condition_must_be_string(self):
         with pytest.raises(HookConfigError, match="if.*string"):
-            load_hooks([
-                {
-                    "event": "startup",
-                    "if": ["tool == Bash"],
-                    "action": {"type": "command", "command": "x"},
-                }
-            ])
+            load_hooks(
+                [
+                    {
+                        "event": "startup",
+                        "if": ["tool == Bash"],
+                        "action": {"type": "command", "command": "x"},
+                    }
+                ]
+            )
 
     def test_empty_condition_is_ignored(self):
-        hooks = load_hooks([
-            {
-                "event": "startup",
-                "if": "   ",
-                "action": {"type": "command", "command": "x"},
-            }
-        ])
+        hooks = load_hooks(
+            [
+                {
+                    "event": "startup",
+                    "if": "   ",
+                    "action": {"type": "command", "command": "x"},
+                }
+            ]
+        )
         assert hooks[0].condition is None
 
     def test_top_level_string_fields_are_trimmed(self):
-        hooks = load_hooks([
-            {
-                "id": "  trimmed  ",
-                "event": " startup ",
-                "if": ' tool == "Bash" ',
-                "action": {"type": "command", "command": "x"},
-            }
-        ])
+        hooks = load_hooks(
+            [
+                {
+                    "id": "  trimmed  ",
+                    "event": " startup ",
+                    "if": ' tool == "Bash" ',
+                    "action": {"type": "command", "command": "x"},
+                }
+            ]
+        )
 
         assert hooks[0].id == "trimmed"
         assert hooks[0].event == "startup"
@@ -613,19 +648,27 @@ class TestLoadHooks:
 
     def test_reject_on_non_pre_tool_use(self):
         with pytest.raises(HookConfigError, match="reject.*pre_tool_use"):
-            load_hooks([{
-                "event": "post_tool_use",
-                "action": {"type": "command", "command": "x"},
-                "reject": True,
-            }])
+            load_hooks(
+                [
+                    {
+                        "event": "post_tool_use",
+                        "action": {"type": "command", "command": "x"},
+                        "reject": True,
+                    }
+                ]
+            )
 
     def test_async_on_pre_tool_use(self):
         with pytest.raises(HookConfigError, match="async.*pre_tool_use"):
-            load_hooks([{
-                "event": "pre_tool_use",
-                "action": {"type": "command", "command": "x"},
-                "async": True,
-            }])
+            load_hooks(
+                [
+                    {
+                        "event": "pre_tool_use",
+                        "action": {"type": "command", "command": "x"},
+                        "async": True,
+                    }
+                ]
+            )
 
     def test_missing_required_field(self):
         with pytest.raises(HookConfigError, match="requires.*command"):
@@ -643,67 +686,78 @@ class TestLoadHooks:
     @pytest.mark.parametrize("field_name", ["reject", "async", "once"])
     def test_boolean_fields_must_be_booleans(self, field_name):
         with pytest.raises(HookConfigError, match=f"{field_name}.*boolean"):
-            load_hooks([
-                {
-                    "event": "post_tool_use",
-                    "action": {"type": "command", "command": "echo ok"},
-                    field_name: "false",
-                }
-            ])
+            load_hooks(
+                [
+                    {
+                        "event": "post_tool_use",
+                        "action": {"type": "command", "command": "echo ok"},
+                        field_name: "false",
+                    }
+                ]
+            )
 
     def test_action_string_fields_must_be_strings(self):
         with pytest.raises(HookConfigError, match="command.*string"):
-            load_hooks([
-                {
-                    "event": "startup",
-                    "action": {"type": "command", "command": ["echo", "bad"]},
-                }
-            ])
+            load_hooks(
+                [
+                    {
+                        "event": "startup",
+                        "action": {"type": "command", "command": ["echo", "bad"]},
+                    }
+                ]
+            )
 
     def test_http_headers_must_be_string_mapping(self):
         with pytest.raises(HookConfigError, match="headers.*mapping"):
-            load_hooks([
-                {
-                    "event": "startup",
-                    "action": {
-                        "type": "http",
-                        "url": "https://example.test",
-                        "headers": [],
-                    },
-                }
-            ])
+            load_hooks(
+                [
+                    {
+                        "event": "startup",
+                        "action": {
+                            "type": "http",
+                            "url": "https://example.test",
+                            "headers": [],
+                        },
+                    }
+                ]
+            )
 
         with pytest.raises(HookConfigError, match="headers.*strings to strings"):
-            load_hooks([
-                {
-                    "event": "startup",
-                    "action": {
-                        "type": "http",
-                        "url": "https://example.test",
-                        "headers": {"X-Test": 1},
-                    },
-                }
-            ])
+            load_hooks(
+                [
+                    {
+                        "event": "startup",
+                        "action": {
+                            "type": "http",
+                            "url": "https://example.test",
+                            "headers": {"X-Test": 1},
+                        },
+                    }
+                ]
+            )
 
     def test_action_timeout_rejects_boolean(self):
         with pytest.raises(HookConfigError, match="timeout.*positive integer"):
-            load_hooks([
-                {
-                    "event": "startup",
-                    "action": {
-                        "type": "command",
-                        "command": "echo ok",
-                        "timeout": True,
-                    },
-                }
-            ])
+            load_hooks(
+                [
+                    {
+                        "event": "startup",
+                        "action": {
+                            "type": "command",
+                            "command": "echo ok",
+                            "timeout": True,
+                        },
+                    }
+                ]
+            )
+
 
 # ---------------------------------------------------------------------------
 # HookEngine
 # ---------------------------------------------------------------------------
 
-class TestHookEngine:
 
+class TestHookEngine:
     def _make_hook(self, **kwargs) -> Hook:
         defaults = {
             "id": "test",
@@ -890,9 +944,11 @@ class TestHookEngine:
         assert notifications[0].success is True
         assert notifications[0].output == "agent reviewed"
 
+
 # ---------------------------------------------------------------------------
 # Agent 循环集成
 # ---------------------------------------------------------------------------
+
 
 class TestAgentHookIntegration:
     """验证 pre_tool_use 拒绝会导致工具调用被跳过。"""
@@ -903,7 +959,7 @@ class TestAgentHookIntegration:
         from flowcoder.client import LLMClient
         from flowcoder.conversation import ConversationManager
         from flowcoder.tools import create_default_registry
-        from flowcoder.tools.base import StreamEnd, StreamEvent, TextDelta, ToolCallComplete
+        from flowcoder.tools.base import StreamEnd, TextDelta, ToolCallComplete
 
         class MockClient(LLMClient):
             def __init__(self):

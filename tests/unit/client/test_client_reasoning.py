@@ -59,10 +59,7 @@ async def _collect(stream):
 
 def test_client_keeps_openai_streaming_helper_exports():
     assert _stream_end_from_openai_chat_usage is stream_end_from_openai_chat_usage
-    assert (
-        _stream_end_from_openai_response_usage
-        is stream_end_from_openai_response_usage
-    )
+    assert _stream_end_from_openai_response_usage is stream_end_from_openai_response_usage
 
 
 def test_client_keeps_llm_error_exports():
@@ -78,12 +75,16 @@ async def test_openai_responses_streams_reasoning_summary():
     class Responses:
         async def create(self, **kwargs):
             captured.update(kwargs)
-            return _AsyncStream([
-                SimpleNamespace(type="response.reasoning_summary_text.delta", delta="先分析"),
-                SimpleNamespace(type="response.output_text.delta", delta="答案"),
-                SimpleNamespace(type="response.reasoning_summary_text.done", text=""),
-                SimpleNamespace(type="response.completed", response=SimpleNamespace(usage=None)),
-            ])
+            return _AsyncStream(
+                [
+                    SimpleNamespace(type="response.reasoning_summary_text.delta", delta="先分析"),
+                    SimpleNamespace(type="response.output_text.delta", delta="答案"),
+                    SimpleNamespace(type="response.reasoning_summary_text.done", text=""),
+                    SimpleNamespace(
+                        type="response.completed", response=SimpleNamespace(usage=None)
+                    ),
+                ]
+            )
 
     client = OpenAIClient.__new__(OpenAIClient)
     client.model = "gpt-test"
@@ -104,29 +105,31 @@ async def test_openai_responses_streams_reasoning_summary():
 async def test_openai_responses_streams_function_call_arguments():
     class Responses:
         async def create(self, **_kwargs):
-            return _AsyncStream([
-                SimpleNamespace(
-                    type="response.output_item.added",
-                    item=SimpleNamespace(
-                        type="function_call",
-                        name="Bash",
-                        call_id="call-1",
+            return _AsyncStream(
+                [
+                    SimpleNamespace(
+                        type="response.output_item.added",
+                        item=SimpleNamespace(
+                            type="function_call",
+                            name="Bash",
+                            call_id="call-1",
+                        ),
                     ),
-                ),
-                SimpleNamespace(
-                    type="response.function_call_arguments.delta",
-                    delta='{"command":"git',
-                ),
-                SimpleNamespace(
-                    type="response.function_call_arguments.delta",
-                    delta=' status"}',
-                ),
-                SimpleNamespace(type="response.function_call_arguments.done"),
-                SimpleNamespace(
-                    type="response.completed",
-                    response=SimpleNamespace(usage=None),
-                ),
-            ])
+                    SimpleNamespace(
+                        type="response.function_call_arguments.delta",
+                        delta='{"command":"git',
+                    ),
+                    SimpleNamespace(
+                        type="response.function_call_arguments.delta",
+                        delta=' status"}',
+                    ),
+                    SimpleNamespace(type="response.function_call_arguments.done"),
+                    SimpleNamespace(
+                        type="response.completed",
+                        response=SimpleNamespace(usage=None),
+                    ),
+                ]
+            )
 
     client = OpenAIClient.__new__(OpenAIClient)
     client.model = "gpt-test"
@@ -153,34 +156,38 @@ async def test_openai_responses_streams_function_call_arguments():
 async def test_openai_compat_streams_reasoning_content():
     class Completions:
         async def create(self, **_kwargs):
-            return _AsyncStream([
-                SimpleNamespace(
-                    choices=[SimpleNamespace(
-                        delta=SimpleNamespace(
-                            reasoning_content="先想",
-                            content=None,
-                            tool_calls=None,
-                        ),
-                        finish_reason=None,
-                    )],
-                    usage=None,
-                ),
-                SimpleNamespace(
-                    choices=[SimpleNamespace(
-                        delta=SimpleNamespace(content="回答", tool_calls=None),
-                        finish_reason="stop",
-                    )],
-                    usage=None,
-                ),
-            ])
+            return _AsyncStream(
+                [
+                    SimpleNamespace(
+                        choices=[
+                            SimpleNamespace(
+                                delta=SimpleNamespace(
+                                    reasoning_content="先想",
+                                    content=None,
+                                    tool_calls=None,
+                                ),
+                                finish_reason=None,
+                            )
+                        ],
+                        usage=None,
+                    ),
+                    SimpleNamespace(
+                        choices=[
+                            SimpleNamespace(
+                                delta=SimpleNamespace(content="回答", tool_calls=None),
+                                finish_reason="stop",
+                            )
+                        ],
+                        usage=None,
+                    ),
+                ]
+            )
 
     client = OpenAICompatClient.__new__(OpenAICompatClient)
     client.model = "compat-test"
     client.thinking = True
     client.max_output_tokens = 1024
-    client._client = SimpleNamespace(
-        chat=SimpleNamespace(completions=Completions())
-    )
+    client._client = SimpleNamespace(chat=SimpleNamespace(completions=Completions()))
 
     events = await _collect(client.stream(ConversationManager()))
 
@@ -193,54 +200,58 @@ async def test_openai_compat_streams_reasoning_content():
 async def test_openai_compat_streams_tool_call_arguments():
     class Completions:
         async def create(self, **_kwargs):
-            return _AsyncStream([
-                SimpleNamespace(
-                    choices=[SimpleNamespace(
-                        delta=SimpleNamespace(
-                            content=None,
-                            tool_calls=[
-                                SimpleNamespace(
-                                    index=0,
-                                    id="call-1",
-                                    function=SimpleNamespace(
-                                        name="Bash",
-                                        arguments='{"command":"git',
-                                    ),
-                                )
-                            ],
-                        ),
-                        finish_reason=None,
-                    )],
-                    usage=None,
-                ),
-                SimpleNamespace(
-                    choices=[SimpleNamespace(
-                        delta=SimpleNamespace(
-                            content=None,
-                            tool_calls=[
-                                SimpleNamespace(
-                                    index=0,
-                                    id="",
-                                    function=SimpleNamespace(
-                                        name="",
-                                        arguments=' status"}',
-                                    ),
-                                )
-                            ],
-                        ),
-                        finish_reason="tool_calls",
-                    )],
-                    usage=None,
-                ),
-            ])
+            return _AsyncStream(
+                [
+                    SimpleNamespace(
+                        choices=[
+                            SimpleNamespace(
+                                delta=SimpleNamespace(
+                                    content=None,
+                                    tool_calls=[
+                                        SimpleNamespace(
+                                            index=0,
+                                            id="call-1",
+                                            function=SimpleNamespace(
+                                                name="Bash",
+                                                arguments='{"command":"git',
+                                            ),
+                                        )
+                                    ],
+                                ),
+                                finish_reason=None,
+                            )
+                        ],
+                        usage=None,
+                    ),
+                    SimpleNamespace(
+                        choices=[
+                            SimpleNamespace(
+                                delta=SimpleNamespace(
+                                    content=None,
+                                    tool_calls=[
+                                        SimpleNamespace(
+                                            index=0,
+                                            id="",
+                                            function=SimpleNamespace(
+                                                name="",
+                                                arguments=' status"}',
+                                            ),
+                                        )
+                                    ],
+                                ),
+                                finish_reason="tool_calls",
+                            )
+                        ],
+                        usage=None,
+                    ),
+                ]
+            )
 
     client = OpenAICompatClient.__new__(OpenAICompatClient)
     client.model = "compat-test"
     client.thinking = False
     client.max_output_tokens = 1024
-    client._client = SimpleNamespace(
-        chat=SimpleNamespace(completions=Completions())
-    )
+    client._client = SimpleNamespace(chat=SimpleNamespace(completions=Completions()))
 
     events = await _collect(client.stream(ConversationManager()))
 

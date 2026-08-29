@@ -22,13 +22,25 @@ def test_snapshot_round_trip_preserves_model_visible_blocks() -> None:
 
 
 def test_legacy_events_migrate_to_a_continuable_conversation() -> None:
-    restored = restore_conversation_from_events([
-        {"type": "UserMessage", "data": {"content": "inspect this"}},
-        {"type": "StreamText", "data": {"text": "I will inspect it"}},
-        {"type": "ToolUseEvent", "data": {"tool_id": "call-1", "tool_name": "ReadFile", "arguments": {"file_path": "a.py"}}},
-        {"type": "ToolResultEvent", "data": {"tool_id": "call-1", "output": "contents", "is_error": False}},
-        {"type": "LoopComplete", "data": {}},
-    ])
+    restored = restore_conversation_from_events(
+        [
+            {"type": "UserMessage", "data": {"content": "inspect this"}},
+            {"type": "StreamText", "data": {"text": "I will inspect it"}},
+            {
+                "type": "ToolUseEvent",
+                "data": {
+                    "tool_id": "call-1",
+                    "tool_name": "ReadFile",
+                    "arguments": {"file_path": "a.py"},
+                },
+            },
+            {
+                "type": "ToolResultEvent",
+                "data": {"tool_id": "call-1", "output": "contents", "is_error": False},
+            },
+            {"type": "LoopComplete", "data": {}},
+        ]
+    )
 
     assert [(message.role, message.content) for message in restored.history] == [
         ("user", "inspect this"),

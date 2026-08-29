@@ -46,9 +46,7 @@ class WorktreeManager:
     ) -> None:
         self.repo_root = repo_root
         self.symlink_directories = symlink_directories or []
-        self.worktree_dir = worktree_dir or str(
-            Path(repo_root) / ".flowcoder" / "worktrees"
-        )
+        self.worktree_dir = worktree_dir or str(Path(repo_root) / ".flowcoder" / "worktrees")
         self._flowcoder_dir = Path(repo_root) / ".flowcoder"
         self._lock = asyncio.Lock()
         self.active: dict[str, Worktree] = {}
@@ -103,9 +101,7 @@ class WorktreeManager:
                 if not ref_file.exists():
                     ref_file = commondir / ref_path
                 if ref_file.exists():
-                    return _normalized_git_object_id(
-                        ref_file.read_text(encoding="utf-8")
-                    )
+                    return _normalized_git_object_id(ref_file.read_text(encoding="utf-8"))
                 packed_refs = commondir / "packed-refs"
                 if packed_refs.exists():
                     for line in packed_refs.read_text(encoding="utf-8").splitlines():
@@ -150,14 +146,18 @@ class WorktreeManager:
 
             os.makedirs(self.worktree_dir, exist_ok=True)
 
-            result = self._run_git([
-                "worktree", "add",
-                "-B", branch_name, wt_path, base_branch,
-            ])
+            result = self._run_git(
+                [
+                    "worktree",
+                    "add",
+                    "-B",
+                    branch_name,
+                    wt_path,
+                    base_branch,
+                ]
+            )
             if result.returncode != 0:
-                raise WorktreeError(
-                    f"git worktree add failed: {result.stderr.strip()}"
-                )
+                raise WorktreeError(f"git worktree add failed: {result.stderr.strip()}")
 
             perform_post_creation_setup(
                 self.repo_root,
@@ -202,7 +202,6 @@ class WorktreeManager:
     # ------------------------------------------------------------------
     # 退出 worktree
     # ------------------------------------------------------------------
-
 
     async def exit(
         self,
@@ -259,7 +258,6 @@ class WorktreeManager:
     # 自动清理
     # ------------------------------------------------------------------
 
-
     async def auto_cleanup(self, name: str, head_commit: str) -> CleanupResult:
         wt = self.active.get(name)
         if wt is None:
@@ -277,7 +275,6 @@ class WorktreeManager:
 
     def list_worktrees(self) -> list[Worktree]:
         return list(self.active.values())
-
 
     def get_current_session(self) -> WorktreeSession | None:
         return self.current_session
@@ -336,7 +333,6 @@ class WorktreeManager:
     # ------------------------------------------------------------------
     # 辅助方法
     # ------------------------------------------------------------------
-
 
     def _get_current_branch(self) -> str:
         try:

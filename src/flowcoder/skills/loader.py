@@ -28,7 +28,6 @@ class SkillLoader:
         self._skills: dict[str, SkillDef] = {}
         self._cache: dict[str, SkillDef] = {}
 
-
     def load_all(self) -> dict[str, SkillDef]:
         seen: dict[str, SkillDef] = {}
 
@@ -47,7 +46,6 @@ class SkillLoader:
         self._skills = seen
         self._cache = {k: v for k, v in seen.items()}
         return seen
-
 
     def _scan_directory(self, path: Path, source: str) -> list[SkillDef]:
         results: list[SkillDef] = []
@@ -101,7 +99,6 @@ class SkillLoader:
 
         return results
 
-
     def get(self, name: str) -> SkillDef | None:
         skill = self._skills.get(name)
         if skill is None:
@@ -118,7 +115,8 @@ class SkillLoader:
             except SkillParseError as e:
                 log.warning(
                     "Hot-reload failed for skill '%s', using cached version: %s",
-                    name, e,
+                    name,
+                    e,
                 )
                 return self._cache.get(name, skill)
 
@@ -129,7 +127,6 @@ class SkillLoader:
 
     def reload(self) -> dict[str, SkillDef]:
         return self.load_all()
-
 
     def get_source_label(self, name: str) -> str:
         skill = self._skills.get(name)

@@ -143,10 +143,7 @@ def string_mapping_field(
     name: str,
 ) -> dict[str, str]:
     value = object_field(payload, name)
-    if not all(
-        isinstance(key, str) and isinstance(item, str)
-        for key, item in value.items()
-    ):
+    if not all(isinstance(key, str) and isinstance(item, str) for key, item in value.items()):
         raise BodyFieldError(f"'{name}' must be an object of strings")
     return value
 

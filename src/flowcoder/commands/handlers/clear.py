@@ -14,7 +14,6 @@ async def handle_clear(ctx: CommandContext) -> None:
         new_session = ctx.session_manager.create()
         ctx.config["set_session"](new_session)
 
-
     ctx.config["set_conversation"](ConversationManager())
 
     if ctx.agent:
@@ -33,4 +32,3 @@ CLEAR_COMMAND = Command(
     type=CommandType.LOCAL_UI,
     handler=handle_clear,
 )
-

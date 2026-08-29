@@ -19,7 +19,6 @@ class CommandType(str, Enum):
 class UIController(Protocol):
     def add_system_message(self, text: str) -> None: ...
 
-
     def send_user_message(self, text: str) -> None: ...
     def set_plan_mode(self, enabled: bool) -> None: ...
     def get_token_count(self) -> tuple[int, int]: ...
@@ -54,8 +53,6 @@ class Command:
 
 
 class CommandRegistry:
-
-
     def __init__(self) -> None:
         self._commands: dict[str, Command] = {}
         self._alias_map: dict[str, str] = {}
@@ -69,9 +66,7 @@ class CommandRegistry:
                 )
             for alias in command.aliases:
                 if alias in self._alias_map or alias in self._commands:
-                    raise ValueError(
-                        f"Alias '{alias}' conflicts with an existing command or alias"
-                    )
+                    raise ValueError(f"Alias '{alias}' conflicts with an existing command or alias")
             self._commands[command.name] = command
             for alias in command.aliases:
                 self._alias_map[alias] = command.name
@@ -83,13 +78,10 @@ class CommandRegistry:
             )
         for alias in command.aliases:
             if alias in self._alias_map or alias in self._commands:
-                raise ValueError(
-                    f"Alias '{alias}' conflicts with an existing command or alias"
-                )
+                raise ValueError(f"Alias '{alias}' conflicts with an existing command or alias")
         self._commands[command.name] = command
         for alias in command.aliases:
             self._alias_map[alias] = command.name
-
 
     def find(self, name: str) -> Command | None:
         if name in self._commands:
@@ -98,7 +90,6 @@ class CommandRegistry:
         if canon:
             return self._commands.get(canon)
         return None
-
 
     def list_commands(self) -> list[Command]:
         return [cmd for cmd in self._commands.values() if not cmd.hidden]

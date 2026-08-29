@@ -20,6 +20,7 @@ async def serve_gui(request: Any) -> FileResponse:
     """返回内置 Web 前端单页应用（Vue 3 SPA）。"""
     return FileResponse(_GUI_HTML, media_type="text/html")
 
+
 from flowcoder.daemon.routes.a2a import (
     a2a_agent_card,
     a2a_message_send,
@@ -165,11 +166,7 @@ def build_routes() -> list[BaseRoute]:
         [spec.path for spec in HTTP_ROUTES] + [spec.path for spec in WEBSOCKET_ROUTES]
     )
     routes: list[BaseRoute] = [
-        Route(spec.path, spec.endpoint, methods=list(spec.methods))
-        for spec in HTTP_ROUTES
+        Route(spec.path, spec.endpoint, methods=list(spec.methods)) for spec in HTTP_ROUTES
     ]
-    routes.extend(
-        WebSocketRoute(spec.path, spec.endpoint)
-        for spec in WEBSOCKET_ROUTES
-    )
+    routes.extend(WebSocketRoute(spec.path, spec.endpoint) for spec in WEBSOCKET_ROUTES)
     return routes

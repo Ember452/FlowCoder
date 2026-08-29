@@ -46,10 +46,7 @@ def compact_success_notification(
 ) -> CompactNotification:
     return CompactNotification(
         before_tokens=compact_event.before_tokens,
-        message=(
-            f"上下文已压缩（{compact_event.before_tokens:,} → "
-            f"{after_tokens:,} tokens）"
-        ),
+        message=(f"上下文已压缩（{compact_event.before_tokens:,} → {after_tokens:,} tokens）"),
         after_tokens=after_tokens,
         boundary=compact_event.boundary,
     )

@@ -135,9 +135,7 @@ class SessionRecord:
                     cls(type=RecordType.ASSISTANT, content=message.content, timestamp=now)
                 )
         else:
-            records.append(
-                cls(type=RecordType.USER, content=message.content, timestamp=now)
-            )
+            records.append(cls(type=RecordType.USER, content=message.content, timestamp=now))
 
         return records
 
@@ -243,9 +241,7 @@ def records_to_messages(records: list[SessionRecord]) -> list[Message]:
             continue
 
         if pending_tool_results:
-            messages.append(
-                Message(role="user", content="", tool_results=pending_tool_results)
-            )
+            messages.append(Message(role="user", content="", tool_results=pending_tool_results))
             pending_tool_results = []
 
         if record.type == RecordType.SYSTEM_PROMPT:
@@ -257,8 +253,7 @@ def records_to_messages(records: list[SessionRecord]) -> list[Message]:
                     role="user",
                     content=(
                         "本次会话延续自之前的对话，因上下文空间不足进行了压缩。"
-                        "以下是早期对话的摘要：\n\n"
-                        + (record.content or "")
+                        "以下是早期对话的摘要：\n\n" + (record.content or "")
                     ),
                 )
             )
@@ -271,8 +266,7 @@ def records_to_messages(records: list[SessionRecord]) -> list[Message]:
                     role="user",
                     content=(
                         "本次会话延续自之前的对话，因上下文空间不足进行了压缩。"
-                        "以下是早期对话的摘要：\n\n"
-                        + summary
+                        "以下是早期对话的摘要：\n\n" + summary
                     ),
                 )
             )
@@ -284,18 +278,12 @@ def records_to_messages(records: list[SessionRecord]) -> list[Message]:
         elif record.type == RecordType.ASSISTANT:
             if isinstance(record.content, list):
                 text, tool_uses = _assistant_content_from_blocks(record.content)
-                messages.append(
-                    Message(role="assistant", content=text, tool_uses=tool_uses)
-                )
+                messages.append(Message(role="assistant", content=text, tool_uses=tool_uses))
             else:
-                messages.append(
-                    Message(role="assistant", content=record.content or "")
-                )
+                messages.append(Message(role="assistant", content=record.content or ""))
 
     if pending_tool_results:
-        messages.append(
-            Message(role="user", content="", tool_results=pending_tool_results)
-        )
+        messages.append(Message(role="user", content="", tool_results=pending_tool_results))
 
     return messages
 
@@ -325,7 +313,7 @@ def validate_message_chain(records: list[SessionRecord]) -> int:
 def truncate_to_valid_message_chain(
     records: list[SessionRecord],
 ) -> list[SessionRecord]:
-    return records[:validate_message_chain(records)]
+    return records[: validate_message_chain(records)]
 
 
 def records_from_last_compact_boundary(

@@ -24,6 +24,7 @@ InferFilePath = Callable[[dict[str, Any]], str]
 
 class ToolHookEngine(Protocol):
     """工具级 Hook 引擎协议：需要同时支持 pre/post tool use Hook。"""
+
     async def run_pre_tool_hooks(
         self,
         ctx: HookContext,
@@ -39,6 +40,7 @@ class PreToolHookResult:
     - rejection: 非 None 表示 Hook 拒绝了工具执行，Agent 应跳过执行
     - events: Hook 执行过程中产生的事件（通知 / 提示消息等）
     """
+
     rejection: ToolRejectedError | None
     events: list[HookEvent]
 

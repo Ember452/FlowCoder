@@ -15,9 +15,7 @@ from flowcoder.a2a.protocol import (
 
 
 def test_parse_json_rpc_request_defaults_missing_params_to_object() -> None:
-    request = parse_json_rpc_request(
-        {"jsonrpc": "2.0", "id": 1, "method": "tasks/list"}
-    )
+    request = parse_json_rpc_request({"jsonrpc": "2.0", "id": 1, "method": "tasks/list"})
 
     assert request.id == 1
     assert request.method == "tasks/list"

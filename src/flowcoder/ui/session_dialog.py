@@ -24,8 +24,13 @@ def _format_size(size: int) -> str:
 
 def _relative_time(meta: SessionMeta) -> str:
     from datetime import datetime, timezone
+
     now = datetime.now(timezone.utc)
-    dt = meta.last_active.replace(tzinfo=timezone.utc) if meta.last_active.tzinfo is None else meta.last_active
+    dt = (
+        meta.last_active.replace(tzinfo=timezone.utc)
+        if meta.last_active.tzinfo is None
+        else meta.last_active
+    )
     delta = now - dt
     secs = int(delta.total_seconds())
     if secs < 60:
@@ -60,7 +65,6 @@ class InlineResumeWidget(Vertical, can_focus=True):
         self._cursor = 0
         self._search = ""
 
-
     def compose(self) -> ComposeResult:
         yield Static(self._build_content(), id="resume-content")
 
@@ -93,9 +97,9 @@ class InlineResumeWidget(Vertical, can_focus=True):
                 lines.append(f"  {title}")
 
             parts = [_relative_time(meta)]
-            if hasattr(meta, 'branch') and meta.branch:
+            if hasattr(meta, "branch") and meta.branch:
                 parts.append(meta.branch)
-            if hasattr(meta, 'file_size') and meta.file_size:
+            if hasattr(meta, "file_size") and meta.file_size:
                 parts.append(_format_size(meta.file_size))
             lines.append(f"  [dim]{'  ·  '.join(parts)}[/]")
             lines.append("")
@@ -109,19 +113,16 @@ class InlineResumeWidget(Vertical, can_focus=True):
     def _refresh(self) -> None:
         self.query_one("#resume-content", Static).update(self._build_content())
 
-
     def _refilter(self) -> None:
         if not self._search:
             self._filtered = list(self._sessions)
         else:
             s = self._search.lower()
             self._filtered = [
-                m for m in self._sessions
-                if s in (m.title or "").lower() or s in m.id.lower()
+                m for m in self._sessions if s in (m.title or "").lower() or s in m.id.lower()
             ]
         self._cursor = 0
         self._refresh()
-
 
     def action_cursor_up(self) -> None:
         if self._cursor > 0:
@@ -132,7 +133,6 @@ class InlineResumeWidget(Vertical, can_focus=True):
         if self._cursor < min(len(self._filtered), 10) - 1:
             self._cursor += 1
             self._refresh()
-
 
     def action_select(self) -> None:
         if self._filtered and 0 <= self._cursor < len(self._filtered):

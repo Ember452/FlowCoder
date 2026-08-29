@@ -43,9 +43,7 @@ def test_account_status_unsigned(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     assert data["logged_in"] is False
 
 
-def test_account_sign_in_models_and_select(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_account_sign_in_models_and_select(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     session_file = tmp_path / "account.yaml"
     monkeypatch.setattr("flowcoder.account.session.SESSION_FILE", session_file)
 
