@@ -22,25 +22,51 @@ from flowcoder.eval.runner import (
 
 
 class FakeSolver:
-    """fake provider：按 task_id 返回预设输出。"""
+    """fake provider：会话式，按 task_id 返回预设输出。
 
-    def __init__(self, answers: dict[str, str]) -> None:
+    answers 值可以是 str（每次 ask 同答案）或 list[str]（按 ask 次序轮替，
+    用尽后重复最后一项）——支撑自愈轮与 k-sample 的测试。
+    """
+
+    def __init__(self, answers: dict[str, str | list[str]]) -> None:
         self._answers = answers
         self.prompts: list[str] = []
+        self.active_sessions = 0
 
-    async def solve(self, prompt: str) -> AgentSolution:
-        self.prompts.append(prompt)
-        text = next((v for k, v in self._answers.items() if k in prompt), "")
-        return AgentSolution(
-            text=text,
-            input_tokens=100,
-            output_tokens=20,
-            turns=1,
-        )
+    def start(self) -> FakeSession:
+        return FakeSession(self)
+
+
+class FakeSession:
+    def __init__(self, solver: FakeSolver) -> None:
+        self._solver = solver
+        self._ask_count = 0
+        solver.active_sessions += 1
+
+    async def ask(self, prompt: str) -> AgentSolution:
+        self._solver.prompts.append(prompt)
+        self._ask_count += 1
+        text = ""
+        for key, value in self._solver._answers.items():
+            if key in prompt:
+                if isinstance(value, list):
+                    text = value[min(self._ask_count, len(value)) - 1]
+                else:
+                    text = value
+                break
+        return AgentSolution(text=text, input_tokens=100, output_tokens=20, turns=1)
+
+    def close(self) -> None:
+        self._solver.active_sessions -= 1
 
 
 class ErrorSolver:
-    async def solve(self, prompt: str) -> AgentSolution:
+    def start(self) -> ErrorSession:
+        return ErrorSession()
+
+
+class ErrorSession:
+    async def ask(self, prompt: str) -> AgentSolution:
         return AgentSolution(error="LLM 429 限流")
 
 
@@ -161,17 +187,25 @@ class TestFullChain:
         assert not results[0].passed
 
     async def test_semaphore_limits_concurrency(self) -> None:
+        class SlowSession:
+            def __init__(self, owner: "SlowSolver") -> None:
+                self._owner = owner
+
+            async def ask(self, prompt: str) -> AgentSolution:
+                owner = self._owner
+                owner.concurrent += 1
+                owner.max_concurrent = max(owner.max_concurrent, owner.concurrent)
+                await asyncio.sleep(0.05)
+                owner.concurrent -= 1
+                return AgentSolution(text=_RIGHT_ADD)
+
         class SlowSolver:
             def __init__(self) -> None:
                 self.concurrent = 0
                 self.max_concurrent = 0
 
-            async def solve(self, prompt: str) -> AgentSolution:
-                self.concurrent += 1
-                self.max_concurrent = max(self.max_concurrent, self.concurrent)
-                await asyncio.sleep(0.05)
-                self.concurrent -= 1
-                return AgentSolution(text=_RIGHT_ADD)
+            def start(self) -> SlowSession:
+                return SlowSession(self)
 
         problems = [BUILTIN_TOY_PROBLEMS[0]] * 6
         solver = SlowSolver()
