@@ -4,16 +4,23 @@ on:
   push:
     tags: ["v*"]
 
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install uv && uv pip install -e ".[dev]" --system
-      - run: python -m build
-      - uses: softprops/action-gh-release@v2
+      - name: Install build tool
+        run: pip install build
+      - name: Build distributions
+        run: python -m build
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
         with:
           files: dist/*

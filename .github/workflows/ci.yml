@@ -6,10 +6,31 @@ on:
   pull_request:
     branches: [main, master]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: pip install "ruff>=0.6"
+      - name: Lint
+        run: ruff check src tests
+      - name: Format check
+        run: ruff format --check src tests
+
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
 
@@ -27,11 +48,24 @@ jobs:
       - name: Install dependencies
         run: uv pip install -e ".[dev]" --system
 
-      - name: Lint (ruff)
-        run: ruff check src tests
-
       - name: Run unit tests
         run: pytest tests/unit -q
 
       - name: Run integration tests
         run: pytest tests/integration -q
+
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        run: pip install uv
+      - name: Install dependencies
+        run: uv pip install -e ".[dev]" --system
+      - name: Unit tests with coverage
+        run: pytest tests/unit --cov=src/flowcoder --cov-report=term-missing
+      # 说明：先观测覆盖率基线，稳定后在 --cov-fail-under=<基线> 处加门禁

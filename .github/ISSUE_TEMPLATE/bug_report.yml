@@ -1,0 +1,54 @@
+name: 缺陷报告
+description: 报告 FlowCoder 的功能异常
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        安全漏洞请勿在此提交，使用 Private vulnerability reporting。
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 发生了什么
+      description: 预期行为 vs 实际行为
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. flowcoder 运行模式（tui / daemon / headless）
+        2. 执行 '...'
+        3. 看到错误
+    validations:
+      required: true
+  - type: dropdown
+    id: module
+    attributes:
+      label: 涉及模块
+      options:
+        - agent 循环
+        - 工具执行
+        - 权限/沙箱
+        - 上下文/记忆
+        - LLM 客户端/流式
+        - daemon/WebSocket
+        - MCP/Teams
+        - TUI/GUI
+        - 配置
+        - 其他
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本与环境
+      placeholder: flowcoder 0.2.0 / Python 3.12 / Windows 11
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志/trace
+      description: 有 trace_id 的日志片段最有价值
