@@ -347,6 +347,40 @@ async def test_stop_consecutive_unknown_tools():
 
 
 @pytest.mark.asyncio
+async def test_stop_consecutive_unknown_tools_with_parallel_reads():
+    """每轮 [幻觉调用 + 并行只读调用×2] 也必须触发 unknown 熔断。
+
+    旧行为：并行批无条件把 consecutive_unknown 清零，模型只要每轮夹一个
+    幻觉调用加两个只读调用，就永远逃过 ≥3 熔断（P0-10）。
+    """
+    responses = []
+    for i in range(5):
+        responses.append(
+            [
+                TextDelta(f"Trying tools {i}"),
+                ToolCallComplete(f"bad{i}", "NonExistentTool", {"arg": "val"}),
+                ToolCallComplete(f"r{i}a", "ReadFile", {"file_path": "README.md"}),
+                ToolCallComplete(f"r{i}b", "ReadFile", {"file_path": "pyproject.toml"}),
+                StreamEnd("end_turn", input_tokens=10, output_tokens=10),
+            ]
+        )
+
+    client = MockLLMClient(responses)
+    registry = create_default_registry()
+    agent = Agent(client, registry, "anthropic")
+    conv = ConversationManager()
+    conv.add_user_message("Do something")
+
+    events = []
+    async for e in agent.run(conv):
+        events.append(e)
+
+    c = _collect(events)
+    assert len(c["error"]) == 1
+    assert "unknown tool" in c["error"][0].message
+
+
+@pytest.mark.asyncio
 async def test_message_splicing():
     """assistant 消息包含 text + 多个 tool_use；对应的 tool_result 被打包在一起。"""
     client = MockLLMClient(

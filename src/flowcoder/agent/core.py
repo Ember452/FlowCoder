@@ -191,6 +191,8 @@ class Agent:
         self._team_manager: Any = None  # Team 管理器
         self.notification_fn: Callable[[], list[str]] | None = None  # 外部通知回调
         self.file_history: Any = None  # 文件历史快照管理器
+        # 后台任务引用集：防止 fire-and-forget 任务被 GC 中途回收，异常在 done callback 记录
+        self._bg_tasks: set[asyncio.Task] = set()
 
     @property
     def _transcript_path(self) -> str:
@@ -478,13 +480,13 @@ class Agent:
                 )
                 # 后台异步观察对话（轻量级，不阻塞）
                 if self.memory_hub:
-                    asyncio.ensure_future(
+                    self._spawn_bg(
                         self._observe_memories(conversation, MEMORY_EVENT_TURN_COMPLETED)
                     )
                 self._loop_count += 1
                 # 每 5 轮触发一次记忆提取（重量级，用 LLM 从对话中提取值得记忆的信息）
                 if self._loop_count % MEMORY_EXTRACTION_INTERVAL == 0 and self.memory_hub:
-                    asyncio.ensure_future(self._extract_memories(conversation))
+                    self._spawn_bg(self._extract_memories(conversation))
                 # 触发 turn_end 和 session_end 生命周期 Hook
                 for he in await self._run_lifecycle_hook("turn_end"):
                     yield he
@@ -563,8 +565,11 @@ class Agent:
                             ):
                                 yield he
 
-                    # 按原始调用顺序汇总结果
-                    consecutive_unknown = 0
+                    # 按原始调用顺序汇总结果。
+                    # 并行批里的工具按分区规则必然是已注册的安全工具，这里
+                    # 不清零 consecutive_unknown：清零会让"每轮夹一个幻觉调用
+                    # + 若干只读调用"的模型永远逃过 ≥3 熔断（见 P0-10）。
+                    # 计数只由串行路径更新：unknown +1，已知工具串行执行清零。
                     for tc in batch.calls:
                         if tc.tool_id in pre_failed:
                             result = pre_failed[tc.tool_id]
@@ -642,6 +647,26 @@ class Agent:
             for he in await self._run_lifecycle_hook("turn_end"):
                 yield he
             yield TurnComplete(turn=iteration)
+
+    def _spawn_bg(self, coro: Any) -> asyncio.Task:
+        """fire-and-forget 后台任务统一入口。
+
+        裸 ensure_future 的问题：无引用（事件循环只持弱引用，任务可能被 GC
+        中途回收）且异常无人观察（静默丢失）。这里持有强引用，结束后移除，
+        异常记入日志而不是被吞掉。返回任务便于调用方在测试/关停时等待。
+        """
+        task = asyncio.ensure_future(coro)
+        self._bg_tasks.add(task)
+        task.add_done_callback(self._on_bg_task_done)
+        return task
+
+    def _on_bg_task_done(self, task: asyncio.Task) -> None:
+        self._bg_tasks.discard(task)
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc is not None:
+            log.error("background task failed: %s: %s", type(exc).__name__, exc)
 
     def _consume_mailbox(self, conversation: ConversationManager) -> None:
         consume_team_mailbox(
