@@ -150,6 +150,8 @@ class AppConfig:
     schema_version: int = 1
     permission_mode: str = "default"
     permission_mode_declared: bool = False
+    sandbox_mode: str = "off"
+    sandbox_mode_declared: bool = False
     mcp_servers: list[MCPServerConfig] = field(default_factory=list)
     mcp_servers_declared: bool = False
     raw_hooks: list[dict] = field(default_factory=list)
@@ -230,6 +232,8 @@ def _load_single_file(path: Path, *, require_providers: bool = True) -> AppConfi
         schema_version=validated["schema_version"],
         permission_mode=validated["permission_mode"],
         permission_mode_declared="permission_mode" in raw_keys,
+        sandbox_mode=validated["sandbox_mode"],
+        sandbox_mode_declared="sandbox_mode" in raw_keys,
         mcp_servers=mcp_servers,
         mcp_servers_declared="mcp_servers" in raw_keys,
         raw_hooks=validated["hooks"],
@@ -253,6 +257,8 @@ def _merge_config(base: AppConfig, override: AppConfig) -> AppConfig:
         base.providers = override.providers
     if override.permission_mode_declared:
         base.permission_mode = override.permission_mode
+    if override.sandbox_mode_declared:
+        base.sandbox_mode = override.sandbox_mode
 
     if override.mcp_servers_declared:
         if not override.mcp_servers:
@@ -309,6 +315,8 @@ def _with_account_providers(config: AppConfig | None) -> AppConfig | None:
         schema_version=config.schema_version,
         permission_mode=config.permission_mode,
         permission_mode_declared=config.permission_mode_declared,
+        sandbox_mode=config.sandbox_mode,
+        sandbox_mode_declared=config.sandbox_mode_declared,
         mcp_servers=config.mcp_servers,
         mcp_servers_declared=config.mcp_servers_declared,
         raw_hooks=config.raw_hooks,
@@ -363,3 +371,22 @@ def load_config(path: Path | None = None) -> AppConfig:
             "At least one provider must be configured (local providers or cloud account models)"
         )
     return merged
+
+
+def update_user_config_value(key: str, value: str, *, path: Path | None = None) -> Path:
+    """把一个顶层字符串配置项写入用户级 config.yaml，返回配置文件路径。
+
+    用整行替换/追加而非整体重解析-回写：保留文件里既有的注释与排版
+    （yaml.safe_dump 会丢掉全部注释）。仅适用于顶层标量键。
+    """
+    target = path if path is not None else Path.home() / ".flowcoder" / "config.yaml"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    pattern = re.compile(rf"^{re.escape(key)}\s*:.*$", re.MULTILINE)
+    line = f"{key}: {value}"
+    existing = target.read_text(encoding="utf-8") if target.exists() else ""
+    if pattern.search(existing):
+        updated = pattern.sub(line, existing, count=1)
+    else:
+        updated = f"{line}\n{existing}" if existing else f"{line}\n"
+    target.write_text(updated, encoding="utf-8")
+    return target
