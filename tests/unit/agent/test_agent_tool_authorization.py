@@ -199,3 +199,30 @@ async def test_authorize_tool_call_allows_when_rule_allows(tmp_path) -> None:
     auth = items[0]
     assert isinstance(auth, _AuthResult)
     assert auth.approved is True
+
+
+@pytest.mark.asyncio
+async def test_authorize_tool_call_times_out_when_frontend_silent(tmp_path, monkeypatch) -> None:
+    """前端失联（无人 set_result）时必须超时拒绝，而不是永久挂死（P0-11）。"""
+    from flowcoder.agent import tool_authorization
+
+    monkeypatch.setattr(tool_authorization, "PERMISSION_REQUEST_TIMEOUT", 0.05)
+    registry = _registry()
+    checker = _checker(tmp_path)
+
+    items: list = []
+    async for item in tool_authorization.authorize_tool_call(
+        registry=registry,
+        permission_checker=checker,
+        tool_call=ToolCallComplete("w1", "WriteFile", {"file_path": "target.txt"}),
+        permission_description="target.txt",
+    ):
+        items.append(item)
+        # 故意不 resolve future，模拟前端失联
+
+    assert len(items) == 2
+    auth = items[1]
+    assert isinstance(auth, _AuthResult)
+    assert auth.approved is False
+    assert auth.error is not None
+    assert "超时" in auth.error.output

@@ -16,6 +16,10 @@ from flowcoder.permissions.rules import Rule, extract_content
 from flowcoder.tools import ToolRegistry
 from flowcoder.tools.base import ToolCallComplete, ToolResult
 
+# PermissionRequest 的等待上限，与 AskUserQuestion 的 300s 对齐：
+# 前端失联/崩溃时若无限等待 future，Agent 会永久挂死
+PERMISSION_REQUEST_TIMEOUT = 300
+
 
 async def authorize_tool_call(
     *,
@@ -67,7 +71,17 @@ async def authorize_tool_call(
                 description=permission_description,
                 future=future,
             )
-            response = await future
+            try:
+                response = await asyncio.wait_for(future, timeout=PERMISSION_REQUEST_TIMEOUT)
+            except asyncio.TimeoutError:
+                yield _AuthResult(
+                    False,
+                    ToolResult(
+                        output="Permission denied: 用户未响应权限请求（超时）",
+                        is_error=True,
+                    ),
+                )
+                return
 
             if response == PermissionResponse.DENY:
                 yield _AuthResult(
