@@ -1,4 +1,4 @@
-# MozilCode 数据传输与流程框架总结
+# FlowCoder 数据传输与流程框架总结
 
 本文总结当前项目里一次用户请求从 daemon/headless CLI 进入、经过多轮模型交互、触发工具调用、写回对话历史、最终收敛为答案的完整路径。重点覆盖三个功能面：
 
@@ -11,31 +11,31 @@
 当前代码可以按 6 层理解：
 
 1. **入口层**
-   - `mozilcode/__main__.py`：headless CLI 入口，负责读取配置、初始化 hooks，并执行 `-p` 非交互任务。
-   - `mozilcode/daemon/server.py`：本地 daemon 入口，提供 HTTP/WebSocket API、会话管理和 A2A 桥接。
+   - `flowcoder/__main__.py`：headless CLI 入口，负责读取配置、初始化 hooks，并执行 `-p` 非交互任务。
+   - `flowcoder/daemon/server.py`：本地 daemon 入口，提供 HTTP/WebSocket API、会话管理和 A2A 桥接。
 
 2. **对话状态层**
-   - `mozilcode/conversation.py`：定义内部消息结构 `Message`、工具调用块 `ToolUseBlock`、工具结果块 `ToolResultBlock`，以及 `ConversationManager`。
+   - `flowcoder/conversation.py`：定义内部消息结构 `Message`、工具调用块 `ToolUseBlock`、工具结果块 `ToolResultBlock`，以及 `ConversationManager`。
    - 所有多轮上下文都落在 `ConversationManager.history` 里。
 
 3. **模型适配层**
-   - `mozilcode/serialization.py`：把内部 `Message` 序列化成 Anthropic、OpenAI Responses、OpenAI Chat Completions 三种协议需要的请求格式。
-   - `mozilcode/client.py`：封装不同 provider，把各家 streaming 响应统一转成项目内部的 `StreamEvent`。
+   - `flowcoder/core/serialization.py`：把内部 `Message` 序列化成 Anthropic、OpenAI Responses、OpenAI Chat Completions 三种协议需要的请求格式。
+   - `flowcoder/client/core.py`：封装不同 provider，把各家 streaming 响应统一转成项目内部的 `StreamEvent`。
 
 4. **Agent 编排层**
-   - `mozilcode/agent.py`：核心循环。负责组装上下文、调用模型、收集模型输出、执行工具、把工具结果写回历史，并决定是否继续下一轮。
+   - `flowcoder/agent/core.py`：核心循环。负责组装上下文、调用模型、收集模型输出、执行工具、把工具结果写回历史，并决定是否继续下一轮。
 
 5. **工具层**
-   - `mozilcode/tools/base.py`：工具基类、工具结果、streaming 事件类型。
-   - `mozilcode/tools/registry.py`：`ToolRegistry`，负责工具注册、启停、schema 输出、延迟工具发现。
-   - `mozilcode/tools/*.py`：内置工具，如 `ReadFile`、`WriteFile`、`EditFile`、`Bash`、`Glob`、`Grep`、`Agent`、`ToolSearch`、`AskUserQuestion`。
-   - `mozilcode/mcp/*`：把 MCP server 暴露的工具包装成统一 `Tool`。
+   - `flowcoder/tools/base.py`：工具基类、工具结果、streaming 事件类型。
+   - `flowcoder/tools/registry.py`：`ToolRegistry`，负责工具注册、启停、schema 输出、延迟工具发现。
+   - `flowcoder/tools/*.py`：内置工具，如 `ReadFile`、`WriteFile`、`EditFile`、`Bash`、`Glob`、`Grep`、`Agent`、`ToolSearch`、`AskUserQuestion`。
+   - `flowcoder/mcp/*`：把 MCP server 暴露的工具包装成统一 `Tool`。
 
 6. **上下文与持久化层**
-   - `mozilcode/context/manager.py`：工具结果预算、大输出持久化、自动 compact、压缩恢复附件。
-   - `mozilcode/memory/session.py`：会话 JSONL 持久化、恢复、compact boundary 记录。
-   - `mozilcode/memory/*`：长期记忆加载、召回、抽取。
-   - `mozilcode/memory/providers/*`：`MemoryHub` 和可插拔记忆 provider。
+   - `flowcoder/context/manager.py`：工具结果预算、大输出持久化、自动 compact、压缩恢复附件。
+   - `flowcoder/memory/session.py`：会话 JSONL 持久化、恢复、compact boundary 记录。
+   - `flowcoder/memory/*`：长期记忆加载、召回、抽取。
+   - `flowcoder/memory/providers/*`：`MemoryHub` 和可插拔记忆 provider。
 
 可以把主流程想成：
 
@@ -150,7 +150,7 @@ POST /api/task
 headless CLI 入口进入：
 
 ```text
-mozilcode -p PROMPT
+flowcoder -p PROMPT
   -> _run_prompt
   -> Agent.run_to_completion
 ```
@@ -223,8 +223,8 @@ assistant text + tool_uses 写入 conversation.history
 交互模式会创建 `SessionManager` 和当前 `Session`。消息会写入：
 
 ```text
-.mozilcode/sessions/<session_id>.jsonl
-.mozilcode/sessions/<session_id>.meta
+.flowcoder/sessions/<session_id>.jsonl
+.flowcoder/sessions/<session_id>.meta
 ```
 
 写入格式不是直接 dump `Message`，而是转换成 `SessionRecord`：
@@ -389,7 +389,7 @@ Agent._execute_batch_parallel
 
 1. 执行后立即处理：
    - `prepare_tool_result_content`
-   - 超过 `SINGLE_RESULT_CHAR_LIMIT` 的结果写入 `.mozilcode/session/tool-results/<tool_use_id>.txt`
+   - 超过 `SINGLE_RESULT_CHAR_LIMIT` 的结果写入 `.flowcoder/sessions/tool-results/<tool_use_id>.txt`
    - 对话里只保留预览和文件路径
 
 2. 请求前统一预算：
@@ -413,14 +413,14 @@ Agent.run_to_completion(task, conversation=None, event_callback=None)
 
 使用场景：
 
-- CLI 非交互模式：`mozilcode -p "..."`。
+- CLI 非交互模式：`flowcoder -p "..."`。
 - 子 Agent 前台执行：`AgentTool` 中调用子 agent 的 `run_to_completion`。
 - 后台任务：`TaskManager.launch` 创建 asyncio task，内部调用 `run_to_completion`。
 - team teammate 的 in-process 执行。
 
 ### 1. 非交互 CLI 流程
 
-`mozilcode/__main__.py` 里：
+`flowcoder/__main__.py` 里：
 
 ```text
 main
@@ -615,15 +615,52 @@ _run_prompt or AgentTool or TaskManager
      -> return final text when no tool calls
 ```
 
+## 十二、改造增量（P1–P4，2026-08）
+
+改造阶段（TRANSFORMATION_PLAN）在上述主流程上叠加了四个能力面，均不改变
+主循环的既有路径：
+
+### 1. LLM 调用韧性层（client/resilience.py，P3）
+
+`create_client` 工厂把协议客户端统一包进 `ResilientClient`——上文的
+`client.stream(...)` 调用实际经过：令牌桶限流（RPM）→ 指数退避重试
+（429/5xx/网络错误/超时，仅"零事件交付"的失败可重放）→ 单请求超时兜底。
+Agent 循环零改动获得韧性。错误体系见 docs/architecture/llm-client.md。
+
+### 2. 四维预算闸（agent/budget.py + core.py，P3）
+
+`run()` 循环每轮开头做一次 token/轮次/时间/成本判定（`Agent(budget=...)`，
+默认不设）。超限**不硬杀**：注入收敛请求并撤下工具 schema，模型总结后
+以 LoopComplete 正常收场；收敛轮仍超限或仍幻觉工具调用才 ErrorEvent 强制结束。
+
+### 3. Bash 工具沙箱双通道（tools/bash.py + sandbox/，P1）
+
+Bash 工具有 `sandbox_mode: off | docker` 两条执行通道（默认 off 走原
+subprocess 零改动；docker 进容器池，白名单工作目录挂载 + 限额 + 断网）。
+两条通道都在 `_authorize_tool` 的权限审批**之后**（结构性保证）。
+容器池/回收/指标见 docs/architecture/sandbox.md。
+
+### 4. 评测流水线（eval/，P2）
+
+评测是 Agent 的纯消费者：`eval/runner.py` 的 `LiveAgentSolver` 驱动
+`agent.run()` 事件流取解法（StreamText/UsageEvent），`DockerSandboxExecutor`
+复用沙箱容器池跑测试，`SolutionSolver`/`SandboxExecutor` 双 Protocol 使
+fake 与真实实现可互换。见 docs/architecture/eval.md。
+
+### 5. 混沌演练（scripts/chaos.py，P4）
+
+可脚本化故障注入（池耗尽/容器 kill/LLM 断网 30s/429 风暴/预算超限），
+实测报告与压测数据见 docs/chaos-report.md。
+
 ## 十一、读代码时建议优先追问的点
 
 如果后续要深挖代码细节，建议按这个顺序追：
 
-1. `mozilcode/agent.py::Agent.run`：最重要，决定一次请求如何循环。
-2. `mozilcode/conversation.py`：理解内部消息结构。
-3. `mozilcode/serialization.py`：理解内部消息怎样映射到各家模型 API。
-4. `mozilcode/client.py`：理解 streaming 响应怎样归一化。
-5. `mozilcode/tools/registry.py`、`mozilcode/tools/__init__.py` 和 `mozilcode/tools/base.py`：理解工具注册、默认工具装配和 schema。
-6. `mozilcode/permissions/checker.py`：理解工具调用安全边界。
-7. `mozilcode/context/manager.py`：理解长对话、工具大输出、compact。
-8. `mozilcode/memory/session.py`：理解多轮会话如何持久化和恢复。
+1. `flowcoder/agent/core.py::Agent.run`：最重要，决定一次请求如何循环。
+2. `flowcoder/conversation.py`：理解内部消息结构。
+3. `flowcoder/core/serialization.py`：理解内部消息怎样映射到各家模型 API。
+4. `flowcoder/client/core.py`：理解 streaming 响应怎样归一化。
+5. `flowcoder/tools/registry.py`、`flowcoder/tools/__init__.py` 和 `flowcoder/tools/base.py`：理解工具注册、默认工具装配和 schema。
+6. `flowcoder/permissions/checker.py`：理解工具调用安全边界。
+7. `flowcoder/context/manager.py`：理解长对话、工具大输出、compact。
+8. `flowcoder/memory/session.py`：理解多轮会话如何持久化和恢复。
