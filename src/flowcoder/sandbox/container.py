@@ -41,6 +41,10 @@ class SandboxConfig:
     network_enabled: bool = False
     #: docker labels；池用它标记归属，reaper 据此清理遗留容器
     labels: dict[str, str] = field(default_factory=dict)
+    #: 宿主目录 → 容器路径的读写挂载。默认空（不可信代码执行零暴露）；
+    #: bash 工具 docker 模式用它把白名单工作目录映射进容器（P1c，挂载面
+    #: 由权限门 + 白名单收窄，取舍见 docs/specs P1c ADR）
+    mounts: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -177,6 +181,11 @@ class SandboxContainer:
         spec.update(network_kwargs(cfg.network_enabled))
         if cfg.labels:
             spec["labels"] = dict(cfg.labels)
+        if cfg.mounts:
+            spec["volumes"] = {
+                host: {"bind": container_path, "mode": "rw"}
+                for host, container_path in cfg.mounts.items()
+            }
         return spec
 
     @property
