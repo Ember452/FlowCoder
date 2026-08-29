@@ -10,7 +10,9 @@
 
 from __future__ import annotations
 
+import os
 import re
+import shlex
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -21,6 +23,20 @@ _EXPANSION_RE = re.compile(
     r"\$(?P<name>EVENT|TOOL_NAME|FILE_PATH|MESSAGE|ERROR)"
     r"|\$TOOL_ARGS\.(?P<arg>[A-Za-z_][A-Za-z0-9_]*)"
 )
+
+# cmd.exe 的元字符集（不含 %：cmd 无法用 ^ 可靠转义百分号展开，见 ADR）
+_CMD_METACHARS_RE = re.compile(r'([&|<>^"!])')
+
+
+def _shell_quote_value(value: str) -> str:
+    """按平台把变量值引用为单个 shell 字面量。
+
+    POSIX 用 shlex.quote；Windows 的 create_subprocess_shell 走 cmd.exe，
+    它不识别单引号，shlex.quote 形同虚设，须用 ^ 转义元字符。
+    """
+    if os.name == "nt":
+        return _CMD_METACHARS_RE.sub(r"^\1", value)
+    return shlex.quote(value)
 
 
 @dataclass
@@ -110,27 +126,38 @@ class HookContext:
             return "" if value is None else str(value)
         return ""
 
-    def expand(self, template: str) -> str:
+    def expand(self, template: str, shell_quote: bool = False) -> str:
+        """展开模板变量。
+
+        shell_quote=True 时把变量值按平台引用为 shell 字面量，用于将要经过
+        create_subprocess_shell 的 command 场景——文件名/参数里的
+        ``;`` ``&`` ``|`` 等元字符会被当作字面量而非命令分隔符；
+        http url/body、prompt 文本等非 shell 场景必须保持 False。
+        """
+
         def replace(match: re.Match[str]) -> str:
             arg_key = match.group("arg")
             if arg_key is not None:
                 if arg_key not in self.tool_args:
                     return match.group(0)
                 value = self.tool_args[arg_key]
-                return "" if value is None else str(value)
+                value = "" if value is None else str(value)
+                return _shell_quote_value(value) if shell_quote else value
 
             name = match.group("name")
             if name == "EVENT":
-                return self.event_name
-            if name == "TOOL_NAME":
-                return self.tool_name
-            if name == "FILE_PATH":
-                return self.file_path
-            if name == "MESSAGE":
-                return self.message
-            if name == "ERROR":
-                return self.error
-            return match.group(0)
+                value = self.event_name
+            elif name == "TOOL_NAME":
+                value = self.tool_name
+            elif name == "FILE_PATH":
+                value = self.file_path
+            elif name == "MESSAGE":
+                value = self.message
+            elif name == "ERROR":
+                value = self.error
+            else:
+                return match.group(0)
+            return _shell_quote_value(value) if shell_quote else value
 
         return _EXPANSION_RE.sub(replace, template)
 

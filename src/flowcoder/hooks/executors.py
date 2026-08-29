@@ -35,9 +35,10 @@ async def execute_command(action: Action, ctx: HookContext) -> ActionResult:
     """执行 shell 命令（command 类型 action）。
 
     使用 asyncio.create_subprocess_shell 异步执行，支持超时。
-    模板变量（如 $FILE_PATH）会被 ctx.expand() 替换为实际值。
+    模板变量（如 $FILE_PATH）会被 ctx.expand() 替换为实际值；
+    变量值必须经 shlex.quote，防止工具参数中的 shell 元字符注入命令。
     """
-    command = ctx.expand(action.command)
+    command = ctx.expand(action.command, shell_quote=True)
     try:
         proc = await asyncio.create_subprocess_shell(
             command,
