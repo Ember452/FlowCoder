@@ -20,7 +20,8 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install ruff
-        run: pip install "ruff>=0.6"
+        # 版本与 pyproject dev 组钉在同一范围，避免新版 ruff 默认规则漂移导致假失败
+        run: pip install "ruff>=0.15,<0.16"
       - name: Lint
         run: ruff check src tests
       - name: Format check
