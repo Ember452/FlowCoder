@@ -5,7 +5,6 @@ Anthropic / OpenAI / OpenAI-compat 客户端与 create_client 工厂。"""
 from __future__ import annotations
 
 import logging
-from abc import ABC, abstractmethod
 from typing import Any, AsyncIterator
 
 from anthropic import AsyncAnthropic
@@ -21,15 +20,13 @@ from flowcoder.providers.anthropic_request import (
 from flowcoder.providers.anthropic_streaming import AnthropicStreamState
 from flowcoder.client.error_mapping import provider_error_mapper
 from flowcoder.config import ProviderConfig
-from flowcoder.client.context_window import (
-    resolve_context_window as _resolve_context_window,
-)
 from flowcoder.conversation import ConversationManager
 from flowcoder.core.serialization import (
     build_anthropic_messages,
     build_chat_completion_messages,
     build_openai_input,
 )
+from flowcoder.client.base import LLMClient
 from flowcoder.client.errors import (
     AuthenticationError,
     LLMError as LLMError,
@@ -72,32 +69,6 @@ _mark_last_user_tail_for_cache = mark_last_user_tail_for_cache
 _rate_limit_error = rate_limit_error
 _is_local_base_url = is_local_base_url
 _supports_adaptive_thinking = supports_adaptive_thinking
-
-
-class LLMClient(ABC):
-    """LLM 客户端统一抽象：屏蔽 Anthropic / OpenAI / OpenAI 兼容三家差异。
-
-    对外只暴露 ``stream()``——把对话 + system prompt + tools 转成统一的
-    ``StreamEvent`` 流（TextDelta / ThinkingDelta / ToolCall* / StreamEnd），
-    Agent 侧无需关心底层用的是哪家协议。子类负责把各自 SDK 的事件
-    翻译成这套统一事件流。
-    """
-
-    #: 采样温度（provider 配置透传；None=provider 默认）。类级默认兜底：
-    #: 部分测试绕过 __init__ 构造实例
-    temperature: float | None = None
-
-    @abstractmethod
-    async def stream(
-        self,
-        conversation: ConversationManager,
-        system: str = "",
-        tools: list[dict[str, Any]] | None = None,
-    ) -> AsyncIterator[StreamEvent]:
-        yield TextDelta("")
-
-    def set_max_output_tokens(self, tokens: int) -> None:
-        pass
 
 
 class AnthropicClient(LLMClient):
@@ -423,38 +394,5 @@ class OpenAICompatClient(LLMClient):
             raise error_mapper.to_llm_error(e) from e
 
 
-def create_client(config: ProviderConfig) -> LLMClient:
-    # 协议工厂：根据 config.protocol 选用对应客户端，对外返回统一的 LLMClient；
-    # 外层统一包 ResilientClient（重试/限流/超时，P3），对消费方透明
-    if config.protocol == "anthropic":
-        inner: LLMClient = AnthropicClient(config)
-    elif config.protocol == "openai":
-        inner = OpenAIClient(config)
-    elif config.protocol == "openai-compat":
-        inner = OpenAICompatClient(config)
-    else:
-        raise ValueError(f"Unknown protocol: {config.protocol}")
-
-    from flowcoder.client.resilience import ResilientClient, TokenBucket
-
-    bucket = TokenBucket(config.rate_limit_rpm) if config.rate_limit_rpm else None
-    return ResilientClient(
-        inner,
-        max_retries=config.max_retries,
-        request_timeout_s=config.request_timeout_s,
-        bucket=bucket,
-    )
-
-
-async def resolve_context_window(config: ProviderConfig) -> None:
-    """context window 解析的第 2 层：对于 anthropic 协议的 provider，
-    从 {base_url}/v1/models/{model} 自动拉取一次模型的 max_input_tokens，
-    并通过 set_fetched_context_window 缓存到 ``config`` 上，这样后续
-    config.get_context_window() 调用就能直接使用、无需再次访问网络。
-
-    完全尽力而为，绝不抛出异常：非 anthropic provider、客户端构造失败
-    （例如缺少 API key）、拉取失败或超时，都会让缓存保持不变，从而让
-    get_context_window() 降级到内置映射表 / 默认值。在启动时调用是安全的——
-    阻塞时间不会超过拉取自身的超时，也不会导致崩溃。
-    """
-    await _resolve_context_window(config, create_client)
+# 工厂与 context window 解析移至 factory.py（P5 拆分）；此处兼容导出
+from flowcoder.client.factory import create_client, resolve_context_window  # noqa: E402,F401

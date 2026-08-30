@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import time
 from collections.abc import Callable
 from typing import Any
 
@@ -82,13 +81,3 @@ class FakeRuntime:
     def set_alive(self, container_id: str, value: bool) -> None:
         """测试注入：模拟外部 kill -9 / 容器意外退出。"""
         self.alive[container_id] = value
-
-
-def blocking_exec(seconds: float) -> ExecFn:
-    """模拟一次长时间挂死的 exec（真实场景：进程 hang、daemon 无响应）。"""
-
-    def _fn(_cid: str, _cmd: list[str], _workdir: str) -> ExecOutcome:
-        time.sleep(seconds)
-        return ExecOutcome(0, "", "")
-
-    return _fn

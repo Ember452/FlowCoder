@@ -24,10 +24,11 @@ import asyncio
 import contextlib
 import json
 import logging
-import tempfile
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
+
+from flowcoder.core.atomic import write_text_atomic
 
 logger = logging.getLogger(__name__)
 
@@ -111,16 +112,7 @@ def cleanup_outbox_file(
         kept_lines.append(line)
     if dropped == 0:
         return (len(kept_lines), 0)
-    fd = tempfile.NamedTemporaryFile(
-        "w", encoding="utf-8", dir=path.parent, delete=False, suffix=".tmp"
-    )
-    try:
-        with fd:
-            fd.write("\n".join(kept_lines) + ("\n" if kept_lines else ""))
-        Path(fd.name).replace(path)
-    except OSError:
-        Path(fd.name).unlink(missing_ok=True)
-        raise
+    write_text_atomic(path, "\n".join(kept_lines) + ("\n" if kept_lines else ""))
     return (len(kept_lines), dropped)
 
 
