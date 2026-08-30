@@ -35,4 +35,4 @@ def complete(registry: CommandRegistry, prefix: str) -> list[tuple[str, str]]:
             display = f"/{cmd.name:<16} — {desc}"
             matches.append((display, "/" + cmd.name))
     matches.sort(key=lambda x: x[1])
-    return matches[:8]
+    return matches[:20]

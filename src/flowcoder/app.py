@@ -2062,10 +2062,7 @@ class FlowCoderApp(App):
             display = self._MODE_DISPLAY.get(perm, perm.value)
             color = _MODE_COLORS.get(perm, "dim")
             label = self.query_one("#mode-label", Static)
-            if perm == PermissionMode.DEFAULT:
-                label.update(f"[{color}]{display}[/{color}]")
-            else:
-                label.update(f"[{color}]{display}[/{color}]  (shift+tab to cycle)")
+            label.update(f"[{color}]{display}[/{color}]  (Shift+Tab 切换模式)")
         try:
             model_label = self.query_one("#model-label", Static)
             model_text = self._selected_provider.model if self._selected_provider else ""
