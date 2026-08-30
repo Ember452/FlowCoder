@@ -12,9 +12,10 @@ from __future__ import annotations
 
 import json
 import logging
-import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+
+from flowcoder.core.atomic import write_json_atomic
 
 logger = logging.getLogger(__name__)
 
@@ -92,23 +93,12 @@ class ScheduleStore:
         return state
 
     def save(self, state: ScheduleState) -> None:
-        self._path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "jobs": {name: asdict(job) for name, job in state.jobs.items()},
             "states": {name: asdict(st) for name, st in state.states.items()},
             "runs": [asdict(r) for r in state.runs[-self._run_limit :]],
         }
-        # 原子写：先写临时文件再 rename，避免写一半被读/崩溃留下半截 JSON
-        fd = tempfile.NamedTemporaryFile(
-            "w", encoding="utf-8", dir=self._path.parent, delete=False, suffix=".tmp"
-        )
-        try:
-            with fd:
-                json.dump(payload, fd, ensure_ascii=False, indent=2)
-            Path(fd.name).replace(self._path)
-        except OSError:
-            Path(fd.name).unlink(missing_ok=True)
-            raise
+        write_json_atomic(self._path, payload)
 
     def append_run(self, state: ScheduleState, record: RunRecord) -> None:
         state.runs.append(record)
