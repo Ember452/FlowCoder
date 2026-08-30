@@ -89,7 +89,7 @@ from flowcoder.commands.handlers.tasks import create_tasks_command
 from flowcoder.skills.executor import SkillExecutor
 from flowcoder.skills.loader import SkillLoader
 from flowcoder.commands.handlers.skill_register import register_skill_commands
-from rich.text import Text as RichText
+from rich.text import Text, Text as RichText
 from textual.theme import Theme
 from flowcoder.core.cache import FileCache
 from flowcoder.tools import ToolRegistry, create_default_registry
@@ -781,6 +781,14 @@ class FlowCoderApp(App):
     @staticmethod
     def _make_banner(model: str = "", work_dir: str = "") -> RichText:
         t = RichText()
+
+        def art(line: str, style: str) -> None:
+            # 艺术列统一补齐到固定 cell 宽（含全角字符），保证右列对齐；
+            # 注意 Text.pad_right(n) 是"补 n 个空格"而非"补齐到 n 宽"
+            seg = Text(line, style=style)
+            seg.pad_right(max(0, 13 - seg.cell_len))
+            t.append(seg)
+
         # 旧版小猫头 logo（保留备查）
         # t.append(" /\\_/\\    ", style="bold color(99)")
         # t.append("FlowCoder v0.1.0\n", style="color(242)")
@@ -788,14 +796,14 @@ class FlowCoderApp(App):
         # t.append(f"{model}\n" if model else "\n", style="color(242)")
         # t.append(" > ^ <    ", style="bold color(99)")
         # t.append(work_dir, style="color(242)")
-        # 橡皮鸭：程序员的调试搭子
-        t.append("   __      ", style="bold #FFB86C")
+        # 双马尾少女（动漫风原创演绎）
+        art("  ∧|  |∧", "bold #FF9EC4")
         t.append("◆ ", style="bold #875FFF")
         t.append("FlowCoder ", style="bold #E8E8ED")
         t.append(f"v{__version__}\n", style="#8A8AA0")
-        t.append(" <(o )___ ", style="bold #FFB86C")
+        art(" (・ω・ ) ♪", "bold #FF9EC4")
         t.append(f"{model}\n" if model else "\n", style="#8A8AA0")
-        t.append("  `---'   ", style="bold #FFB86C")
+        art(" /  ¦  ¦", "bold #FF9EC4")
         t.append(work_dir, style="#6A6A80")
         return t
 
