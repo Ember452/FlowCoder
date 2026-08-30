@@ -152,6 +152,46 @@ class MemoryConfig:
 
 
 @dataclass
+class ScheduledJobConfig:
+    """一条 cron 定时任务（P5.5 接线）。"""
+
+    name: str
+    cron: str
+    prompt: str
+
+
+@dataclass
+class SchedulerConfig:
+    enabled: bool = False
+    jobs: list[ScheduledJobConfig] = field(default_factory=list)
+    #: None = 使用 <work_dir>/.flowcoder/scheduler.json
+    state_file: str | None = None
+
+
+@dataclass
+class WatchdogConfig:
+    enabled: bool = False
+    poll_interval_s: int = 300
+    paths: list[str] = field(default_factory=list)  # 文件变更监控
+    watch_git: bool = True  # git 工作区状态信号
+    cooldown_s: float = 1800.0
+    daily_limit: int = 10
+    energy_cap: float = 3.0
+
+
+@dataclass
+class BudgetConfig:
+    """四维预算闸（P3）的配置入口；至少一项上限。"""
+
+    max_total_tokens: int | None = None
+    max_turns: int | None = None
+    max_seconds: float | None = None
+    max_cost_usd: float | None = None
+    input_price_per_1m: float = 0.0
+    output_price_per_1m: float = 0.0
+
+
+@dataclass
 class AppConfig:
     providers: list[ProviderConfig]
     schema_version: int = 1
@@ -174,6 +214,12 @@ class AppConfig:
     teammate_mode_declared: bool = False
     enable_coordinator_mode: bool = False
     enable_coordinator_mode_declared: bool = False
+    scheduler: SchedulerConfig = field(default_factory=SchedulerConfig)
+    scheduler_declared: bool = False
+    watchdog: WatchdogConfig = field(default_factory=WatchdogConfig)
+    watchdog_declared: bool = False
+    budget: BudgetConfig | None = None
+    budget_declared: bool = False
 
 
 def _load_single_file(path: Path, *, require_providers: bool = True) -> AppConfig:
@@ -220,6 +266,24 @@ def _load_single_file(path: Path, *, require_providers: bool = True) -> AppConfi
         stale_cleanup_interval=wt["stale_cleanup_interval"],
         stale_cutoff_hours=wt["stale_cutoff_hours"],
     )
+    scheduler_cfg = SchedulerConfig(
+        enabled=validated["scheduler"]["enabled"],
+        jobs=[
+            ScheduledJobConfig(name=j["name"], cron=j["cron"], prompt=j["prompt"])
+            for j in validated["scheduler"]["jobs"]
+        ],
+        state_file=validated["scheduler"]["state_file"],
+    )
+    watchdog_cfg = WatchdogConfig(
+        enabled=validated["watchdog"]["enabled"],
+        poll_interval_s=validated["watchdog"]["poll_interval_s"],
+        paths=validated["watchdog"]["paths"],
+        watch_git=validated["watchdog"]["watch_git"],
+        cooldown_s=validated["watchdog"]["cooldown_s"],
+        daily_limit=validated["watchdog"]["daily_limit"],
+        energy_cap=validated["watchdog"]["energy_cap"],
+    )
+    budget_cfg = BudgetConfig(**validated["budget"]) if validated["budget"] else None
     memory_cfg = MemoryConfig(
         enabled=validated["memory"]["enabled"],
         providers=[
@@ -257,6 +321,12 @@ def _load_single_file(path: Path, *, require_providers: bool = True) -> AppConfi
         teammate_mode_declared="teammate_mode" in raw_keys,
         enable_coordinator_mode=validated["enable_coordinator_mode"],
         enable_coordinator_mode_declared="enable_coordinator_mode" in raw_keys,
+        scheduler=scheduler_cfg,
+        scheduler_declared="scheduler" in raw_keys,
+        watchdog=watchdog_cfg,
+        watchdog_declared="watchdog" in raw_keys,
+        budget=budget_cfg,
+        budget_declared="budget" in raw_keys,
     )
 
 
@@ -300,6 +370,15 @@ def _merge_config(base: AppConfig, override: AppConfig) -> AppConfig:
     if override.enable_coordinator_mode_declared:
         base.enable_coordinator_mode = override.enable_coordinator_mode
         base.enable_coordinator_mode_declared = True
+    if override.scheduler_declared:
+        base.scheduler = override.scheduler
+        base.scheduler_declared = True
+    if override.watchdog_declared:
+        base.watchdog = override.watchdog
+        base.watchdog_declared = True
+    if override.budget_declared:
+        base.budget = override.budget
+        base.budget_declared = True
     return base
 
 
@@ -340,6 +419,12 @@ def _with_account_providers(config: AppConfig | None) -> AppConfig | None:
         teammate_mode_declared=config.teammate_mode_declared,
         enable_coordinator_mode=config.enable_coordinator_mode,
         enable_coordinator_mode_declared=config.enable_coordinator_mode_declared,
+        scheduler=config.scheduler,
+        scheduler_declared=config.scheduler_declared,
+        watchdog=config.watchdog,
+        watchdog_declared=config.watchdog_declared,
+        budget=config.budget,
+        budget_declared=config.budget_declared,
     )
 
 

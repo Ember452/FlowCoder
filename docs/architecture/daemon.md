@@ -17,7 +17,8 @@ Starlette daemon：session 管理、任务调度、A2A 桥接、Origin 鉴权、
 - **保留期清理**：默认 72h（`FLOWCODER_OUTBOX_RETENTION_HOURS` 可调），守护
   任务周期执行；只删"已 ack 且过期"事件，未投递不误删；无盖章的历史行保留。
 - 调度器（scheduler/）定时触发、看门狗（watchdog/）主动提示，均复用本
-  事件流与会话台账。
+  事件流与会话台账；P5.5 起按 `scheduler`/`watchdog` 配置段在 app lifespan
+  自动装配（默认全关，装配集中在 daemon/background.py）。
 
 细节与决策：docs/specs/2026-08-29-outbox-p5c-adr.md。
 
