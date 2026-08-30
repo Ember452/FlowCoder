@@ -41,6 +41,17 @@ YAML 配置加载、多层合并、validator 校验、用户配置持久化。
 | `request_timeout_s` | None | **P3**：单请求"无事件产出"超时兜底 |
 | `context_window` / `max_output_tokens` | 0（自动解析） | 0 = 走四层回退链（配置 → 自动拉取 → 模型映射表 → 保守默认） |
 
+## 后台服务与预算（P5.5）
+
+| 段 | 默认 | 说明 |
+|---|---|---|
+| `scheduler` | 全关 | `{enabled, jobs: [{name, cron, prompt}], state_file}`；cron 在**配置加载期**校验（写错启动即报错）；到期任务经 daemon 会话提交 Agent 回合 |
+| `watchdog` | 全关 | `{enabled, poll_interval_s, watch_git, paths, cooldown_s, daily_limit, energy_cap}`；信号源按配置组装（git / 文件变更） |
+| `budget` | 无 | 四维预算闸（token/轮次/时间/成本，成本需配单价），`create_agent_from_config` 注入全部 daemon/CLI/eval 路径的 Agent；TUI 接线随 R3 |
+
+零配置零变化：三段缺省时不创建任何后台任务、不注入预算
+（独立测试断言，见 tests/integration/test_p55_wiring.py）。
+
 ## 校验与合并语义
 
 - `validator.py` 是唯一入口（`validate_config_structure`）：逐键校验 + 清洗，
