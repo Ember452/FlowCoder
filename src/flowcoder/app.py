@@ -20,6 +20,8 @@ from textual.message import Message as TMessage
 from textual.widgets import Markdown, OptionList, Static, TextArea
 from textual.widgets.option_list import Option
 
+from flowcoder import __version__
+
 if TYPE_CHECKING:
     from flowcoder.ui.askuser_dialog import InlineAskUserWidget
     from flowcoder.ui.permission_dialog import InlinePermissionWidget
@@ -87,7 +89,7 @@ from flowcoder.commands.handlers.tasks import create_tasks_command
 from flowcoder.skills.executor import SkillExecutor
 from flowcoder.skills.loader import SkillLoader
 from flowcoder.commands.handlers.skill_register import register_skill_commands
-from rich.text import Text as RichText
+from rich.text import Text, Text as RichText
 from textual.theme import Theme
 from flowcoder.core.cache import FileCache
 from flowcoder.tools import ToolRegistry, create_default_registry
@@ -636,10 +638,21 @@ class SubAgentBlock(Static, can_focus=True):
 _FLOWCODER_THEME = Theme(
     name="flowcoder",
     primary="#875FFF",
-    background="#1a1a1a",
-    surface="#1a1a1a",
-    panel="#1a1a1a",
+    secondary="#5B8AF5",
+    accent="#FFB86C",
+    foreground="#E8E8ED",
+    background="#0F0F13",
+    surface="#16161D",
+    panel="#1B1B24",
+    success="#9DDB8B",
+    warning="#F5C97B",
+    error="#FF7A93",
     dark=True,
+    variables={
+        "block-cursor-background": "#875FFF",
+        "block-cursor-foreground": "#0F0F13",
+        "input-selection-background": "#875FFF 25%",
+    },
 )
 
 
@@ -768,12 +781,30 @@ class FlowCoderApp(App):
     @staticmethod
     def _make_banner(model: str = "", work_dir: str = "") -> RichText:
         t = RichText()
-        t.append(" /\\_/\\    ", style="bold color(99)")
-        t.append("FlowCoder v0.1.0\n", style="color(242)")
-        t.append("( o.o )   ", style="bold color(99)")
-        t.append(f"{model}\n" if model else "\n", style="color(242)")
-        t.append(" > ^ <    ", style="bold color(99)")
-        t.append(work_dir, style="color(242)")
+
+        def art(line: str, style: str) -> None:
+            # 艺术列统一补齐到固定 cell 宽（含全角字符），保证右列对齐；
+            # 注意 Text.pad_right(n) 是"补 n 个空格"而非"补齐到 n 宽"
+            seg = Text(line, style=style)
+            seg.pad_right(max(0, 13 - seg.cell_len))
+            t.append(seg)
+
+        # 旧版小猫头 logo（保留备查）
+        # t.append(" /\\_/\\    ", style="bold color(99)")
+        # t.append("FlowCoder v0.1.0\n", style="color(242)")
+        # t.append("( o.o )   ", style="bold color(99)")
+        # t.append(f"{model}\n" if model else "\n", style="color(242)")
+        # t.append(" > ^ <    ", style="bold color(99)")
+        # t.append(work_dir, style="color(242)")
+        # 双马尾少女（动漫风原创演绎）
+        art("  ∧|  |∧", "bold #FF9EC4")
+        t.append("◆ ", style="bold #875FFF")
+        t.append("FlowCoder ", style="bold #E8E8ED")
+        t.append(f"v{__version__}\n", style="#8A8AA0")
+        art(" (・ω・ ) ♪", "bold #FF9EC4")
+        t.append(f"{model}\n" if model else "\n", style="#8A8AA0")
+        art(" /  ¦  ¦", "bold #FF9EC4")
+        t.append(work_dir, style="#6A6A80")
         return t
 
     def compose(self) -> ComposeResult:
@@ -2039,10 +2070,7 @@ class FlowCoderApp(App):
             display = self._MODE_DISPLAY.get(perm, perm.value)
             color = _MODE_COLORS.get(perm, "dim")
             label = self.query_one("#mode-label", Static)
-            if perm == PermissionMode.DEFAULT:
-                label.update(f"[{color}]{display}[/{color}]")
-            else:
-                label.update(f"[{color}]{display}[/{color}]  (shift+tab to cycle)")
+            label.update(f"[{color}]{display}[/{color}]  (Shift+Tab 切换模式)")
         try:
             model_label = self.query_one("#model-label", Static)
             model_text = self._selected_provider.model if self._selected_provider else ""

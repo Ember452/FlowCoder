@@ -11,6 +11,7 @@ from flowcoder.commands.handlers.mcp import MCP_COMMAND
 from flowcoder.commands.handlers.memory import MEMORY_COMMAND
 from flowcoder.commands.handlers.permission import PERMISSION_COMMAND
 from flowcoder.commands.handlers.plan import PLAN_COMMAND
+from flowcoder.commands.handlers.review import REVIEW_COMMAND
 from flowcoder.commands.handlers.session import SESSION_COMMAND
 from flowcoder.commands.handlers.skill import SKILL_COMMAND
 from flowcoder.commands.handlers.rewind import REWIND_COMMAND
@@ -25,6 +26,7 @@ ALL_COMMANDS = [
     COMPACT_COMMAND,
     CLEAR_COMMAND,
     PLAN_COMMAND,
+    REVIEW_COMMAND,
     DO_COMMAND,
     SESSION_COMMAND,
     MCP_COMMAND,
