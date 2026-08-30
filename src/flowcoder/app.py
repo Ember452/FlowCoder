@@ -20,6 +20,8 @@ from textual.message import Message as TMessage
 from textual.widgets import Markdown, OptionList, Static, TextArea
 from textual.widgets.option_list import Option
 
+from flowcoder import __version__
+
 if TYPE_CHECKING:
     from flowcoder.ui.askuser_dialog import InlineAskUserWidget
     from flowcoder.ui.permission_dialog import InlinePermissionWidget
@@ -636,10 +638,21 @@ class SubAgentBlock(Static, can_focus=True):
 _FLOWCODER_THEME = Theme(
     name="flowcoder",
     primary="#875FFF",
-    background="#1a1a1a",
-    surface="#1a1a1a",
-    panel="#1a1a1a",
+    secondary="#5B8AF5",
+    accent="#FFB86C",
+    foreground="#E8E8ED",
+    background="#0F0F13",
+    surface="#16161D",
+    panel="#1B1B24",
+    success="#9DDB8B",
+    warning="#F5C97B",
+    error="#FF7A93",
     dark=True,
+    variables={
+        "block-cursor-background": "#875FFF",
+        "block-cursor-foreground": "#0F0F13",
+        "input-selection-background": "#875FFF 25%",
+    },
 )
 
 
@@ -768,12 +781,22 @@ class FlowCoderApp(App):
     @staticmethod
     def _make_banner(model: str = "", work_dir: str = "") -> RichText:
         t = RichText()
-        t.append(" /\\_/\\    ", style="bold color(99)")
-        t.append("FlowCoder v0.1.0\n", style="color(242)")
-        t.append("( o.o )   ", style="bold color(99)")
-        t.append(f"{model}\n" if model else "\n", style="color(242)")
-        t.append(" > ^ <    ", style="bold color(99)")
-        t.append(work_dir, style="color(242)")
+        # 旧版小猫头 logo（保留备查）
+        # t.append(" /\\_/\\    ", style="bold color(99)")
+        # t.append("FlowCoder v0.1.0\n", style="color(242)")
+        # t.append("( o.o )   ", style="bold color(99)")
+        # t.append(f"{model}\n" if model else "\n", style="color(242)")
+        # t.append(" > ^ <    ", style="bold color(99)")
+        # t.append(work_dir, style="color(242)")
+        # 橡皮鸭：程序员的调试搭子
+        t.append("   __      ", style="bold #FFB86C")
+        t.append("◆ ", style="bold #875FFF")
+        t.append("FlowCoder ", style="bold #E8E8ED")
+        t.append(f"v{__version__}\n", style="#8A8AA0")
+        t.append(" <(o )___ ", style="bold #FFB86C")
+        t.append(f"{model}\n" if model else "\n", style="#8A8AA0")
+        t.append("  `---'   ", style="bold #FFB86C")
+        t.append(work_dir, style="#6A6A80")
         return t
 
     def compose(self) -> ComposeResult:

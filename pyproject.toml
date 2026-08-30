@@ -1,6 +1,6 @@
 [project]
 name = "flowcoder"
-version = "0.2.0"
+version = "0.6.0"
 description = "本地优先的自研 Agent 运行时：TUI + daemon + headless CLI"
 requires-python = ">=3.11"
 dependencies = [
