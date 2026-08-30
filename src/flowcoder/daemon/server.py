@@ -17,7 +17,7 @@ from flowcoder.config.validator import ConfigError
 from flowcoder.hooks import HookEngine, load_hooks
 
 from flowcoder.daemon.routes.core import build_routes
-from flowcoder.daemon.outbox import build_outbox_lifespan
+from flowcoder.daemon.background import build_background_lifespan
 from flowcoder.daemon.server_state import DaemonServer
 from flowcoder.daemon.session.store import SessionStore
 from flowcoder.a2a.bridge import A2ABridge
@@ -144,9 +144,9 @@ def create_app(
 
     app = Starlette(
         routes=build_routes(),
-        # Outbox（P5c）：保留期清理守护任务（仅当启用保留期）
+        # 后台服务（P5c Outbox 清理 + P5.5 调度器/看门狗按配置装配）
         lifespan=(
-            build_outbox_lifespan(server, interval_s=3600.0)
+            build_background_lifespan(server, config, outbox_retention_s)
             if outbox_retention_s is not None
             else None
         ),
