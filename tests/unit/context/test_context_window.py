@@ -139,7 +139,7 @@ class TestAutoFetch:
         p = _provider(model="claude-sonnet-4-6")
         fake = AsyncMock()
         fake.fetch_model_context_window = AsyncMock(return_value=555_000)
-        with patch("flowcoder.client.core.create_client", return_value=fake) as mk:
+        with patch("flowcoder.client.factory.create_client", return_value=fake) as mk:
             await resolve_context_window(p)
             # 此时第 2 层的值优先级高于映射表（200000）。
             assert p.get_context_window() == 555_000
@@ -152,7 +152,7 @@ class TestAutoFetch:
         p = _provider(model="claude-sonnet-4-6")
         fake = AsyncMock()
         fake.fetch_model_context_window = AsyncMock(side_effect=RuntimeError("boom"))
-        with patch("flowcoder.client.core.create_client", return_value=fake):
+        with patch("flowcoder.client.factory.create_client", return_value=fake):
             # 不应抛出异常。
             await resolve_context_window(p)
         # 对 claude 回退到映射表。
@@ -163,7 +163,7 @@ class TestAutoFetch:
         p = _provider(model="totally-unknown-model")
         fake = AsyncMock()
         fake.fetch_model_context_window = AsyncMock(return_value=None)
-        with patch("flowcoder.client.core.create_client", return_value=fake):
+        with patch("flowcoder.client.factory.create_client", return_value=fake):
             await resolve_context_window(p)
         # 既没获取到、也没匹配到 → 使用保守默认值。
         assert p.get_context_window() == 128_000
@@ -182,7 +182,7 @@ class TestAutoFetch:
     @pytest.mark.asyncio
     async def test_non_anthropic_provider_is_not_fetched(self):
         p = _provider(protocol="openai-compat", model="gpt-4o")
-        with patch("flowcoder.client.core.create_client") as mk:
+        with patch("flowcoder.client.factory.create_client") as mk:
             await resolve_context_window(p)
             mk.assert_not_called()
         # 完全通过映射表解析。
@@ -191,7 +191,7 @@ class TestAutoFetch:
     @pytest.mark.asyncio
     async def test_explicit_config_skips_fetch(self):
         p = _provider(model="claude-sonnet-4-6", context_window=4096)
-        with patch("flowcoder.client.core.create_client") as mk:
+        with patch("flowcoder.client.factory.create_client") as mk:
             await resolve_context_window(p)
             mk.assert_not_called()
         assert p.get_context_window() == 4096
@@ -201,7 +201,7 @@ class TestAutoFetch:
         p = _provider(model="claude-sonnet-4-6")
         fake = AsyncMock()
         fake.fetch_model_context_window = AsyncMock(return_value=0)
-        with patch("flowcoder.client.core.create_client", return_value=fake):
+        with patch("flowcoder.client.factory.create_client", return_value=fake):
             await resolve_context_window(p)
         # 0 绝不能被缓存；仍然走映射表。
         assert p._fetched_context_window == 0
