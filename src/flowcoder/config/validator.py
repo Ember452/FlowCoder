@@ -247,6 +247,122 @@ def validate_permission_mode(mode: str) -> str:
     return mode
 
 
+def validate_scheduler(raw: object) -> dict:
+    """校验 scheduler 配置段（P5.5）：enabled / jobs / state_file。"""
+    if raw is None:
+        raw = {}
+    if not isinstance(raw, dict):
+        raise ConfigError("'scheduler' must be a mapping")
+    enabled = raw.get("enabled", False)
+    if not isinstance(enabled, bool):
+        raise ConfigError("'scheduler.enabled' must be a boolean")
+    raw_jobs = raw.get("jobs", [])
+    if not isinstance(raw_jobs, list):
+        raise ConfigError("'scheduler.jobs' must be a list")
+    jobs = []
+    seen: set[str] = set()
+    for i, entry in enumerate(raw_jobs):
+        if not isinstance(entry, dict):
+            raise ConfigError(f"scheduler job #{i + 1}: must be a mapping")
+        label = f"scheduler job #{i + 1}"
+        name = _required_string_field(entry, "name", label)
+        if name in seen:
+            raise ConfigError(f"{label}: duplicate name '{name}'")
+        seen.add(name)
+        cron = _required_string_field(entry, "cron", label)
+        prompt = _required_string_field(entry, "prompt", label)
+        # cron 合法性提前到配置期（加载即报错，不等到触发）
+        from flowcoder.scheduler.cron import CronError, CronExpr
+
+        try:
+            CronExpr.parse(cron)
+        except CronError as e:
+            raise ConfigError(f"{label}: invalid cron: {e}") from e
+        jobs.append({"name": name, "cron": cron, "prompt": prompt})
+    state_file = raw.get("state_file")
+    if state_file is not None and not isinstance(state_file, str):
+        raise ConfigError("'scheduler.state_file' must be a string")
+    return {"enabled": enabled, "jobs": jobs, "state_file": state_file}
+
+
+def validate_watchdog(raw: object) -> dict:
+    """校验 watchdog 配置段（P5.5）。"""
+    if raw is None:
+        raw = {}
+    if not isinstance(raw, dict):
+        raise ConfigError("'watchdog' must be a mapping")
+    enabled = raw.get("enabled", False)
+    if not isinstance(enabled, bool):
+        raise ConfigError("'watchdog.enabled' must be a boolean")
+    poll_interval_s = _integer_field(
+        raw.get("poll_interval_s", 300),
+        "'watchdog.poll_interval_s'",
+        min_value=5,
+        allow_zero=False,
+    )
+    paths = _string_list_field(raw, "paths", "watchdog")
+    watch_git = raw.get("watch_git", True)
+    if not isinstance(watch_git, bool):
+        raise ConfigError("'watchdog.watch_git' must be a boolean")
+    cooldown_s = raw.get("cooldown_s", 1800.0)
+    if isinstance(cooldown_s, bool) or not isinstance(cooldown_s, (int, float)) or cooldown_s < 0:
+        raise ConfigError("'watchdog.cooldown_s' must be a non-negative number")
+    daily_limit = _integer_field(
+        raw.get("daily_limit", 10),
+        "'watchdog.daily_limit'",
+        min_value=1,
+        allow_zero=False,
+    )
+    energy_cap = raw.get("energy_cap", 3.0)
+    if isinstance(energy_cap, bool) or not isinstance(energy_cap, (int, float)) or energy_cap <= 0:
+        raise ConfigError("'watchdog.energy_cap' must be a positive number")
+    return {
+        "enabled": enabled,
+        "poll_interval_s": poll_interval_s,
+        "paths": paths,
+        "watch_git": watch_git,
+        "cooldown_s": float(cooldown_s),
+        "daily_limit": daily_limit,
+        "energy_cap": float(energy_cap),
+    }
+
+
+def validate_budget(raw: object) -> dict | None:
+    """校验 budget 配置段（P5.5）：至少一项上限；成本需配单价。"""
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise ConfigError("'budget' must be a mapping")
+
+    def _num(key: str, *, positive: bool) -> float | None:
+        value = raw.get(key)
+        if value is None:
+            return None
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ConfigError(f"'budget.{key}' must be a number")
+        if positive and value <= 0:
+            raise ConfigError(f"'budget.{key}' must be a positive number")
+        return float(value)
+
+    result = {
+        "max_total_tokens": _num("max_total_tokens", positive=True),
+        "max_turns": _num("max_turns", positive=True),
+        "max_seconds": _num("max_seconds", positive=True),
+        "max_cost_usd": _num("max_cost_usd", positive=True),
+        "input_price_per_1m": _num("input_price_per_1m", positive=False) or 0.0,
+        "output_price_per_1m": _num("output_price_per_1m", positive=False) or 0.0,
+    }
+    if all(
+        result[k] is None for k in ("max_total_tokens", "max_turns", "max_seconds", "max_cost_usd")
+    ):
+        raise ConfigError("'budget' 至少要设置一项上限")
+    if result["max_cost_usd"] is not None and (
+        result["input_price_per_1m"] <= 0 and result["output_price_per_1m"] <= 0
+    ):
+        raise ConfigError("'budget.max_cost_usd' 需要至少一个单价（input/output_price_per_1m）")
+    return result
+
+
 def validate_sandbox_mode(mode: str) -> str:
     """校验 sandbox_mode 取值。"""
     if mode not in VALID_SANDBOX_MODES:
@@ -463,6 +579,9 @@ def validate_config_structure(raw: object, *, require_providers: bool = True) ->
         "providers": providers,
         "permission_mode": validate_permission_mode(raw.get("permission_mode", "default")),
         "sandbox_mode": validate_sandbox_mode(raw.get("sandbox_mode", "off")),
+        "scheduler": validate_scheduler(raw.get("scheduler")),
+        "watchdog": validate_watchdog(raw.get("watchdog")),
+        "budget": validate_budget(raw.get("budget")),
         "mcp_servers": validate_mcp_servers(raw.get("mcp_servers")),
         "hooks": validate_hooks(raw.get("hooks")),
         "memory": validate_memory(raw.get("memory")),
