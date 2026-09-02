@@ -49,6 +49,7 @@ def parse_exit_worktree_body(body: dict[str, Any]) -> ExitWorktreeBody:
 
 
 def task_to_dict(task: Any, *, clock: Callable[[], float] = time.monotonic) -> dict:
+    # 进行中的任务无 end_time，以当前时刻近似耗时；clock 可注入以便测试
     elapsed = (task.end_time or clock()) - task.start_time
     return {
         "id": task.id,
@@ -82,6 +83,7 @@ def _entry_is_workspace_dir(path: Path, resolved_root: Path) -> bool:
         return False
     if not path.is_symlink():
         return True
+    # 符号链接需解析后仍落在工作区内，防止软链逃逸暴露工作区外目录
     try:
         path.resolve().relative_to(resolved_root)
     except (OSError, ValueError):

@@ -32,8 +32,10 @@ def history_page(events: list[dict], before: int, limit: int) -> tuple[list[dict
     end = max(0, min(before, len(events)))
     start = max(0, end - limit)
     fallback_start = start
+    # 页首前移到最近的 UserMessage，保证一页以一次完整对话回合开头
     while start < end and events[start].get("type") != "UserMessage":
         start += 1
+    # 整页内无用户消息则退回原始分页起点，避免空页
     if start == end:
         start = fallback_start
     return events[start:end], start
@@ -145,6 +147,7 @@ async def stream_events(websocket: WebSocket) -> None:
                     if event is None:
                         stop = True
                         break
+                    # 无持久化 seq 的旧事件按位置合成序号，保证补投游标仍单调
                     seq = event_seq(event) if event_seq(event) is not None else start + offset + 1
                     if since_mode and seq <= since:
                         continue  # 断点之前的事件：客户端已有，跳过（不丢不重）

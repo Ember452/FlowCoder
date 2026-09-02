@@ -177,6 +177,7 @@ async def save_config(request: Request) -> JSONResponse:
         previous_name = provider.get("previous_name") or provider["name"]
         previous = existing_by_name.get(previous_name)
         clear_key = provider.pop("_clear_api_key", False)
+        # 未填 api_key 且未显式清空时沿用旧 key：前端编辑不重复回填密钥
         if not provider["api_key"] and not clear_key and isinstance(previous, dict):
             provider["api_key"] = previous.get("api_key", "")
         provider.pop("previous_name", None)

@@ -48,6 +48,8 @@ def resolve_mode_transition(
     pre_plan_mode: PermissionMode | None = None,
 ) -> ModeTransition:
     """Resolve mode changes while keeping plan mode separate from command acceptance."""
+    # 进入 plan 后把"命令接受态"另存为 pre_plan_mode（plan 与接受态走两条轴），
+    # "do" 则退出 plan 回到接受态
     if requested == "do":
         return ModeTransition(
             next_mode=pre_plan_mode or PermissionMode.DEFAULT,

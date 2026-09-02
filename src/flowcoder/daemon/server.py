@@ -87,6 +87,7 @@ class DaemonTokenAuthMiddleware:
             return
 
         supplied = self._http_token(scope) if scope_type == "http" else self._ws_token(scope)
+        # compare_digest：常数时间比较，避免通过响应耗时探测 token（本地服务也防时序差异）
         if not supplied or not hmac.compare_digest(supplied, self.token):
             if scope_type == "websocket":
                 await send({"type": "websocket.close", "code": 1008})
@@ -204,6 +205,7 @@ def run_daemon(host: str = "127.0.0.1", port: int = 7800, work_dir: str | None =
 
     hook_engine = HookEngine(hooks) if hooks else None
     auth_token = os.environ.get("FLOWCODER_DAEMON_TOKEN", "").strip()
+    # 仅 loopback 才允许无 token：监听非本机地址却无鉴权会直接暴露给内网/公网
     if not _is_loopback_host(host) and not auth_token:
         raise RuntimeError("FLOWCODER_DAEMON_TOKEN is required when daemon host is not localhost")
 

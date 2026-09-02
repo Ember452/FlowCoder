@@ -110,6 +110,7 @@ def cleanup_outbox_file(
             dropped += 1
             continue
         kept_lines.append(line)
+    # 无删除时不重写文件——避免每次清理都触发一次磁盘 IO（保留期默认 72h）
     if dropped == 0:
         return (len(kept_lines), 0)
     write_text_atomic(path, "\n".join(kept_lines) + ("\n" if kept_lines else ""))

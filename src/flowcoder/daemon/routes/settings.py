@@ -55,6 +55,7 @@ def _write_raw_config(raw: dict[str, Any]) -> None:
             handle.write(content)
             handle.flush()
             os.fsync(handle.fileno())
+        # fsync 落盘后同目录原子替换，配置写坏时不留半程文件
         os.replace(temporary, USER_CONFIG_FILE)
     finally:
         if os.path.exists(temporary):
@@ -70,6 +71,7 @@ def _apply_raw_config(request: Request, raw: dict[str, Any]) -> JSONResponse | N
         _write_raw_config(raw)
         server.config = load_config()
     except Exception as exc:
+        # 配置校验/加载失败时回滚到旧配置，避免留存一份坏配置
         if previous_exists:
             _write_raw_config(previous_raw)
         elif USER_CONFIG_FILE.exists():

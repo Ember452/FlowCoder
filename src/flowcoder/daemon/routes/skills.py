@@ -55,6 +55,7 @@ def _skill_to_dict(skill: Any, source_label: str) -> dict[str, Any]:
 
 
 def _is_disabled(skill: Any) -> bool:
+    # 禁用通过把技能文件重命名为 .disabled 后缀实现（保留源码、可再次启用）
     if skill.source_path is None:
         return False
     return skill.source_path.suffix == ".disabled" or (

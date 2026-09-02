@@ -37,6 +37,7 @@ class WatchdogDeliverer:
         try:
             task_id = await self._server.start_task(sid, prompt)
         except Exception as e:
+            # 会话可能已失效（重载/崩溃），重建后重试一次——避免提醒静默丢失
             logger.warning("看门狗提醒提交失败，重建会话重试：%s", e)
             self._sid = None
             sid = await self._ensure_session()

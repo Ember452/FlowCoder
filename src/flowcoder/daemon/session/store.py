@@ -53,6 +53,7 @@ def _clean_meta(meta: object) -> dict:
 
 
 def _event_slice_start(persisted_count: int, event_count: int) -> int:
+    # 只追加"上次已落盘之后"的新事件；越界（旧计数）时收敛到合法范围
     if persisted_count < 0:
         return 0
     if persisted_count > event_count:

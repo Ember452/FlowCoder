@@ -37,6 +37,8 @@ class ActiveTaskRegistry:
         return task
 
     def clear_if_current(self, sid: str, task: asyncio.Task | None) -> None:
+        # 仅当登记的就是本任务时才清：旧的被取消协程可能晚于新任务结束，
+        # 误清的 identity 比较可防止把新登记的任务从注册表中删掉
         if task is not None and self.tasks.get(sid) is task:
             self.discard(sid)
 
