@@ -29,12 +29,14 @@ class DaemonJobExecutor:
         self._sid: str | None = None
 
     async def _ensure_session(self) -> str:
+        """懒创建并缓存调度器专用 daemon 会话。"""
         if self._sid is None:
             self._sid = await self._server.init_session(work_dir=self._work_dir)
             logger.info("调度器 daemon 会话就绪：%s", self._sid)
         return self._sid
 
     async def __call__(self, job: JobDefinition) -> None:
+        """把任务 prompt 提交为 daemon 会话的 Agent 回合；会话失效则重建重试。"""
         sid = await self._ensure_session()
         try:
             task_id = await self._server.start_task(sid, job.prompt)

@@ -25,6 +25,7 @@ class GateStateStore:
         self._key_limit = key_limit
 
     def load(self) -> GateState:
+        """从 JSON 恢复门控状态；缺失/损坏时返回空状态（重启不重复打扰的兜底）。"""
         if not self._path.exists():
             return GateState()
         try:
@@ -42,6 +43,7 @@ class GateStateStore:
         return state
 
     def save(self, state: GateState, *, config: GateConfig | None = None) -> None:
+        """把门控状态原子写回磁盘，delivery_times 按门控衰减历史上限裁剪。"""
         limit = config.history_limit if config else 200
         payload = {
             "delivered_keys": sorted(state.delivered_keys)[-self._key_limit :],

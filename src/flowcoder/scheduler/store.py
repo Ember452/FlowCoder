@@ -67,6 +67,7 @@ class ScheduleStore:
         return self._path
 
     def load(self) -> ScheduleState:
+        """从 JSON 恢复状态；文件缺失或损坏时返回空状态。"""
         if not self._path.exists():
             return ScheduleState()
         try:
@@ -93,6 +94,7 @@ class ScheduleStore:
         return state
 
     def save(self, state: ScheduleState) -> None:
+        """把全量状态原子写回磁盘，运行记录只保留最近 run_limit 条。"""
         payload = {
             "jobs": {name: asdict(job) for name, job in state.jobs.items()},
             "states": {name: asdict(st) for name, st in state.states.items()},
@@ -101,6 +103,7 @@ class ScheduleStore:
         write_json_atomic(self._path, payload)
 
     def append_run(self, state: ScheduleState, record: RunRecord) -> None:
+        """追加一条运行记录并裁剪超出 run_limit 的旧记录。"""
         state.runs.append(record)
         if len(state.runs) > self._run_limit:
             del state.runs[: len(state.runs) - self._run_limit]

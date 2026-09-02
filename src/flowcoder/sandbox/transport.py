@@ -16,6 +16,7 @@ from flowcoder.sandbox.runtime import ContainerRuntime, SandboxError
 
 
 def _validate_rel_path(name: str) -> None:
+    """校验相对路径：拒绝空串、反斜杠、绝对路径与 .. 穿越。"""
     if not name or not name.strip():
         raise SandboxError(f"非法的沙箱文件路径：{name!r}（不能为空）")
     # 反斜杠在 POSIX 是合法文件名字符，但极易造成 Windows 语义混淆，直接拒绝

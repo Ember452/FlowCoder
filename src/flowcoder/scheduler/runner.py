@@ -94,6 +94,7 @@ class Scheduler:
             await self.poll_once(self._now())
 
     def _next_wake_in(self) -> float:
+        """距最近一个（已减去预触发提前量的）调度点的等待秒数。"""
         now = self._now()
         deadlines = [
             st.next_run - self._latency.pre_trigger_window()
@@ -136,6 +137,7 @@ class Scheduler:
         return produced
 
     async def _fire_job(self, job: JobDefinition, job_state: JobState, now: float) -> RunRecord:
+        """执行一次任务并按指数退避重试，返回运行记录（含成败与尝试次数）。"""
         scheduled_for = job_state.next_run or now
         # 实测触发延迟喂给预触发器；只采样"触发路径"的小延迟——
         # 停机/拥塞导致的巨量错过不是 loop 延迟，采样会污染 P90 并把
@@ -179,6 +181,7 @@ class Scheduler:
         state.next_run = next_dt.timestamp()
 
     def _advance_past(self, job: JobDefinition, moment: float) -> float:
+        """计算严格晚于 moment 的下一个 cron 触发时刻（epoch 秒）。"""
         return CronExpr.parse(job.cron).next_after(_epoch_to_datetime(moment)).timestamp()
 
     def _coalesced_count(self, job: JobDefinition, missed_from: float, new_next: float) -> int:

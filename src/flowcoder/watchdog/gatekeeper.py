@@ -72,6 +72,7 @@ class Watchdog:
         self._now = now_fn
 
     async def poll_once(self, now: float | None = None) -> WatchdogReport:
+        """巡检全部信号源一轮，返回本轮的账目；有送达则落盘门控状态。"""
         now = now if now is not None else self._now()
         report = WatchdogReport()
         for source in self._sources:
@@ -87,6 +88,7 @@ class Watchdog:
         return report
 
     async def _process(self, signal: Signal, now: float, report: WatchdogReport) -> None:
+        """处理单条信号：去重 → 判定 → 门控 → 送达，逐级累计账目。"""
         report.signals_seen += 1
         if self._gate.is_duplicate(signal.delivery_key):
             report.duplicates += 1
@@ -115,6 +117,7 @@ class Watchdog:
         report.block_reasons[reason] = report.block_reasons.get(reason, 0) + 1
 
     async def run_forever(self, *, poll_interval_s: float = DEFAULT_POLL_INTERVAL_S) -> None:
+        """守护循环：按固定间隔轮询，直到被取消。"""
         logger.info("看门狗启动：%d 个信号源", len(self._sources))
         while True:
             await self.poll_once(self._now())

@@ -35,6 +35,7 @@ class SignalSource(Protocol):
 
 
 def _key(kind: str, content: str) -> str:
+    """把事件内容哈希成 12 位前缀，作为内容刻画型去重锚点。"""
     digest = hashlib.sha1(content.encode("utf-8")).hexdigest()[:12]  # noqa: S324
     return f"{kind}:{digest}"
 
@@ -50,6 +51,7 @@ class GitStatusSource:
 
     @staticmethod
     async def _run_git(args: list[str]) -> str:
+        """真实 git 调用封装：非零退出码抛错，stdout 按 UTF-8 解码。"""
         proc = await asyncio.create_subprocess_exec(
             "git",
             *args,
@@ -62,6 +64,7 @@ class GitStatusSource:
         return out.decode("utf-8", errors="replace")
 
     async def poll(self) -> list[Signal]:
+        """状态变化时才产出信号（脏/净切换或脏文件集合变化）。"""
         branch = (await self._run(["rev-parse", "--abbrev-ref", "HEAD"])).strip()
         status = await self._run(["status", "--porcelain"])
         lines = [ln for ln in status.splitlines() if ln.strip()]
@@ -92,6 +95,7 @@ class TestResultsSource:
         self._last_pass_rate: float | None = None
 
     def report(self, label: str, passed: int, total: int) -> Signal | None:
+        """喂入一次测试结果；通过率下降时产出信号，持平/改善或首次不产出。"""
         if total <= 0:
             return None
         rate = passed / total
@@ -122,6 +126,7 @@ class FileChangeSource:
         self._hashes: dict[str, str] = {}
 
     async def poll(self) -> list[Signal]:
+        """快照比对监控文件；内容变化时产出信号，首次快照不视为变更。"""
         signals: list[Signal] = []
         for path in self._paths:
             try:

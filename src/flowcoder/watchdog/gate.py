@@ -49,6 +49,7 @@ class GateState:
 
 
 def _date_key(now: float) -> str:
+    """把时刻规约成 UTC 日界字符串，作为每日计数的键。"""
     # UTC 日界：确定性、可测试，且避免极端时钟值在 Windows 触发
     # fromtimestamp 的本地时区越界
     import datetime as dt
@@ -76,6 +77,7 @@ class ProactiveGate:
         return delivery_key in self.state.delivered_keys
 
     def decide(self, delivery_key: str, *, now: float | None = None) -> GateDecision:
+        """四层判定：去重 → 冷却 → 每日上限 → 能量衰减；任一不满足即拦截。"""
         now = now if now is not None else self._now()
         st = self.state
         cfg = self.config

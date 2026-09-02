@@ -35,6 +35,7 @@ class LeaseReaper:
         self._interval_s = interval_s
 
     async def run_forever(self) -> None:
+        """守护循环：按间隔轮询对账，直到被取消。"""
         while True:
             await asyncio.sleep(self._interval_s)
             await self.reconcile_once()
@@ -52,6 +53,7 @@ class LeaseReaper:
         return reaped
 
     async def _reap(self, record: LeaseRecord) -> None:
+        """强杀并清除孤儿容器台账，触发池补建维持水位。"""
         logger.warning("回收孤儿容器（任务已结束未归还）：%s", record.container_id)
         self.pool_active_remove(record.container_id)
         runtime = self._pool._ensure_runtime()

@@ -80,6 +80,7 @@ class LLMJudge:
         self._client = client
 
     async def judge(self, signal: Signal) -> Verdict:
+        """驱动一次 LLM 调用判定价值；LLM 不可用时保守判定"不值得"。"""
         from flowcoder.client.errors import LLMError
         from flowcoder.conversation import ConversationManager
 

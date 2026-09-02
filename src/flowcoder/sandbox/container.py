@@ -91,6 +91,7 @@ class SandboxContainer:
         self._closed = False
 
     async def start(self) -> None:
+        """创建并启动容器，记录执行的 ID；已启动时幂等直接返回。"""
         if self._closed:
             raise SandboxError("容器已关闭，不能再启动")
         if self._container_id is not None:
@@ -159,6 +160,7 @@ class SandboxContainer:
     async def _kill_after_grace(
         self, runtime: ContainerRuntime, container_id: str, grace_s: float
     ) -> None:
+        """外层兜底：SIGTERM 先行，宽限后再 SIGKILL。"""
         try:
             await asyncio.to_thread(runtime.kill, container_id, "SIGTERM")
             await asyncio.sleep(grace_s)
@@ -168,6 +170,7 @@ class SandboxContainer:
             pass
 
     def _build_create_spec(self) -> dict[str, Any]:
+        """组装容器创建参数：只读根、tmpfs 工作目录、断网与限额、可写挂载。"""
         cfg = self._config
         spec: dict[str, Any] = {
             "image": cfg.image,

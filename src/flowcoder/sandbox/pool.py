@@ -78,6 +78,7 @@ class Lease:
         timeout_s: float = 30.0,
         kill_grace_s: float = 2.0,
     ) -> ExecutionResult:
+        """在底层容器上执行命令；据此更新状态并回写池的执行/资源统计。"""
         result = await self.container.execute(
             command, files=files, timeout_s=timeout_s, kill_grace_s=kill_grace_s
         )
@@ -221,6 +222,7 @@ class SandboxPool:
     # ------------------------------------------------------------------ 内部
 
     async def _release(self, lease: Lease) -> None:
+        """归还租借：注销台账、记账、销毁容器并按需后台补建。"""
         cid = lease.container.container_id
         if cid is not None:
             self._active.pop(cid, None)
@@ -242,10 +244,12 @@ class SandboxPool:
 
     @staticmethod
     def _log_refill_failure(task: asyncio.Task[None]) -> None:
+        """补建任务的完成回调：吞掉取消/无异常场景，仅记录真实失败。"""
         if not task.cancelled() and task.exception() is not None:
             logger.error("容器补建失败，池水位暂时下降：%s", task.exception())
 
     async def _create_and_stock(self) -> SandboxContainer:
+        """建一个容器并入池：预热阶段直接入 idle，后续入 idle 并唤醒一个等待者。"""
         container = SandboxContainer(config=self._labeled_config, runtime=self._runtime)
         await container.start()
         cond = self._cond
@@ -258,6 +262,7 @@ class SandboxPool:
         return container
 
     async def _acquire(self, started: float) -> SandboxContainer:
+        """取一个空闲容器；池空则排队等待（背压），超上限快速失败。"""
         cond = self._cond
         if cond is None:
             cond = self._cond = asyncio.Condition()
@@ -280,6 +285,7 @@ class SandboxPool:
         return container
 
     def _record_execution(self, lease: Lease, result: ExecutionResult) -> None:
+        """落账一次执行：复用判定、耗时指标、trace 工具数、资源采样。"""
         cid = lease.container.container_id
         if cid is None:
             return

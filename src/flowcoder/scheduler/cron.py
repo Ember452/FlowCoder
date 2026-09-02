@@ -26,6 +26,7 @@ class CronError(ValueError):
 
 
 def _parse_value(token: str, field: int) -> int:
+    """解析单个数字并对周 7→0（视为周日），越界报错。"""
     lo, hi = _FIELD_RANGES[field]
     try:
         value = int(token)
@@ -72,6 +73,7 @@ class CronExpr:
     """解析后的 cron 表达式；next_after 计算严格晚于给定时刻的下一次触发。"""
 
     def __init__(self, expression: str) -> None:
+        """解析 5 字段 cron，并记录日/周字段是否受限以决定二者取 OR 还是取一。"""
         parts = expression.split()
         if len(parts) != 5:
             raise CronError(f"cron 表达式必须为 5 个字段（分 时 日 月 周）: {expression!r}")
@@ -90,6 +92,7 @@ class CronExpr:
         return cls(expression)
 
     def _day_matches(self, candidate: dt.datetime) -> bool:
+        """按日/周字段判定当天是否命中（受限互为 OR，仅一方受限时取该方）。"""
         dom_ok = candidate.day in self.days
         # Python weekday(): Mon=0..Sun=6；cron 0=Sun。映射：cron_wd = (py_wd + 1) % 7
         cron_wd = (candidate.weekday() + 1) % 7

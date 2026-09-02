@@ -31,6 +31,7 @@ def container_kwargs(limits: ResourceLimits) -> dict[str, Any]:
     """把限额翻译成 docker containers.create 的关键字参数。"""
     return {
         "mem_limit": f"{limits.memory_mb}m",
+        # docker 的 nano_cpus 以 1e9 纳核 = 1 CPU 计
         "nano_cpus": int(limits.cpus * 1_000_000_000),
         "pids_limit": limits.pids_limit,
     }

@@ -145,6 +145,7 @@ class DockerRuntime:
             precpu.get("system_cpu_usage") or 0
         )
         online_cpus = cpu_stats.get("online_cpus") or 1
+        # Docker 的 CPU% 按两帧间的 CPU 增量占比换算：delta/system_delta × 核数 × 100
         cpu_percent = cpu_delta / system_delta * online_cpus * 100 if system_delta > 0 else 0.0
         return {
             "memory_mb": memory_bytes / (1024 * 1024),
