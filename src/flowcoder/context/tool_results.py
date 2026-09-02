@@ -64,6 +64,8 @@ def cleanup_tool_results(session_dir: Path) -> None:
 
 
 def persist_tool_result(tool_use_id: str, content: str, session_dir: Path) -> Path:
+    """把超大 tool-result 落盘为独立文件，返回落盘路径。"""
+    # O_EXCL 保证同一 tool_use_id 只写入一次：重复调用时静默跳过，不覆盖首次内容。
     file_path = session_dir / f"{tool_use_id}.txt"
     try:
         fd = os.open(str(file_path), os.O_WRONLY | os.O_CREAT | os.O_EXCL)
@@ -271,6 +273,11 @@ def _copy_message_with_tool_results(
 def _snip_stale_messages(
     history: list[Message],
 ) -> list[Message]:
+    """把超过 KEEP_RECENT_TURNS 的旧轮次大结果裁剪成预览片段（Pass 3）。
+
+    时序上旧的轮次只保留最近、已裁剪或已持久化的结果原文，其余大结果替换为
+    前 200 字符的预览，避免历史里的巨型 tool-result 浪费上下文。
+    """
     total_turns = _count_turns(history)
     if total_turns <= KEEP_RECENT_TURNS:
         return history

@@ -54,6 +54,7 @@ class RecoveryState:
             self._skills[name] = SkillInvocationRecord(name=name, body=body, timestamp=time.time())
 
     def snapshot_files(self, limit: int) -> list[FileReadRecord]:
+        """返回最近读取过的文件快照，按时间倒序并最多保留 `limit` 条。"""
         with self._lock:
             records = list(self._files.values())
         records.sort(key=lambda r: r.timestamp, reverse=True)
@@ -62,6 +63,7 @@ class RecoveryState:
         return records
 
     def snapshot_skills(self) -> list[SkillInvocationRecord]:
+        """返回本会话所有调用过的技能快照，按时间倒序。"""
         with self._lock:
             records = list(self._skills.values())
         records.sort(key=lambda r: r.timestamp, reverse=True)
@@ -75,6 +77,7 @@ def _approx_tokens(s: str) -> int:
 
 
 def _truncate_by_tokens(s: str, token_budget: int) -> str:
+    """把长文本按近似 token 预算截断到合适字符数，超限时在尾部追加截断标记。"""
     if token_budget <= 0 or not s:
         return s
     if _approx_tokens(s) <= token_budget:

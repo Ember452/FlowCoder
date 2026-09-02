@@ -114,6 +114,7 @@ class CompactEvent:
 
 
 def compute_compact_threshold(context_window: int, manual: bool = False) -> int:
+    """计算触发压缩的 token 阈值：上下文窗口预留摘要输出空间后，再减去触发冗余 margin。"""
     effective = context_window - SUMMARY_OUTPUT_RESERVE
     margin = MANUAL_COMPACT_SAFETY_MARGIN if manual else AUTO_COMPACT_SAFETY_MARGIN
     return effective - margin
@@ -146,6 +147,7 @@ SUMMARY_PROMPT = """\
 
 
 def extract_summary(llm_output: str) -> str:
+    """抽取 LLM 输出中 <summary>...</summary> 标签之间的内容；标签缺失时原样返回全文。"""
     start = llm_output.find("<summary>")
     end = llm_output.find("</summary>")
     if start == -1 or end == -1:
@@ -159,6 +161,7 @@ def build_compact_messages(
     has_keep_tail: bool = False,
     transcript_path: str = "",
 ) -> list[Message]:
+    """构造压缩后重建对话的首条 user 消息：摘要正文 + 尾部保留提示 + 恢复附件。"""
     content = (
         "本次会话延续自之前的对话，因上下文空间不足进行了压缩。以下是早期对话的摘要：\n\n" + summary
     )
@@ -174,6 +177,7 @@ def build_compact_messages(
 
 
 def _group_messages_by_turn(messages: list[Message]) -> list[list[Message]]:
+    """把连续消息按"回合"分组：以一条不带工具调用的 assistant 消息作为一组的结尾。"""
     groups: list[list[Message]] = []
     current: list[Message] = []
     for msg in messages:

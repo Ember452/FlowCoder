@@ -23,6 +23,7 @@ class PathSandbox:
         return self._allowed_roots[0]
 
     def check(self, path: str) -> tuple[bool, str]:
+        """校验路径是否落在项目根或临时目录等允许范围内；越界返回 (False, 原因)。"""
         p = Path(path).expanduser()
         if not p.is_absolute():
             p = self.project_root / p

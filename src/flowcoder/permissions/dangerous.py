@@ -89,6 +89,7 @@ _SAFE_PREFIX_COMMANDS = frozenset(
 
 
 def _tokenize_command(command: str) -> list[str]:
+    """把命令按 shell 词法切分；切分失败时退化为按空白切分，避免误判。"""
     try:
         return shlex.split(command)
     except ValueError:
@@ -96,6 +97,7 @@ def _tokenize_command(command: str) -> list[str]:
 
 
 def _short_rm_flags(flag: str) -> tuple[bool, bool]:
+    """提取短参数中（如 -rf）是否含递归 r 与强制 f 标记；长参数或非选项返回两个 False。"""
     if not flag.startswith("-") or flag.startswith("--"):
         return False, False
     chars = flag[1:].lower()
@@ -103,6 +105,7 @@ def _short_rm_flags(flag: str) -> tuple[bool, bool]:
 
 
 def _detect_rm_root(command: str) -> bool:
+    """识别递归强制删除根目录（rm -rf /）的命令；只在递归且强制的组合下才判定为危险。"""
     tokens = _tokenize_command(command)
     for index, token in enumerate(tokens):
         if token != "rm":
@@ -132,6 +135,7 @@ def _detect_rm_root(command: str) -> bool:
 
 
 def is_safe_command(command: str) -> bool:
+    """判断命令是否为无需审批的只读安全命令：不含管道/重定向等复合符，且在安全白名单内。"""
     trimmed = command.strip()
     if not trimmed:
         return False
@@ -154,6 +158,7 @@ class DangerousCommandDetector:
                 self._patterns.append((re.compile(regex_str), reason))
 
     def detect(self, command: str) -> tuple[bool, str]:
+        """对命令做 rm 根目录专项检查与正则黑名单匹配，命中返回 (True, 原因)。"""
         if _detect_rm_root(command):
             return True, _RM_ROOT_REASON
         for pattern, reason in self._patterns:

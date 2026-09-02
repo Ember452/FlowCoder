@@ -30,6 +30,7 @@ class Rule:
     effect: Effect
 
     def matches(self, tool_name: str, content: str) -> bool:
+        """判断单条规则是否命中：工具名精确相等，内容用 shell 通配符匹配。"""
         # 工具名必须精确匹配，内容用 shell 通配符（fnmatch）匹配模式
         if self.tool_name != tool_name:
             return False
@@ -37,6 +38,7 @@ class Rule:
 
 
 def parse_rule(raw: str, effect: Effect) -> Rule:
+    """把 `Tool(pattern)` 形式的规则文本解析为 Rule；语法不符时抛 ValueError。"""
     m = _RULE_RE.match(raw.strip())
     if not m:
         raise ValueError(f"无效的规则语法: {raw}")
@@ -44,6 +46,7 @@ def parse_rule(raw: str, effect: Effect) -> Rule:
 
 
 def _load_rules_file(path: Path) -> list[Rule]:
+    """从 YAML 规则文件加载规则；文件缺失、格式非法或逐项解析失败的条目都会被跳过。"""
     # 规则文件是 YAML 列表，每项 {rule: "Tool(pattern)", effect: allow|deny}
     if not path.is_file():
         return []
@@ -96,6 +99,7 @@ class RuleEngine:
         return tiers
 
     def evaluate(self, tool_name: str, content: str) -> Effect | None:
+        """按三层规则优先级匹配：高层先于低层、同层内后写覆盖先写；全未命中返回 None。"""
         # 逐层匹配，命中即返回；同层内 reversed 使后写规则覆盖先写规则。
         # 三层都未命中则返回 None，交由上层 PermissionChecker 的模式兜底判定。
         for rules in self._load_tiers():
@@ -105,6 +109,7 @@ class RuleEngine:
         return None
 
     def append_local_rule(self, rule: Rule) -> None:
+        """把会话中学习到的规则追加写回 local 规则文件，实现运行时持久化。"""
         # 运行时学习：用户在交互中"总是允许/拒绝"某操作时，追加到 local 规则文件
         if self._local_path is None:
             return

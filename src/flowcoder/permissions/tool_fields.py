@@ -23,6 +23,7 @@ _SANDBOX_PATH_FIELDS: dict[str, tuple[str, str]] = {
 
 
 def extract_content(tool_name: str, arguments: dict[str, Any]) -> str:
+    """抽取工具参数中用于权限匹配的文本内容；未知工具或缺省参数时返回空串。"""
     field = _CONTENT_FIELDS.get(tool_name)
     if field is None:
         return ""
@@ -31,6 +32,7 @@ def extract_content(tool_name: str, arguments: dict[str, Any]) -> str:
 
 
 def extract_sandbox_path(tool_name: str, arguments: dict[str, Any]) -> str | None:
+    """抽取用于沙箱校验的路径参数；未知工具返回 None，参数缺失时回落到预设默认值。"""
     field_spec = _SANDBOX_PATH_FIELDS.get(tool_name)
     if field_spec is None:
         return None

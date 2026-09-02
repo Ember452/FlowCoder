@@ -40,6 +40,7 @@ def clone_replacement_state(src: ContentReplacementState) -> ContentReplacementS
 
 
 def append_replacement_records(session_dir: Path, records: list[ContentReplacementRecord]) -> None:
+    """把本轮新产生的替换记录追加写入会话目录下的 JSONL 文件，供会话恢复时重建。"""
     if not records:
         return
     path = session_dir / REPLACEMENT_RECORDS_FILENAME
@@ -59,6 +60,7 @@ def append_replacement_records(session_dir: Path, records: list[ContentReplaceme
 
 
 def load_replacement_records(session_dir: Path) -> list[ContentReplacementRecord]:
+    """读取会话目录下持久化的替换记录；文件不存在时返回空列表。"""
     path = session_dir / REPLACEMENT_RECORDS_FILENAME
     if not path.exists():
         return []
@@ -84,6 +86,7 @@ def reconstruct_replacement_state(
     records: list[ContentReplacementRecord],
     inherited_replacements: Mapping[str, str] | None = None,
 ) -> ContentReplacementState:
+    """从恢复的消息和历史替换记录重建替换状态，只采纳仍出现在消息中的候选。"""
     state = create_replacement_state()
     candidate_ids: set[str] = set()
     for msg in messages:
