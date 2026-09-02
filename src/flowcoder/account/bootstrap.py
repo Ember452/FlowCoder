@@ -83,6 +83,8 @@ def ensure_runtime_config():
         return load_config()
     except ConfigError:
         status = get_status()
+        # 已登录时配置缺失属真实配置错误，不引导（避免引导流程掩盖问题）；
+        # 否则仅在可交互的 TTY 下才走账号登录引导，非交互环境直接抛出
         if status.logged_in:
             raise
         if not sys.stdin.isatty():

@@ -28,6 +28,7 @@ class AccountSession:
 
     @property
     def logged_in(self) -> bool:
+        # 仅当同时持有 token 与 base_url 才算登录态，缺任一视为未登录
         return bool(self.token and self.base_url)
 
     def gateway_base_url(self) -> str:
@@ -45,6 +46,7 @@ class AccountSession:
 
 
 def _coerce_session(raw: dict[str, Any]) -> AccountSession | None:
+    """把已反序列化的 YAML 字典强校验为 AccountSession，token/base_url 缺失视为无效。"""
     token = str(raw.get("token") or "").strip()
     base_url = str(raw.get("base_url") or DEFAULT_BASE_URL).strip().rstrip("/")
     if not token or not base_url:
@@ -69,6 +71,7 @@ def _coerce_session(raw: dict[str, Any]) -> AccountSession | None:
 
 
 def load_session(path: Path | None = None) -> AccountSession | None:
+    """从会话文件加载 AccountSession；文件缺失/损坏/内容非法时返回 None。"""
     target = path or SESSION_FILE
     if not target.exists():
         return None
@@ -82,6 +85,7 @@ def load_session(path: Path | None = None) -> AccountSession | None:
 
 
 def save_session(session: AccountSession, path: Path | None = None) -> None:
+    """把会话原子落盘为 YAML：先写临时文件并 fsync，再 rename 覆盖，防写入中途断电损坏。"""
     target = path or SESSION_FILE
     target.parent.mkdir(parents=True, exist_ok=True)
     content = yaml.safe_dump(

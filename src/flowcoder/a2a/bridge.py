@@ -57,6 +57,7 @@ class A2ABridge:
         self._contexts: dict[str, str] = {}
 
     def agent_card(self, base_url: str = "") -> dict[str, Any]:
+        """返回描述本 Agent 能力与端点的 A2A AgentCard（JSON-RPC 发现用）。"""
         base = base_url.rstrip("/")
         endpoint = f"{base}/a2a/rpc" if base else "/a2a/rpc"
         model = ""
@@ -97,6 +98,7 @@ class A2ABridge:
         }
 
     async def handle_json_rpc(self, payload: Any) -> Any:
+        """处理 JSON-RPC 请求或请求批处理数组，逐条分派并折叠错误为 JSON-RPC error。"""
         if isinstance(payload, list):
             if not payload:
                 return self._json_error(None, -32600, "Invalid JSON-RPC request")
@@ -104,6 +106,7 @@ class A2ABridge:
         return await self._handle_json_rpc_single(payload)
 
     async def _handle_json_rpc_single(self, payload: Any) -> dict[str, Any]:
+        """处理单条 JSON-RPC 请求；解析与业务异常均统一转成 error 结构，不让异常外泄。"""
         try:
             request = parse_json_rpc_request(payload)
         except A2AError as e:
@@ -120,6 +123,7 @@ class A2ABridge:
         return {"jsonrpc": "2.0", "id": request.id, "result": result}
 
     async def _dispatch(self, method: str, params: Any) -> Any:
+        # 归一化方法名（兼容 A2A 的大小写/连字符变体）后分派到对应处理函数
         normalized = method.strip()
         if normalized in {"message/send", "SendMessage", "Message/Send"}:
             if not isinstance(params, dict):
@@ -138,6 +142,7 @@ class A2ABridge:
         raise A2AError(f"Unsupported A2A method: {method}", -32601)
 
     async def send_message(self, params: dict[str, Any]) -> dict[str, Any]:
+        """发送一条消息产生任务；按配置决定是否等待其完成。"""
         config = configuration_from_params(params)
         wait_for_completion = should_wait(config)
         timeout = (
@@ -161,6 +166,8 @@ class A2ABridge:
         metadata: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> A2ATask:
+        """以纯文本运行一次 Agent 任务并等待其完成，返回任务对象。"""
+        # 便捷入口：把纯文本组装成 A2A message 参数后走标准消息流程
         params = {
             "message": {
                 "role": "ROLE_USER",
@@ -180,12 +187,15 @@ class A2ABridge:
         params: dict[str, Any],
         source: str,
     ) -> A2ATask:
+        """在 daemon 开启新会话并启动 Agent 任务，构造 A2ATask 外壳并登记。"""
         request = parse_message_request(params)
         context_id = request.context_id
+        # 未显式给 contextId 时，若请求带 task_id 提示且该任务已存在，则沿用其上下文
         if not context_id and request.task_id_hint and request.task_id_hint in self._tasks:
             context_id = self._tasks[request.task_id_hint].context_id
         context_id = str(context_id or f"ctx-{uuid.uuid4().hex[:12]}")
 
+        # 同一 contextId 复用同一 daemon 会话，实现多轮对话延续
         session_id = self._contexts.get(context_id)
         if session_id is None:
             try:
@@ -205,6 +215,7 @@ class A2ABridge:
             raise A2AError(str(e), -32002) from e
 
         task_id = str(request.task_id_hint or internal_task_id or uuid.uuid4().hex[:8])
+        # task_id 冲突时追加乱序后缀去重，保证每个 A2A 句柄唯一
         if task_id in self._tasks:
             task_id = f"{task_id}-{uuid.uuid4().hex[:4]}"
         task = A2ATask(
@@ -222,6 +233,7 @@ class A2ABridge:
         return task
 
     def get_task(self, task_id: str) -> A2ATask:
+        """按 id 取任务（同时用最新事件日志刷新其状态）；不存在抛 A2AError。"""
         task = self._tasks.get(task_id)
         if task is None:
             raise A2AError(f"Task not found: {task_id}", -32003)
@@ -229,6 +241,7 @@ class A2ABridge:
         return task
 
     async def cancel_task(self, task_id: str) -> A2ATask:
+        """请求取消未终止的任务并置为已取消状态。"""
         task = self.get_task(task_id)
         if task.state not in TERMINAL_STATES:
             cancelled = self._server.cancel_active_task(task.session_id)
@@ -241,6 +254,7 @@ class A2ABridge:
         return task
 
     async def wait_for_task(self, task_id: str, timeout: float | None = None) -> A2ATask:
+        """阻塞轮询直到任务进入终止态，超时则打上超时提示并返回当前任务。"""
         task = self.get_task(task_id)
         timeout_seconds = timeout if timeout is not None else self._default_wait_timeout
         deadline = time.monotonic() + timeout_seconds

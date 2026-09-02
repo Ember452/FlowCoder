@@ -35,6 +35,7 @@ class CatalogModel:
 
 
 def normalize_base_url(base_url: str | None) -> str:
+    """规范化云端 base_url：去空白/尾部斜杠，空值回退默认地址。"""
     value = (base_url or DEFAULT_BASE_URL).strip().rstrip("/")
     if not value:
         raise AccountClientError("base_url required")
@@ -42,6 +43,7 @@ def normalize_base_url(base_url: str | None) -> str:
 
 
 def _error_message(payload: Any, fallback: str) -> str:
+    # 从响应体提取服务端返回的 error/message 作为可读错误文案，否则用 HTTP 状态回退
     if isinstance(payload, dict):
         err = payload.get("error") or payload.get("message")
         if isinstance(err, str) and err.strip():
@@ -57,6 +59,7 @@ def _request_json(
     json_body: dict[str, Any] | None = None,
     timeout: float = 30.0,
 ) -> Any:
+    """发起带可选 Bearer 认证的同步请求，统一把 HTTP/网络错误折叠为 AccountClientError。"""
     headers: dict[str, str] = {"Accept": "application/json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -86,6 +89,7 @@ def login(
     base_url: str | None = None,
     register: bool = False,
 ) -> AccountSession:
+    """登录（或注册）云端账号，用返回的 JWT 构造 AccountSession。"""
     root = normalize_base_url(base_url)
     path = "/api/auth/register" if register else "/api/auth/login"
     payload = _request_json(
@@ -118,6 +122,7 @@ def login(
 
 
 def fetch_models(session: AccountSession) -> list[CatalogModel]:
+    """拉取当前账号可见的模型目录并转为 CatalogModel 列表。"""
     payload = _request_json(
         "GET",
         f"{session.base_url.rstrip('/')}/api/models",

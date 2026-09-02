@@ -16,6 +16,7 @@ TASK_COMPLETED = "TASK_STATE_COMPLETED"
 TASK_FAILED = "TASK_STATE_FAILED"
 TASK_CANCELED = "TASK_STATE_CANCELED"
 
+# 到达下列状态后任务不再推进，刷新逻辑据此停止消费事件
 TERMINAL_STATES = {TASK_COMPLETED, TASK_FAILED, TASK_CANCELED}
 
 
@@ -52,6 +53,7 @@ def set_task_state(
     status_message: str | None = None,
     error: str | None = None,
 ) -> None:
+    """更新任务状态并刷新时间戳，可一并写入提示信息或错误描述。"""
     task.state = state
     if status_message is not None:
         task.status_message = status_message
@@ -61,6 +63,7 @@ def set_task_state(
 
 
 def refresh_task_from_log(task: A2ATask, log_list: list[dict | None] | None) -> None:
+    """用 daemon 事件日志自上次游标后的事件增量刷新任务状态。"""
     if log_list is None:
         if task.state not in TERMINAL_STATES:
             set_task_state(
@@ -81,6 +84,7 @@ def refresh_task_from_log(task: A2ATask, log_list: list[dict | None] | None) -> 
 
 
 def apply_task_log_event(task: A2ATask, event: object) -> None:
+    """把单条 daemon 事件映射为 A2A 任务状态/输出；任务终止后忽略后续事件。"""
     if task.state in TERMINAL_STATES:
         return
     if event is None:
@@ -128,6 +132,7 @@ def apply_task_log_event(task: A2ATask, event: object) -> None:
 
 
 def task_to_a2a_payload(task: A2ATask) -> dict[str, Any]:
+    """把 A2ATask 序列化为 A2A 规范载荷（含状态、历史、输出 artifacts 与错误）。"""
     status: dict[str, Any] = {
         "state": task.state,
         "timestamp": task.updated_at,

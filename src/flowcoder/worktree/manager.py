@@ -31,9 +31,11 @@ class WorktreeError(Exception):
 
 
 def _normalized_git_object_id(value: str) -> str | None:
+    """校验并规范化 git 对象 ID（40/64 位十六进制），非法返回 None。"""
     candidate = value.strip()
     if not _GIT_OBJECT_ID_RE.fullmatch(candidate):
         return None
+    # git 对象 ID 不区分大小写，统一小写便于跨来源（文件/命令输出）比较
     return candidate.lower()
 
 
@@ -53,6 +55,8 @@ class WorktreeManager:
         self.current_session: WorktreeSession | None = None
 
     def _run_git(self, args: list[str], cwd: str | None = None) -> subprocess.CompletedProcess[str]:
+        # GIT_TERMINAL_PROMPT=0 + GIT_ASKPASS="" 强制 git 禁用交互式认证/提示，
+        # 保证在非交互环境（如后台任务）中遇到认证需求时立即失败而非挂起
         env = {**os.environ, **GIT_ENV}
         return subprocess.run(
             ["git"] + args,
@@ -70,6 +74,7 @@ class WorktreeManager:
 
     @staticmethod
     def read_worktree_head_sha(wt_path: str) -> str | None:
+        """直接解析 .git 站点文件读取当前 HEAD 提交 ID，避免启动 git 子进程（快速恢复路径）。"""
         wt = Path(wt_path)
         git_file = wt / ".git"
         if not git_file.exists():
@@ -119,6 +124,7 @@ class WorktreeManager:
     # ------------------------------------------------------------------
 
     async def create(self, name: str, base_branch: str = "HEAD") -> Worktree:
+        """新建 worktree；若同名目录已存在则直接复用（快速恢复），否则走 git worktree add。"""
         async with self._lock:
             err = validate_slug(name)
             if err:
@@ -127,6 +133,7 @@ class WorktreeManager:
             if name in self.active:
                 raise WorktreeError(f"worktree already exists: {name}")
 
+            # 斜杠被扁平化为 +，保证磁盘路径为单段，避免嵌套目录
             flat_slug = flatten_slug(name)
             wt_path = os.path.join(self.worktree_dir, flat_slug)
             branch_name = f"worktree-{flat_slug}"
@@ -181,6 +188,7 @@ class WorktreeManager:
     # ------------------------------------------------------------------
 
     async def enter(self, name: str) -> WorktreeSession:
+        """进入 worktree，记录进入前的分支/HEAD 并把会话落盘，供退出时恢复。"""
         wt = self.active.get(name)
         if wt is None:
             raise WorktreeError(f"worktree not found: {name}")
@@ -209,6 +217,7 @@ class WorktreeManager:
         action: str = "keep",
         discard_changes: bool = False,
     ) -> None:
+        """退出 worktree；action=remove 时删除 worktree 与其分支，有未提交变更时需 discard_changes 强制。"""
         if action not in VALID_EXIT_ACTIONS:
             raise WorktreeError(f"invalid worktree exit action: {action}")
 
@@ -246,6 +255,7 @@ class WorktreeManager:
         if result.returncode != 0:
             log.warning("git worktree remove failed: %s", result.stderr.strip())
 
+        # 短暂让出事件循环，等 git 落盘完成后删除分支，避免竞态失败
         await asyncio.sleep(0.1)
 
         flat_slug = flatten_slug(name)
@@ -259,6 +269,7 @@ class WorktreeManager:
     # ------------------------------------------------------------------
 
     async def auto_cleanup(self, name: str, head_commit: str) -> CleanupResult:
+        """按 head_commit 检测 worktree 是否有变更：无变更则自动删除，有变更则保留。"""
         wt = self.active.get(name)
         if wt is None:
             return CleanupResult(kept=False)
@@ -280,6 +291,7 @@ class WorktreeManager:
         return self.current_session
 
     def _restored_worktree_path(self, session: WorktreeSession) -> Path | None:
+        """校验持久化会话指向的 worktree 是否可安全恢复，返回其路径（非法则 None）。"""
         err = validate_slug(session.worktree_name)
         if err:
             log.warning(
@@ -291,6 +303,7 @@ class WorktreeManager:
 
         managed_root = Path(self.worktree_dir).resolve()
         wt_path = Path(session.worktree_path).resolve()
+        # 要求 worktree 路径必须位于受管目录内，防止被篡改的会话指向任意路径（路径逃逸）
         try:
             wt_path.relative_to(managed_root)
         except ValueError:
@@ -306,6 +319,7 @@ class WorktreeManager:
     # ------------------------------------------------------------------
 
     def restore_session(self) -> WorktreeSession | None:
+        """从磁盘恢复上一次持久化的 worktree 会话（重启后重新进入该 worktree）。"""
         session = load_worktree_session(self._flowcoder_dir)
         if session is None:
             return None
@@ -335,6 +349,7 @@ class WorktreeManager:
     # ------------------------------------------------------------------
 
     def _get_current_branch(self) -> str:
+        # 当前不在具体分支（如分离头）或 git 调用失败时回退为 "HEAD" 兜底，绝不抛错
         try:
             result = self._run_git(["rev-parse", "--abbrev-ref", "HEAD"])
             return result.stdout.strip() if result.returncode == 0 else "HEAD"
@@ -342,6 +357,7 @@ class WorktreeManager:
             return "HEAD"
 
     def _get_head_commit(self) -> str:
+        # 读取失败时回退为空串，调用方（enter）据此容忍"未知起点"
         try:
             result = self._run_git(["rev-parse", "HEAD"])
             return result.stdout.strip() if result.returncode == 0 else ""

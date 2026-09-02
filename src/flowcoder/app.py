@@ -113,6 +113,8 @@ _SKIP_DIRS = {".git", "node_modules", ".venv", "__pycache__", ".flowcoder", "bui
 
 
 def scan_files_for_at(prefix: str, work_dir: str, limit: int = 10) -> list[str]:
+    # 用户输入 @前缀 时的文件补全候选：枚举 work_dir 下以该前缀开头的文件/目录，
+    # 跳过常见忽略目录与隐藏项
     matches: list[str] = []
     base = os.path.join(work_dir, os.path.dirname(prefix)) if "/" in prefix else work_dir
     name_prefix = os.path.basename(prefix).lower()
@@ -135,6 +137,8 @@ def scan_files_for_at(prefix: str, work_dir: str, limit: int = 10) -> list[str]:
 
 
 def expand_at_refs(text: str, work_dir: str) -> str:
+    """把消息里的 @路径 引用替换为 [File: ...] 内联代码块，将文件内容带进 Agent 上下文。"""
+
     def _replace(m: re.Match) -> str:
         rel_path = m.group(1)
         full_path = os.path.join(work_dir, rel_path)
@@ -320,6 +324,7 @@ def _is_subagent_tool(tool_name: str) -> bool:
 
 
 def _tool_title(tool_name: str, arguments: dict[str, Any]) -> str:
+    # 为常用工具生成人类可读的一行标题（只取文件名/命令摘要，避免刷屏）
     if tool_name == "ReadFile":
         path = os.path.basename(arguments.get("file_path", ""))
         return f"Read {path}" if path else "Read"
@@ -343,6 +348,7 @@ def _tool_title(tool_name: str, arguments: dict[str, Any]) -> str:
 
 
 def _format_detail(tool_name: str, arguments: dict[str, Any], output: str) -> str:
+    # 渲染展开后的工具输出明细：Bash 区分 IN/OUT，文件工具带路径，统一截断到 MAX_TRUNCATED_LINES
     parts: list[str] = []
 
     if tool_name == "Bash":
@@ -369,6 +375,8 @@ def _format_detail(tool_name: str, arguments: dict[str, Any], output: str) -> st
 
 
 class ToolCallBlock(Static, can_focus=True):
+    """单个工具调用在 UI 中的折叠展示块（加载态/结果态可点击展开明细）。"""
+
     def __init__(self, tool_name: str, arguments: dict[str, Any], **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.tool_name = tool_name
@@ -420,6 +428,7 @@ class ToolCallBlock(Static, can_focus=True):
             self._render_expanded()
 
 
+# 命令行切换权限模式时的循环顺序（shift+tab）
 _MODE_CYCLE = [
     PermissionMode.DEFAULT,
     PermissionMode.ACCEPT_EDITS,
@@ -427,6 +436,7 @@ _MODE_CYCLE = [
     PermissionMode.BYPASS,
 ]
 
+# 各权限模式在状态栏对应的文字颜色
 _MODE_COLORS = {
     PermissionMode.DEFAULT: "dim",
     PermissionMode.ACCEPT_EDITS: "green",
@@ -558,6 +568,8 @@ THINKING_VERBS = [
 
 
 class ToolGroupSummary(Static, can_focus=True):
+    """汇总展示一组已完成工具调用的折叠条目，可点击展开/收起。"""
+
     def __init__(self, count: int, total_elapsed: float, **kwargs: Any) -> None:
         label = f"● Done ({count} tool uses · {total_elapsed:.1f}s)  (ctrl+o to expand)"
         super().__init__(label, **kwargs)
@@ -582,6 +594,8 @@ class ToolGroupSummary(Static, can_focus=True):
 
 
 class SubAgentBlock(Static, can_focus=True):
+    """展示一次子 Agent 调用的运行/结果块，含该子任务最终输出预览与统计。"""
+
     def __init__(self, agent_type: str, description: str, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._agent_type = agent_type or "agent"
@@ -635,6 +649,7 @@ class SubAgentBlock(Static, can_focus=True):
         self._render_done()
 
 
+# 应用默认配色主题（Textual Theme），深色系，变量色随状态区分
 _FLOWCODER_THEME = Theme(
     name="flowcoder",
     primary="#875FFF",
@@ -700,6 +715,12 @@ class SerializedSendGate:
 
 
 class FlowCoderApp(App):
+    """Textual TUI 装配入口：把 Provider/Agent/记忆/工具/权限/工位/MCP/团队等子系统组装并驱动。
+
+    注意（AGENTS.md）：这是已知的 god file，只允许修改展示层装配与事件处理逻辑，
+    禁止在此追加新的领域逻辑；新功能应落入对应模块后在此仅做插桩。
+    """
+
     CSS_PATH = "ui/styles.tcss"
     TITLE = "FlowCoder"
     INLINE_PADDING = 0
@@ -1356,6 +1377,7 @@ class FlowCoderApp(App):
             return ""
 
     async def _send_message(self, text: str, is_notification: bool = False) -> None:
+        """把一条用户消息送入 Agent 并渲染事件流：展开 @引用、召回记忆、流式打字、内联权限/提问。"""
         assert self.agent is not None
 
         if self._mcp_init_task and not self._mcp_init_task.done():
@@ -1814,6 +1836,7 @@ class FlowCoderApp(App):
             pass
 
     async def _handle_permission_request(self, request: PermissionRequest) -> None:
+        # 工具调用触发权限门时，挂起一次性内联审批弹窗，等待用户在界面内作答
         from flowcoder.ui.permission_dialog import InlinePermissionWidget
 
         chat = self.query_one("#chat-area", VerticalScroll)
@@ -1881,6 +1904,7 @@ class FlowCoderApp(App):
     # -----------------------------------------------------------------
 
     async def _update_session_summary(self) -> None:
+        # 会话收敛后异步用 LLM 生成摘要并写入会话 meta 文件
         if not self.session or not self.client or not self.agent:
             return
         try:
@@ -1900,6 +1924,7 @@ class FlowCoderApp(App):
     # -----------------------------------------------------------------
 
     async def _init_mcp(self) -> None:
+        # 加载 MCP 配置并注册工具，顺便统计已连接服务/工具数，用于生成给 Agent 的说明注入
         self._mcp_connecting = True
         self._update_mode_label()
         manager = MCPManager()
@@ -1938,6 +1963,7 @@ class FlowCoderApp(App):
             )
 
     async def _shutdown_mcp(self) -> None:
+        # 取消未完成的 MCP 初始化并关闭所有已建立连接，确保退出时无残留资源
         if self._mcp_init_task is not None:
             self._mcp_init_task.cancel()
             try:

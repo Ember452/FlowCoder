@@ -24,10 +24,13 @@ IMPORTANT:
 
 
 def generate_worktree_name() -> str:
+    """生成不可猜测、低碰撞概率的临时 worktree 名。"""
+    # 用 secrets 而非 random：临时名可能出现在路径/分支上，避免可预测/可枚举
     return f"agent-{secrets.token_hex(4)}"
 
 
 def build_worktree_notice(parent_cwd: str, wt_path: str) -> str:
+    # 填充父 agent 工作目录与 worktree 路径，生成注入父上下文的提示文案
     return WORKTREE_NOTICE_TEMPLATE.format(
         parent_cwd=parent_cwd,
         wt_path=wt_path,

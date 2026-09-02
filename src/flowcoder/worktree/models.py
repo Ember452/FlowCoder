@@ -8,6 +8,8 @@ from datetime import datetime
 
 @dataclass
 class Worktree:
+    """已创建/已恢复的 git worktree 的元信息。"""
+
     name: str
     path: str
     branch: str
@@ -18,6 +20,8 @@ class Worktree:
 
 @dataclass
 class WorktreeSession:
+    """进入 worktree 前的现场快照，用于退出/恢复时还原主工作区状态。"""
+
     original_cwd: str
     worktree_path: str
     worktree_name: str

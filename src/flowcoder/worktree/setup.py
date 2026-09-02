@@ -22,6 +22,7 @@ def perform_post_creation_setup(
     wt_path: str,
     symlink_directories: list[str] | None = None,
 ) -> None:
+    """新建 worktree 后补齐主仓库的本地配置、hooks、symlink 与被忽略文件。"""
     root = Path(repo_root)
     wt = Path(wt_path)
 
@@ -32,6 +33,7 @@ def perform_post_creation_setup(
 
 
 def _copy_local_configs(root: Path, wt: Path) -> None:
+    # 把仅存在于本机、不入库的配置文件（如本地 env）复制进 worktree 以保持行为一致
     for name in LOCAL_CONFIG_FILES:
         src = root / name
         if src.exists():
@@ -44,6 +46,7 @@ def _copy_local_configs(root: Path, wt: Path) -> None:
 
 
 def _setup_git_hooks(root: Path, wt: Path) -> None:
+    # 让 worktree 复用一个 hooks 目录（husky 或 .git/hooks），保证提交钩子在新工作区同样生效
     hooks_path: str | None = None
 
     husky_dir = root / ".husky"
@@ -70,6 +73,7 @@ def _setup_git_hooks(root: Path, wt: Path) -> None:
 
 
 def _create_symlinks(root: Path, wt: Path, directories: list[str]) -> None:
+    # 对大型/易变的目录建立指向主仓库的 symlink，避免复制占用磁盘且难同步（src 已存在再跳过）
     for dirname in directories:
         src = root / dirname
         dst = wt / dirname
@@ -85,6 +89,7 @@ def _create_symlinks(root: Path, wt: Path, directories: list[str]) -> None:
 
 
 def _copy_ignored_files(root: Path, wt: Path) -> None:
+    # .worktreeinclude 列出需要额外复制进 worktree 的忽略文件（默认 git 不会带到新工作区）
     include_file = root / ".worktreeinclude"
     if not include_file.exists():
         return

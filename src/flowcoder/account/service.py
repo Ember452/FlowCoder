@@ -57,6 +57,7 @@ def session_path() -> Path:
 
 
 def get_status(path: Path | None = None) -> AccountStatus:
+    """汇总当前登录状态（是否登录、账号信息、会话文件位置）。"""
     session = load_session(path)
     if session is None:
         return AccountStatus(
@@ -83,6 +84,7 @@ def sign_in(
     register: bool = False,
     path: Path | None = None,
 ) -> AccountSession:
+    """登录云端账号并持久化会话；同账号重登时保留已选模型。"""
     previous = load_session(path)
     session = cloud_login(
         email=email,
@@ -90,6 +92,7 @@ def sign_in(
         base_url=base_url,
         register=register,
     )
+    # 若本次登录与旧会话属同一账号，沿用之前选择的模型，避免每次登录重置
     if previous and previous.base_url == session.base_url and previous.email == session.email:
         session = with_selected_model(session, previous.selected_model)
     save_session(session, path)
@@ -101,6 +104,7 @@ def sign_out(path: Path | None = None) -> None:
 
 
 def list_catalog(path: Path | None = None) -> list[CatalogModel]:
+    """返回当前账号可见的模型目录；未登录抛 401。"""
     session = load_session(path)
     if session is None:
         raise AccountClientError("not signed in", status_code=401)
@@ -108,6 +112,7 @@ def list_catalog(path: Path | None = None) -> list[CatalogModel]:
 
 
 def select_model(model_name: str, path: Path | None = None) -> AccountSession:
+    """选择并持久化默认模型；需该模型在当前目录中可用。"""
     session = load_session(path)
     if session is None:
         raise AccountClientError("not signed in", status_code=401)
@@ -123,6 +128,7 @@ def select_model(model_name: str, path: Path | None = None) -> AccountSession:
 
 
 def load_account_providers(path: Path | None = None) -> list[ProviderConfig]:
+    """把账号会话合成 provider 列表；离线时仅对已选模型兜底合成单入口。"""
     session = load_session(path)
     if session is None:
         return []
@@ -153,6 +159,8 @@ def filter_local_providers(providers: list[dict[str, Any]]) -> list[dict[str, An
 
 
 def provider_payload(provider: ProviderConfig) -> dict[str, Any]:
+    """把 ProviderConfig 序列化为可下发 UI 的字典，附带 managed 类型且不回传 key 明文。"""
+    # 对外只暴露是否已设 key 的布尔位，绝不回传 key 明文（账号托管时更不落库）
     managed = "account" if is_account_provider_name(provider.name) else "local"
     return {
         "name": provider.name,

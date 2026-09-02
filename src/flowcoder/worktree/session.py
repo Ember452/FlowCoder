@@ -35,6 +35,7 @@ def save_worktree_session(
     flowcoder_dir: Path,
     session: WorktreeSession | None,
 ) -> None:
+    """把 worktree 会话落盘为 JSON；session 为 None 时写入空对象以清除旧状态。"""
     path = _session_path(flowcoder_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
     if session is None:
@@ -53,6 +54,7 @@ def save_worktree_session(
 
 
 def load_worktree_session(flowcoder_dir: Path) -> WorktreeSession | None:
+    """从磁盘加载 worktree 会话；文件缺失/损坏/字段非法时返回 None。"""
     path = _session_path(flowcoder_dir)
     if not path.exists():
         return None

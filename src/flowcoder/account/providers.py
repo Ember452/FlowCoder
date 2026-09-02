@@ -30,6 +30,8 @@ def provider_from_catalog_model(
     session: AccountSession,
     model: CatalogModel,
 ) -> ProviderConfig:
+    # 把云端目录模型合成为本地 ProviderConfig。上游密钥不落到本地（由网关持有），
+    # 本地仅透传 JWT，请求经 gateway 转发再由网关换真实上游密钥。
     # Gateway 是 OpenAI Chat Completions 兼容面；本地统一走 openai-compat。
     return ProviderConfig(
         name=account_provider_name(model.name),
@@ -47,11 +49,13 @@ def build_account_providers(
     session: AccountSession,
     models: list[CatalogModel],
 ) -> list[ProviderConfig]:
+    """把账号目录所有模型合成为 provider 列表；已选模型排到首位作为默认。"""
     if not session.logged_in or not models:
         return []
     providers = [provider_from_catalog_model(session, m) for m in models]
     if session.selected_model:
         selected = account_provider_name(session.selected_model)
+        # 排序使已选模型靠前（成为 providers[0] 默认），其余保持目录顺序
         providers.sort(key=lambda p: 0 if p.name == selected else 1)
     return providers
 

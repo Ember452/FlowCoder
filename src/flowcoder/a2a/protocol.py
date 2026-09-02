@@ -33,6 +33,7 @@ class JsonRpcRequest:
 
 
 def parse_json_rpc_request(payload: Any) -> JsonRpcRequest:
+    """校验 JSON-RPC 信封（含版本、method），抽出 method/params；非法抛 A2AError。"""
     if not isinstance(payload, dict):
         raise A2AError("Invalid JSON-RPC request", -32600)
     if payload.get("jsonrpc") != "2.0":
@@ -53,6 +54,7 @@ def parse_json_rpc_request(payload: Any) -> JsonRpcRequest:
 
 
 def parse_message_request(params: dict[str, Any]) -> A2AMessageRequest:
+    """从 message 请求中抽出 prompt/context/task 提示等字段，组装为 A2AMessageRequest。"""
     message = _message_from_params(params)
     prompt = _extract_text(message)
     if not prompt:
@@ -70,6 +72,7 @@ def parse_message_request(params: dict[str, Any]) -> A2AMessageRequest:
 
 
 def task_id_from_params(params: Any) -> str:
+    """从 params（字符串或对象）抽取任务 id，兼容 id/taskId/task_id 等多种字段名。"""
     if isinstance(params, str):
         task_id = params.strip()
         if not task_id:
@@ -106,6 +109,7 @@ def configuration_from_params(params: dict[str, Any]) -> dict[str, Any]:
 
 
 def should_wait(config: dict[str, Any]) -> bool:
+    """根据配置中的等待语义（returnImmediately/blocking/waitUntilCompleted）判断调用方是否要阻塞等待。"""
     if "returnImmediately" in config:
         return not _bool_from_config(config, "returnImmediately")
     if "blocking" in config:
@@ -116,6 +120,7 @@ def should_wait(config: dict[str, Any]) -> bool:
 
 
 def float_from_config(config: dict[str, Any], key: str, default: float) -> float:
+    """读取配置中的正数项，缺失取默认；非法值（非数字/布尔/非正）抛 A2AError。"""
     if key not in config:
         return default
     value = config[key]
@@ -132,6 +137,8 @@ def _message_from_params(params: dict[str, Any]) -> dict[str, Any]:
 
 
 def _extract_text(message: dict[str, Any]) -> str:
+    # 兼容 A2A 多种文本表达：直接 content 字符串、parts 列表（str / {text} / {data}
+    # / 嵌套 {text:{text}}），拼合并 trim
     direct = message.get("content")
     if isinstance(direct, str):
         return direct.strip()

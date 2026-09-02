@@ -13,6 +13,8 @@ from flowcoder.worktree.manager import WorktreeManager
 
 log = logging.getLogger(__name__)
 
+# 识别"临时" worktree 的名字模式：若程序崩溃留下孤儿目录，仅符合这些模式才会被自动清理，
+# 用户自定义的持久 worktree 不受影响
 EPHEMERAL_PATTERNS = [
     re.compile(r"^agent-a[0-9a-f]{7}$"),
     re.compile(r"^wf_[0-9a-f]{8}-[0-9a-f]{3}-\d+$"),
@@ -23,10 +25,12 @@ EPHEMERAL_PATTERNS = [
 
 
 def _is_ephemeral(name: str) -> bool:
+    """判断 worktree 名是否命中"临时"模式，只有这类目录才在超时后被自动清理。"""
     return any(p.match(name) for p in EPHEMERAL_PATTERNS)
 
 
 async def cleanup_stale_worktrees(manager: WorktreeManager, cutoff_hours: int) -> int:
+    """清理超出存活时长、无任何未提交/未推送改动的临时 worktree，返回清理数量。"""
     cutoff = datetime.now() - timedelta(hours=cutoff_hours)
     removed = 0
     worktree_dir = Path(manager.worktree_dir)
@@ -84,7 +88,9 @@ async def start_stale_cleanup_task(
     interval: int,
     cutoff_hours: int,
 ) -> None:
+    """后台循环：每隔 interval 秒执行一次过期 worktree 清理，直至所在任务被取消。"""
     while True:
+        # 先 sleep 再清理，避免启动瞬间立即扫描；首轮清理被推迟一个周期
         await asyncio.sleep(interval)
         try:
             count = await cleanup_stale_worktrees(manager, cutoff_hours)
