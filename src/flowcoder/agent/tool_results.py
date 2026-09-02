@@ -19,6 +19,7 @@ def tool_result_block(
     result: ToolResult,
     session_dir: Path,
 ) -> ToolResultBlock:
+    # 写回对话的块：超长内容经 prepare_tool_result_content 截断或落盘，保证上下文受控
     return ToolResultBlock(
         tool_use_id=tool_call.tool_id,
         content=prepare_tool_result_content(
@@ -35,6 +36,7 @@ def tool_result_event(
     result: ToolResult,
     elapsed: float,
 ) -> ToolResultEvent:
+    # 实时事件：把执行结果与耗时推给前端展示，不含落盘后的完整内容
     return ToolResultEvent(
         tool_id=tool_call.tool_id,
         tool_name=tool_call.tool_name,
@@ -45,6 +47,7 @@ def tool_result_event(
 
 
 def hook_rejected_result(reason: str) -> ToolResult:
+    # pre_tool_use 拒绝时把原因做成错误结果，作为工具输出回喂给 LLM
     return ToolResult(
         output=f"Hook rejected: {reason}",
         is_error=True,

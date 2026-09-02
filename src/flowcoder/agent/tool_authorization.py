@@ -28,6 +28,7 @@ async def authorize_tool_call(
     tool_call: ToolCallComplete,
     permission_description: str,
 ) -> AsyncIterator[PermissionRequest | _AuthResult]:
+    # 权限决策：先排除工具不存在/被禁用，再做 deny/ask/allow 三态细判
     tool = registry.get(tool_call.tool_name)
     if tool is None:
         yield _AuthResult(
@@ -54,6 +55,7 @@ async def authorize_tool_call(
         decision = permission_checker.check(tool, tool_call.arguments)
 
         if decision.effect == "deny":
+            # 硬拒绝：直接给出拒绝结果，不询问用户
             yield _AuthResult(
                 False,
                 ToolResult(
@@ -64,6 +66,7 @@ async def authorize_tool_call(
             return
 
         if decision.effect == "ask":
+            # ask：挂起 future 交前端回执，等待期内 Agent 暂停、整批工具亦阻塞
             loop = asyncio.get_running_loop()
             future: asyncio.Future[PermissionResponse] = loop.create_future()
             yield PermissionRequest(
@@ -74,6 +77,7 @@ async def authorize_tool_call(
             try:
                 response = await asyncio.wait_for(future, timeout=PERMISSION_REQUEST_TIMEOUT)
             except asyncio.TimeoutError:
+                # 前端失联时超时兜底，避免 Agent 被未完成的授权请求挂死
                 yield _AuthResult(
                     False,
                     ToolResult(
@@ -94,6 +98,7 @@ async def authorize_tool_call(
                 return
 
             if response == PermissionResponse.ALLOW_ALWAYS:
+                # 用户选"始终允许"：把命令模板做成 allow 规则挂到会话级规则，同款调用不再弹窗
                 content = extract_content(tool_call.tool_name, tool_call.arguments)
                 pattern = f"{content[:60]}*" if len(content) > 60 else f"{content}*"
                 rule = Rule(
@@ -103,4 +108,4 @@ async def authorize_tool_call(
                 )
                 permission_checker.rule_engine.append_local_rule(rule)
 
-    yield _AuthResult(True, None)
+    yield _AuthResult(True, None)  # 决策为 allow 或未配置 checker 时默认放行

@@ -681,6 +681,7 @@ class Agent:
             exit_plan_called = any(tc.tool_name == "ExitPlanMode" for tc in response.tool_calls)
             conversation.add_tool_results_message(tool_results)
             if exit_plan_called:
+                # Plan 模式：用户批准方案（ExitPlanMode）即本轮收敛，不再进入下一轮
                 yield TurnComplete(turn=iteration)
                 yield LoopComplete(total_turns=iteration)
                 break
