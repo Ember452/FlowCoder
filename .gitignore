@@ -42,7 +42,6 @@ htmlcov/
 *.log
 
 # IDE / 迁移过程文件（不进仓库）
-AGENTS.md
 docs/plans/migration-plan.md
 
 # OS
