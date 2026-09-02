@@ -24,6 +24,7 @@ REQUIRED_PROVIDER_METHODS = (
 
 
 def validate_provider_contract(provider: Any, target: str) -> None:
+    """校验 Provider 元数据为合法非空字符串，且实现全部必需方法，否则抛错。"""
     for attr in ("name", "kind", "version"):
         value = getattr(provider, attr, None)
         if not isinstance(value, str) or not value.strip():
@@ -56,6 +57,11 @@ def provider_constructor_kwargs(
     config: dict[str, Any],
     legacy_manager: Any | None,
 ) -> dict[str, Any]:
+    """从构造签名里挑选可注入的参数（project_root/config/manager）。
+
+    支持按名称注入的 kwargs；若构造器有必选而无法注入的参数则抛错，
+    避免懒加载到真正实例化时才暴露签名不兼容。
+    """
     available = {"project_root": project_root, "config": config}
     if legacy_manager is not None:
         available["manager"] = legacy_manager

@@ -29,6 +29,10 @@ def build_memory_hub(
     *,
     legacy_manager: MemoryManager | None = None,
 ) -> MemoryHub | None:
+    """按配置构建 MemoryHub：依次加载启用的 Provider，校验契约与重名。
+
+    记忆功能被禁用时返回 None。无启用的 Provider 时也返回 None。
+    """
     if memory_config is not None and not memory_config.enabled:
         return None
 
@@ -69,6 +73,7 @@ def _load_provider(
     *,
     legacy_manager: MemoryManager | None = None,
 ) -> MemoryProvider:
+    """按 provider 配置类型检查是否内建，内建走类导入，否则要求 python 模块路径。"""
     config = provider_config.config or {}
     if provider_config.type in BUILTIN_MEMORY_PROVIDERS:
         provider = _load_class_provider(
@@ -88,6 +93,7 @@ def _load_provider(
 def _load_python_provider(
     provider_config: MemoryProviderConfig, project_root: str
 ) -> MemoryProvider:
+    """加载基于 python 模块路径的自定义 Provider（需提供 module 与 class_name）。"""
     module_name = provider_config.module
     class_name = provider_config.class_name
     if not module_name or not class_name:
@@ -109,6 +115,7 @@ def _load_class_provider(
     *,
     legacy_manager: MemoryManager | None = None,
 ) -> MemoryProvider:
+    """按 "module:Class" 目标导入 Provider 类、按参数签名注入构造参数并实例化。"""
     module_name, _, class_name = target.partition(":")
     if not module_name or not class_name:
         raise MemoryProviderLoadError(f"Invalid memory provider target: {target}")

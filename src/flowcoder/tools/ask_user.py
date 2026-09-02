@@ -51,6 +51,12 @@ class AskUserTool(Tool):
         self._pending_event: AskUserEvent | None = None
 
     async def execute(self, params: AskUserParams) -> ToolResult:
+        """向用户异步发起提问并等待回答。
+
+        通过保存 AskUserEvent（含 future）把问题转交给外层 UI 展示，
+        本工具在此 await future；UI 填好答案后由外部 set_result 解挂。
+        超时 300s 视为用户未响应。
+        """
         questions_data = [q.model_dump() for q in params.questions]
 
         loop = asyncio.get_running_loop()

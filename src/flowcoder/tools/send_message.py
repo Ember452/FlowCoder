@@ -111,6 +111,7 @@ class SendMessageTool(Tool):
         return ToolResult(output=f"Message sent to '{p.to}'.")
 
     def _wake_pane(self, agent_id: str) -> None:
+        """唤醒队友的终端面板：向其 pane 发送一个空按键，触发其处理新消息。"""
         pane_id = self._team_manager.get_pane_id(agent_id)
         if pane_id is None:
             return

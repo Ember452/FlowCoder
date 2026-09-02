@@ -21,6 +21,7 @@ def create_default_registry(
     base_dir: str | Path | None = None,
     sandbox_mode: str = "off",
 ) -> ToolRegistry:
+    """装配默认内置工具注册表，并共享同一个文件状态缓存以保证 read-before-edit。"""
     from flowcoder.tools.bash import Bash
     from flowcoder.tools.edit_file import EditFile
     from flowcoder.tools.file_state_cache import FileStateCache

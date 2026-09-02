@@ -31,6 +31,12 @@ def create_child_agent(
     team_name: str = "",
     team_manager: Any = None,
 ) -> Agent:
+    """创建子 Agent 实例。
+
+    组装一个新的 Agent 供子任务使用：从父 Agent 继承协议 / 上下文窗口 /
+    hook 引擎，并按传入的 definition 设定工作目录、最大轮次与权限模式。
+    返回时同时把 parent_id / trace_id（及可选的 agent_id、team 信息）挂到子 Agent 上。
+    """
     from flowcoder.agent import Agent as AgentClass
 
     checker = create_subagent_permission_checker(
@@ -68,6 +74,7 @@ def complete_trace_from_agent(
     *,
     status: str = "completed",
 ) -> None:
+    """回写子 Agent 的 token 统计并结束其 trace 节点。"""
     trace_manager.update(
         trace_node.agent_id,
         input_tokens=agent.total_input_tokens,

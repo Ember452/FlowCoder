@@ -22,6 +22,7 @@ PERMISSION_MODE_MAP = {
 
 
 def resolve_permission_mode(value: str | None) -> PermissionMode:
+    """把字符串权限模式（如 "dontAsk"）解析为枚举；未知或 None 归为 DEFAULT。"""
     if value is None:
         return PermissionMode.DEFAULT
     return PERMISSION_MODE_MAP.get(value, PermissionMode.DEFAULT)
@@ -31,6 +32,7 @@ def create_subagent_permission_checker(
     work_dir: str,
     permission_mode: str | PermissionMode | None,
 ) -> PermissionChecker:
+    """构建子 Agent 的权限检查器（危险命令检测 + 工作目录沙箱 + 规则引擎）。"""
     mode = (
         permission_mode
         if isinstance(permission_mode, PermissionMode)
@@ -45,6 +47,7 @@ def create_subagent_permission_checker(
 
 
 def unique_agent_name(base_name: str, existing_names: Iterable[str]) -> str:
+    """为队友生成不与已有成员冲突的名字：优先 base_name，冲突则追加 -2/-3… 后缀。"""
     existing = set(existing_names)
     if base_name not in existing:
         return base_name
