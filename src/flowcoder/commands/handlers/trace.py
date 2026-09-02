@@ -25,6 +25,7 @@ def _status_icon(status: str) -> str:
 def create_trace_command(trace_manager: TraceManager, lead_agent_id: str = "") -> Command:
 
     async def handler(ctx: CommandContext) -> None:
+        """把 Agent 追踪节点组织成树状并渲染，末尾给出汇总。"""
         nodes = list(trace_manager._nodes.values())
         if not nodes:
             ctx.ui.add_system_message("没有 Agent 追踪记录")
@@ -52,6 +53,7 @@ def create_trace_command(trace_manager: TraceManager, lead_agent_id: str = "") -
                 )
                 _render(n.agent_id, indent + 1)
 
+        # 无父节点、或父节点已被清理的节点视为根，避免孤儿节点不被显示
         roots = [n for n in nodes if n.parent_id is None or n.parent_id not in trace_manager._nodes]
         if not roots:
             roots = nodes[:1]

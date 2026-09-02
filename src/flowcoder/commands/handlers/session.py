@@ -7,6 +7,7 @@ from flowcoder.conversation import ConversationManager
 
 
 async def handle_session(ctx: CommandContext) -> None:
+    """/session 入口：按子命令处理（list/resume/new/delete）。"""
     sm = ctx.session_manager
     if sm is None:
         ctx.ui.add_system_message("会话管理器未初始化")
@@ -57,9 +58,11 @@ async def handle_session(ctx: CommandContext) -> None:
                 title = m.title or "(未命名)"
                 lines.append(f"  {i}. [{m.id[:8]}]  {title}  ({m.message_count} msgs, {ts})")
             ctx.ui.add_system_message("\n".join(lines))
+            # 记录本轮列出的会话 id，供后续用序号恢复时映射
             ctx.config["_resume_candidates"] = [m.id for m in metas[:15]]
             return
         candidates = ctx.config.get("_resume_candidates", [])
+        # 数字入参优先解释为上一轮列表中的序号，否则按会话 id 处理
         if session_id.isdigit() and candidates:
             idx = int(session_id) - 1
             if 0 <= idx < len(candidates):

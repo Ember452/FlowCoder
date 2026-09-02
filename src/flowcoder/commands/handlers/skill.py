@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 
 async def handle_skill(ctx: CommandContext) -> None:
+    """/skill 入口：按子命令分发（list/info/reload）。"""
     parts = ctx.args.strip().split(maxsplit=1)
     subcmd = parts[0] if parts else "list"
     sub_args = parts[1] if len(parts) > 1 else ""
@@ -33,6 +34,7 @@ async def handle_skill(ctx: CommandContext) -> None:
 
 
 def _handle_list(ctx: CommandContext, loader: SkillLoader) -> None:
+    """列出已加载的技能及其来源标签。"""
     catalog = loader.get_catalog()
     if not catalog:
         ctx.ui.add_system_message("没有已加载的 Skill")
@@ -46,6 +48,7 @@ def _handle_list(ctx: CommandContext, loader: SkillLoader) -> None:
 
 
 def _handle_info(ctx: CommandContext, loader: SkillLoader, name: str) -> None:
+    """展示单个技能的元信息。"""
     if not name:
         ctx.ui.add_system_message("用法：/skill info <name>")
         return
@@ -71,6 +74,7 @@ def _handle_info(ctx: CommandContext, loader: SkillLoader, name: str) -> None:
 
 
 async def _handle_reload(ctx: CommandContext, loader: SkillLoader) -> None:
+    """重载技能，并把技能重新注册为斜杠命令。"""
     skills = loader.reload()
 
     registry = ctx.config.get("registry")

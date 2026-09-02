@@ -22,6 +22,8 @@ def register_skill_commands(
     loader: SkillLoader,
     executor: SkillExecutor | None = None,
 ) -> None:
+    """把已加载技能注册为斜杠命令；先注销上次注册的旧技能命令。"""
+    # 先清理上一次注册的技能命令，避免重载后命令与别名残留
     for name in list(_REGISTERED_SKILL_NAMES):
         if registry.find(name) is not None:
             registry._commands.pop(name, None)
@@ -35,6 +37,7 @@ def register_skill_commands(
         s_name = skill_name
         s_desc = skill_desc
 
+        # 用 make_handler(name) 闭包捕获当前 name，避免循环变量被后续轮次覆盖
         def make_handler(name: str) -> callable:
 
             async def handler(ctx: CommandContext) -> None:
@@ -53,6 +56,7 @@ def register_skill_commands(
                     ctx.ui.add_system_message(f"未找到 Skill：{name}")
                     return
 
+                # fork：异步独立执行并把结果打印出来；inline：注入对话并触发后续用户消息
                 if skill.mode == "fork":
                     ctx.ui.add_system_message(f"⏳ Running {name} skill...")
 

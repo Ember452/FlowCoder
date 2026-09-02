@@ -8,6 +8,7 @@ from flowcoder.commands.registry import Command, CommandType
 
 
 async def _handle_rewind(ctx) -> None:
+    """回退文件/会话快照：先列快照，再按选项恢复（代码+会话/仅会话/仅代码）。"""
     fh = getattr(ctx.agent, "file_history", None)
     if fh is None or not fh.has_snapshots():
         ctx.ui.add_system_message("No checkpoints to rewind to.")
@@ -51,6 +52,7 @@ async def _handle_rewind(ctx) -> None:
 
     snap = snapshots[idx]
 
+    # option 1/2/3 分别对应：代码+会话、仅会话、仅代码
     if option == 1:
         changed = fh.rewind(idx)
         ctx.conversation.replace_history(ctx.conversation.history[: snap.message_index])

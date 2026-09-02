@@ -59,6 +59,7 @@ class CommandRegistry:
         self._lock = asyncio.Lock()
 
     async def register(self, command: Command) -> None:
+        """注册命令，检测与既有命令/别名的冲突并建立别名映射。"""
         async with self._lock:
             if command.name in self._commands or command.name in self._alias_map:
                 raise ValueError(
@@ -72,6 +73,7 @@ class CommandRegistry:
                 self._alias_map[alias] = command.name
 
     def register_sync(self, command: Command) -> None:
+        """register 的同步版本，供非异步上下文（如启动装配）使用。"""
         if command.name in self._commands or command.name in self._alias_map:
             raise ValueError(
                 f"Command name '{command.name}' conflicts with an existing command or alias"
@@ -84,6 +86,7 @@ class CommandRegistry:
             self._alias_map[alias] = command.name
 
     def find(self, name: str) -> Command | None:
+        """按命令名或别名查找命令，找不到返回 None。"""
         if name in self._commands:
             return self._commands[name]
         canon = self._alias_map.get(name)

@@ -6,6 +6,7 @@ from flowcoder.commands.registry import Command, CommandContext, CommandType
 
 
 async def handle_memory(ctx: CommandContext) -> None:
+    """/memory 入口：查看/清空/编辑长期记忆。"""
     mm = ctx.memory_manager
     if mm is None:
         ctx.ui.add_system_message("记忆管理器未初始化")

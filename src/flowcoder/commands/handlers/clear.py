@@ -7,6 +7,7 @@ from flowcoder.conversation import ConversationManager
 
 
 async def handle_clear(ctx: CommandContext) -> None:
+    """清空对话：关闭旧会话、新建会话与对话、重置 Agent 循环计数。"""
     if ctx.session:
         ctx.session.close()
 

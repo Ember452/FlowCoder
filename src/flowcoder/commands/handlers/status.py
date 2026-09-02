@@ -11,6 +11,7 @@ VERSION = "v0.9.0"
 
 
 async def handle_status(ctx: CommandContext) -> None:
+    """汇总展示当前模式、沙箱、会话、Token 用量与会话运行状态。"""
     lines = ["FlowCoder 状态", "─────────────"]
 
     mode = ctx.agent.permission_mode.value if ctx.agent else "unknown"
@@ -42,6 +43,7 @@ async def handle_status(ctx: CommandContext) -> None:
 
     if ctx.memory_manager:
         content = ctx.memory_manager.load()
+        # 记忆内容以 "- " 开头的列表项计数，每条即一条记忆条目
         mem_lines = [line for line in content.split("\n") if line.strip().startswith("- ")]
         lines.append(f"记忆: {len(mem_lines)} 条")
 

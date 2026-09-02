@@ -6,6 +6,7 @@ from flowcoder.commands.registry import CommandRegistry
 
 
 def parse_command(text: str) -> tuple[str, str, bool]:
+    """解析输入：返回 (命令名, 参数, 是否形如斜杠命令)。"""
     text = text.strip()
     if not text.startswith("/"):
         return "", "", False
@@ -31,6 +32,7 @@ def complete(registry: CommandRegistry, prefix: str) -> list[tuple[str, str]]:
             desc = cmd.description
             if len(desc) > 30:
                 desc = desc[:28] + "…"
+            # 转义方括号，避免描述被 Textual 误解析为富文本标记
             desc = desc.replace("[", "\\[")
             display = f"/{cmd.name:<16} — {desc}"
             matches.append((display, "/" + cmd.name))

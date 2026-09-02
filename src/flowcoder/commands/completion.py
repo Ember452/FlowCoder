@@ -67,6 +67,7 @@ class CompletionPopup(Static):
         return self._values[self._cursor]
 
     def _refresh_content(self) -> None:
+        """按光标位置渲染候选项列表，高亮当前项并处理滚动窗口。"""
         total = len(self._displays)
         if total == 0:
             self._last_content = ""

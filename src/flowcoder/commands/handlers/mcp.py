@@ -6,6 +6,7 @@ from flowcoder.commands.registry import Command, CommandContext, CommandType
 
 
 async def handle_mcp(ctx: CommandContext) -> None:
+    """展示 MCP 服务器状态及各自注册工具数量。"""
     app = ctx.ui
     info = getattr(app, "_mcp_server_info", "")
     if not info:
@@ -18,6 +19,7 @@ async def handle_mcp(ctx: CommandContext) -> None:
     mcp_mgr = getattr(app, "mcp_manager", None)
     if mcp_mgr and hasattr(mcp_mgr, "_clients"):
         for name, client in mcp_mgr._clients.items():
+            # MCP 工具命名约定为 mcp__<server>__<tool>，据此归组统计数量
             tool_names = [
                 t.name
                 for t in ctx.agent.registry.list_tools()

@@ -10,6 +10,7 @@ _MODE_NAMES = "、".join(SANDBOX_MODES)
 
 
 async def handle_sandbox(ctx: CommandContext) -> None:
+    """查看/切换 Bash 沙箱模式，切换成功后持久化到用户配置。"""
     if ctx.agent is None:
         ctx.ui.add_system_message("Agent 未初始化")
         return

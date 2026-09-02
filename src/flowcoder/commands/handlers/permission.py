@@ -10,6 +10,7 @@ _MODE_NAMES = {m.value: m for m in PermissionMode}
 
 
 async def handle_permission(ctx: CommandContext) -> None:
+    """/permission 入口：按子命令处理（mode/rules/add/reset）。"""
     if ctx.agent is None:
         ctx.ui.add_system_message("Agent 未初始化")
         return
@@ -65,6 +66,7 @@ async def handle_permission(ctx: CommandContext) -> None:
             return
         from flowcoder.permissions.rules import parse_rule
 
+        # 从右拆分：最后一段必须是 allow/deny，前面的 Tool(pattern) 里允许包含空格
         rule_parts = rule_str.rsplit(None, 1)
         if len(rule_parts) < 2 or rule_parts[1] not in ("allow", "deny"):
             ctx.ui.add_system_message(

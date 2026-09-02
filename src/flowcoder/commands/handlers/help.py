@@ -6,12 +6,14 @@ from flowcoder.commands.registry import Command, CommandContext, CommandType
 
 
 def _format_aliases(cmd: Command) -> str:
+    """拼接命令名与别名显示（用斜杠前缀区分别名）。"""
     if not cmd.aliases:
         return cmd.name
     return cmd.name + ", " + ", ".join(f"/{a}" for a in cmd.aliases)
 
 
 async def handle_help(ctx: CommandContext) -> None:
+    """/help 入口：带参数查单个命令详情，无参数列全部命令。"""
     registry = ctx.config["registry"]
 
     if ctx.args:

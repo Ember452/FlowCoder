@@ -26,6 +26,7 @@ def _format_status(status: str) -> str:
 def create_tasks_handler(task_manager: TaskManager):
 
     async def handler(ctx: CommandContext) -> None:
+        """/tasks 入口：按子命令处理（info/cancel/list）。"""
         args = ctx.args.strip()
         parts = args.split(maxsplit=1) if args else []
         subcmd = parts[0] if parts else ""

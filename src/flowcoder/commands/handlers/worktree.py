@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 def create_worktree_command(manager: WorktreeManager) -> Command:
 
     async def handle_worktree(ctx: CommandContext) -> None:
+        """/worktree 入口：按子命令分发（create/list/enter/exit/status）。"""
         args = ctx.args.strip()
         if not args:
             ctx.ui.add_system_message(
@@ -57,6 +58,7 @@ async def _handle_create(
     manager: WorktreeManager,
     args: list[str],
 ) -> None:
+    """创建并进入 worktree，成功后把 Agent 工作目录切到新路径。"""
     if not args:
         ctx.ui.add_system_message("用法: /worktree create <name> [base-branch]")
         return
@@ -84,6 +86,7 @@ async def _handle_create(
 
 
 def _handle_list(ctx: CommandContext, manager: WorktreeManager) -> None:
+    """列出全部 worktree，标记当前所在的那个。"""
     worktrees = manager.list_worktrees()
     if not worktrees:
         ctx.ui.add_system_message("当前没有活跃的 worktree")
@@ -107,6 +110,7 @@ async def _handle_enter(
     manager: WorktreeManager,
     args: list[str],
 ) -> None:
+    """进入指定 worktree 并把 Agent 工作目录切换到对应路径。"""
     if not args:
         ctx.ui.add_system_message("用法: /worktree enter <name>")
         return
@@ -126,6 +130,7 @@ async def _handle_exit(
     manager: WorktreeManager,
     args: list[str],
 ) -> None:
+    """退出当前 worktree，支持 --remove/--discard，并把工作目录切回原目录。"""
     session = manager.get_current_session()
     if session is None:
         ctx.ui.add_system_message("当前不在任何 worktree 中")
@@ -148,6 +153,7 @@ async def _handle_exit(
 
 
 def _handle_status(ctx: CommandContext, manager: WorktreeManager) -> None:
+    """展示当前 worktree 会话的各项路径与分支信息。"""
     session = manager.get_current_session()
     if session is None:
         ctx.ui.add_system_message("当前不在任何 worktree 中")

@@ -27,6 +27,7 @@ def _usage() -> str:
 
 
 async def handle_account(ctx: CommandContext) -> None:
+    """/account 命令入口：按子命令分发（状态/登录/模型/登出）。"""
     parts = (ctx.args or "").split()
     if not parts:
         status = get_status()
@@ -84,6 +85,7 @@ async def handle_account(ctx: CommandContext) -> None:
             except AccountClientError:
                 pass
             selected = session.selected_model
+            # 登录成功后若尚无默认模型，自动选目录里第一个可用模型，避免新会话无模型可用
             if models and not selected:
                 session = select_model(models[0].name)
                 selected = session.selected_model

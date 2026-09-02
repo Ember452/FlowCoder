@@ -6,6 +6,7 @@ from flowcoder.commands.registry import Command, CommandContext, CommandType
 
 
 async def handle_compact(ctx: CommandContext) -> None:
+    """手动触发上下文压缩；token 过少或 Agent 未初始化则跳过。"""
     if ctx.agent is None:
         ctx.ui.add_system_message("Agent 未初始化")
         return
