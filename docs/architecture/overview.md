@@ -58,4 +58,4 @@ config.md，决策原始记录在 docs/specs/ 的六篇 ADR。
 | 可靠性加固 | client/resilience.py + agent/budget.py + e2e | v0.5.0-hardening |
 
 规划中未开工：扩展阶段（scheduler/watchdog/Outbox，P5a-c）、
-框架抽象 keel/（R1–R4，见 FRAMEWORK_REFACTOR_PLAN.md）。
+框架抽象 keel/（R1–R4，见 docs/plans/FRAMEWORK_REFACTOR_PLAN.md）。

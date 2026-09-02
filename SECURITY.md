@@ -23,4 +23,4 @@
 - **权限门**：工具执行必须先过四模式审批，沙箱是权限门的下游而非替代
 - **执行隔离**：`sandbox_mode=docker` 时命令在容器内以 non-root、断网、资源受限方式执行
 
-历史安全修复记录见 `docs/specs/` 下的 ADR 与 `CODE_QUALITY_AUDIT.md`。
+历史安全修复记录见 `docs/specs/` 下的 ADR 与 `docs/plans/CODE_QUALITY_AUDIT.md`。

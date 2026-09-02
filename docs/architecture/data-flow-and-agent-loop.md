@@ -650,7 +650,7 @@ fake 与真实实现可互换。见 docs/architecture/eval.md。
 ### 5. 混沌演练（scripts/chaos.py，P4）
 
 可脚本化故障注入（池耗尽/容器 kill/LLM 断网 30s/429 风暴/预算超限），
-实测报告与压测数据见 docs/chaos-report.md。
+实测报告与压测数据见 docs/reports/chaos-report.md。
 
 ## 十一、读代码时建议优先追问的点
 

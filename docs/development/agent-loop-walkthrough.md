@@ -136,7 +136,7 @@ approved 才查 registry、执行。`_execute_single_tool_direct`（core.py:667�
 提取每 5 轮一次（`MEMORY_EXTRACTION_INTERVAL = 5`，core.py:125,484-487）。
 为什么后台：两者都是 LLM 调用，阻塞主循环会让用户白等。已知代价：裸
 `ensure_future` 无异常兜底、无引用持有——这是 P0.5 审计项（后台任务需入
-`self._bg_tasks` 集合），见 CODE_QUALITY_AUDIT.md。
+`self._bg_tasks` 集合），见 docs/plans/CODE_QUALITY_AUDIT.md。
 
 ### 8. 为什么 max_tokens 触顶不报错而是续写
 

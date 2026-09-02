@@ -12,7 +12,7 @@
 - 四维预算闸（P3）：`agent/budget.py` + Agent 最小接入——token/轮次/时间/成本
   超限触发"总结并收敛"而非硬杀，默认不设预算
 - 混沌演练框架（P4）：`scripts/chaos.py` 五场景（池耗尽、容器 kill 自愈、
-  LLM 断网 30s、429 风暴、预算超限），实测报告 docs/chaos-report.md（5/5 通过）
+  LLM 断网 30s、429 风暴、预算超限），实测报告 docs/reports/chaos-report.md（5/5 通过）
 
 ### Changed
 - 新增错误类型：`ServerError`（5xx，可重试）、`LLMTimeoutError`；

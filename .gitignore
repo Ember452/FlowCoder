@@ -43,7 +43,7 @@ htmlcov/
 
 # IDE / 迁移过程文件（不进仓库）
 AGENTS.md
-docs/migration-plan.md
+docs/plans/migration-plan.md
 
 # OS
 .DS_Store
