@@ -40,6 +40,7 @@ class ProviderErrorMapper:
         )
 
     def to_llm_error(self, error: BaseException) -> LLMError:
+        """把 SDK 异常按类型归一成统一 LLMError；5xx 转可重试 ServerError，其余归一般 API 错误。"""
         if isinstance(error, self.authentication_errors):
             return AuthenticationError(f"Invalid API key: {error}")
         if isinstance(error, self.rate_limit_errors):
@@ -57,6 +58,7 @@ class ProviderErrorMapper:
 
 
 def provider_error_mapper(sdk: ModuleType) -> ProviderErrorMapper:
+    """从具体 provider SDK 模块里抽取各类异常的元组，组装归一化映射器。"""
     return ProviderErrorMapper(
         authentication_errors=_exception_tuple(sdk.AuthenticationError),
         rate_limit_errors=_exception_tuple(sdk.RateLimitError),

@@ -36,6 +36,7 @@ class LLMTimeoutError(LLMError):
 
 
 def response_header(error: BaseException, name: str) -> str:
+    """安全地从 SDK 异常对象里取响应头某个值；对象无响应/取不到返回空串。"""
     response = getattr(error, "response", None)
     headers = getattr(response, "headers", None)
     if headers is None:
@@ -48,6 +49,7 @@ def response_header(error: BaseException, name: str) -> str:
 
 
 def parse_retry_after_seconds(value: str) -> float | None:
+    """把 Retry-After 头解析成等待秒数；空串/非法/负数都视为无建议。"""
     if not value:
         return None
     try:
@@ -60,6 +62,7 @@ def parse_retry_after_seconds(value: str) -> float | None:
 
 
 def rate_limit_error(error: BaseException) -> RateLimitError:
+    """把触发限流的原始异常转成 RateLimitError，并带上 provider 建议的 retry-after。"""
     retry_after = parse_retry_after_seconds(response_header(error, "retry-after"))
     if retry_after is None:
         return RateLimitError("Rate limited. Please wait.")

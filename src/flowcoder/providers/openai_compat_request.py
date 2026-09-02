@@ -44,6 +44,7 @@ def build_chat_completion_request_kwargs(
         "messages": request_messages,
         "max_tokens": max_output_tokens,
         "stream": True,
+        # 流式须显式开启用量统计，才能在最后一个 chunk 附带 usage 字段
         "stream_options": {"include_usage": True},
     }
     if tools:

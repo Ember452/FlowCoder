@@ -16,6 +16,7 @@ from flowcoder.tools.base import (
 
 
 def parse_tool_arguments(raw: str) -> dict[str, Any]:
+    """把流式累加的参数字符串解析成 dict；空串或非法 JSON 兜底为空 dict。"""
     if not raw:
         return {}
     try:

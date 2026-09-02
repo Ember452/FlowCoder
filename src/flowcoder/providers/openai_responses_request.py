@@ -49,6 +49,8 @@ def build_openai_response_request_kwargs(
     if tools:
         kwargs["tools"] = convert_tools_for_responses(tools)
     if thinking:
+        # 开启 reasoning 简短摘要（auto）：响应完成时由 input_tokens 之外的
+        # reasoning_summary 事件补一份精简推理概述
         kwargs["reasoning"] = {"summary": "auto"}
     elif temperature is not None:
         kwargs["temperature"] = temperature

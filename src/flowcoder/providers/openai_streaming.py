@@ -30,6 +30,7 @@ RESPONSE_REASONING_DONE_EVENTS = {
 
 
 def as_dict(value: Any) -> dict[str, Any]:
+    """把 Pydantic v2 模型 / dataclass / dict 统一归一为普通 dict；其余类型兜底为空 dict。"""
     if isinstance(value, dict):
         return value
     if hasattr(value, "model_dump"):
@@ -42,6 +43,7 @@ def as_dict(value: Any) -> dict[str, Any]:
 
 
 def get_text(value: Any, *names: str) -> str:
+    """按优先级从属性或 dict 字段中取首个非空字符串；推理内容各 provider 字段名不一致，故多键兜底。"""
     for name in names:
         item = getattr(value, name, None)
         if isinstance(item, str) and item:
@@ -55,6 +57,7 @@ def get_text(value: Any, *names: str) -> str:
 
 
 def parse_tool_arguments(raw: str) -> dict[str, Any]:
+    """把流式累加的参数字符串解析成 dict；空串或非法 JSON 兜底为空 dict。"""
     if not raw:
         return {}
     try:

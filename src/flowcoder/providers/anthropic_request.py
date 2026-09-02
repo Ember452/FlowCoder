@@ -48,6 +48,8 @@ def mark_last_tool_for_cache(tools: list[dict[str, Any]]) -> list[dict[str, Any]
 
 
 def supports_adaptive_thinking(model: str) -> bool:
+    # 仅 opus-4 / sonnet-4 家族且小版本 >=6 的模型支持自适应思考：
+    # 去掉家族前缀后取首个数字位（如 "claude-sonnet-4-5" → "5"），>=6 即命中
     for family in ("claude-opus-4-", "claude-sonnet-4-"):
         if model.startswith(family):
             rest = model[len(family) :]
@@ -58,7 +60,9 @@ def supports_adaptive_thinking(model: str) -> bool:
 
 def thinking_config(model: str, max_output_tokens: int) -> dict[str, Any]:
     if supports_adaptive_thinking(model):
+        # 自适应思考下 budget_tokens=0 交由模型自行决定预算
         return {"type": "enabled", "budget_tokens": 0}
+    # Anthropic 约束：budget_tokens 必须 < max_tokens 且 >= 1024，故取 max-1 再兜底
     return {
         "type": "enabled",
         "budget_tokens": max(max_output_tokens - 1, 1024),
