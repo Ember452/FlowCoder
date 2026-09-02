@@ -38,6 +38,7 @@ class ConfigError(Exception):
 
 
 def validate_schema_version(value: object) -> int:
+    """校验 schema_version：正整数且不超出当前支持的最高版本。"""
     if not isinstance(value, int) or isinstance(value, bool) or value < 1:
         raise ConfigError("'schema_version' must be a positive integer")
     if value > CURRENT_CONFIG_SCHEMA_VERSION:
@@ -108,6 +109,7 @@ def _integer_field(
     min_value: int,
     allow_zero: bool,
 ) -> int:
+    """校验整数字段：类型、符号（正/非负）与下界，返回原值。"""
     if not isinstance(value, int) or isinstance(value, bool):
         requirement = "non-negative" if allow_zero else "positive"
         raise ConfigError(f"{field_label} must be a {requirement} integer")
@@ -120,6 +122,7 @@ def _integer_field(
 
 
 def reject_removed_config_sections(raw: dict) -> None:
+    """任一已下线配置段出现即报错，防止重新引入 GUI/cloud 等残留。"""
     removed = find_removed_config_sections(raw)
     if not removed:
         return

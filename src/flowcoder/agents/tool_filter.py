@@ -140,6 +140,10 @@ def resolve_agent_tools(
     definition: AgentDef,
     is_background: bool = False,
 ) -> ToolRegistry:
+    """按全局禁用、来源、后台白名单与定义里的 allow/deny 分层过滤工具表。
+
+    MCP 工具第 0 层始终放行（命名前缀 mcp_），不受后续 remove/only 影响。
+    """
     all_tools = _tools_by_name(parent_registry)
 
     # 第 0 层：MCP 工具始终放行，先分离出来再做后续过滤
@@ -171,6 +175,11 @@ def build_teammate_tools(
     backend_type: str,
     definition: AgentDef | None = None,
 ) -> ToolRegistry:
+    """构造 teammate 的工具表：按后端裁剪基础工具 + 注入团队协调工具。
+
+    IN_PROCESS 后端只放行白名单；其他后端移除团队级工具并保留其余，
+    最后统一注入 Task*/SendMessage 等协调工具。
+    """
     from flowcoder.teams.models import BackendType
     from flowcoder.tools.send_message import SendMessageTool
     from flowcoder.tools.tasks.create import TaskCreateTool
@@ -211,6 +220,7 @@ def build_teammate_tools(
 
 
 def apply_coordinator_filter(registry: ToolRegistry) -> ToolRegistry:
+    """收敛为协调者模式可见的最小工具集（COORDINATOR_MODE_ALLOWED_TOOLS）。"""
     return _registry_from_tools(
         _only_tools(_tools_by_name(registry), COORDINATOR_MODE_ALLOWED_TOOLS)
     )

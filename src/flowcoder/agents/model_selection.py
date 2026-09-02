@@ -23,6 +23,7 @@ def resolve_subagent_model_override(
     requested_model: str | None,
     definition_model: str,
 ) -> str | None:
+    """确定模型覆盖：显式请求优先，其次定义里的模型（除 inherit），否则 None。"""
     model = requested_model or (definition_model if definition_model != "inherit" else None)
     if model == "inherit":
         return None
@@ -33,6 +34,7 @@ def build_subagent_provider_config(
     provider_config: ProviderConfig,
     model_alias: str,
 ) -> ProviderConfig:
+    """以父 provider 协议/凭据为基础，仅替换模型名，构造子 Agent provider。"""
     model_id = MODEL_ALIAS_MAP.get(model_alias, model_alias)
     return ProviderConfig(
         name=f"sub-{model_alias}",
@@ -68,6 +70,7 @@ def select_subagent_client(
     requested_model: str | None,
     definition_model: str,
 ) -> LLMClient:
+    """选择子 Agent 的 LLM client：有模型覆盖则建独立 client，否则沿用父 client。"""
     model_override = resolve_subagent_model_override(
         requested_model,
         definition_model,

@@ -23,6 +23,7 @@ def write_text_atomic(path: Path | str, text: str) -> None:
     try:
         with fd:
             fd.write(text)
+        # 临时文件与目标同目录，rename 才能保证在同一文件系统内原子替换
         Path(fd.name).replace(path)
     except OSError:
         Path(fd.name).unlink(missing_ok=True)

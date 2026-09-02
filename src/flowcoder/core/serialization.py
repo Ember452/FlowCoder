@@ -70,6 +70,11 @@ def build_anthropic_messages(messages: list[Message]) -> list[dict[str, Any]]:
 
 
 def build_openai_input(messages: list[Message]) -> list[dict[str, Any]]:
+    """OpenAI 原生 Functions 格式。
+
+    工具调用拆成独立的 function_call/function_call_output 消息而不并进
+    assistant 消息（针对 maintainer 仍用旧补全协议的场景）。
+    """
     result: list[dict[str, Any]] = []
     for m in messages:
         if m.tool_uses:
@@ -143,6 +148,7 @@ def build_chat_completion_messages(messages: list[Message]) -> list[dict[str, An
 
 
 def build_messages(messages: list[Message], protocol: str = "anthropic") -> list[dict[str, Any]]:
+    """按协议分派到对应的消息构造器（anthropic/openai/openai-compat）."""
     if protocol == "openai":
         return build_openai_input(messages)
     if protocol == "openai-compat":

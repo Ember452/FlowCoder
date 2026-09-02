@@ -25,6 +25,8 @@ VALID_ISOLATION_MODES = {"", "worktree"}
 
 @dataclass
 class AgentDef:
+    """一份已解析的 Agent 定义（含校验后的字段与正文 system_prompt）。"""
+
     agent_type: str
     when_to_use: str
     system_prompt: str = ""
@@ -126,6 +128,7 @@ def build_agent_def(
     file_path: Path | None = None,
     source: str = "builtin",
 ) -> AgentDef:
+    """校验 frontmatter 字段并把 meta+正文组装成 AgentDef。"""
     _validate_agent_meta(meta, str(file_path) if file_path is not None else "")
     return AgentDef(
         agent_type=_required_string(meta, "name", ""),
@@ -156,6 +159,7 @@ def build_agent_def(
 
 
 def parse_agent_file(path: Path) -> AgentDef:
+    """读取并解析单个 .md Agent 定义文件。"""
     try:
         raw = path.read_text(encoding="utf-8")
     except OSError as e:

@@ -15,6 +15,7 @@ MAX_NOTIFICATION_RESULT_LENGTH = 5000
 
 
 def format_task_notification(task: BackgroundTask) -> str:
+    """把后台任务的状态与结果格式化成可注入对话的通知文本（长结果截断）。"""
     result = task.result
     if len(result) > MAX_NOTIFICATION_RESULT_LENGTH:
         result = result[:MAX_NOTIFICATION_RESULT_LENGTH] + "\n... (truncated)"

@@ -13,6 +13,10 @@ class FrontmatterParseError(Exception):
 
 
 def parse_yaml_frontmatter(raw: str) -> tuple[dict, str]:
+    """解析文本开头的 --- YAML --- 元数据，返回 (meta, body)。
+
+    meta 必须是映射；正文为去掉开头换行后的剩余部分。
+    """
     stripped = raw.lstrip()
     lines = stripped.splitlines(keepends=True)
     if not lines or lines[0].strip() != "---":

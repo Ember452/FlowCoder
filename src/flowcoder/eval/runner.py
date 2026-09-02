@@ -201,6 +201,7 @@ class EvalRunner:
     def _problem_result_from_trials(
         self, problem: Problem, trials: list[TrialRecord]
     ) -> ProblemResult:
+        """从 trial 列表汇总成单题结果：选胜出（或最后失败）trial 填聚合字段。"""
         result = ProblemResult(task_id=problem.task_id, _trials=trials)
         if not trials:
             return result

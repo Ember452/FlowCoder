@@ -94,6 +94,7 @@ async def _make_solver(args: argparse.Namespace):
 
 
 async def _run_once(args: argparse.Namespace, problems, label: str):
+    """构建执行器与 Runner 运行一轮，写报告并返回 (results, metrics)。"""
     from flowcoder.eval import (
         DockerSandboxExecutor,
         EvalRunner,
@@ -122,6 +123,7 @@ async def _run_once(args: argparse.Namespace, problems, label: str):
 
 
 async def _run_compare(args: argparse.Namespace, problems) -> int:
+    """跑对比矩阵（无自愈/有自愈 × k=1/k=3），产出一份对比报告。"""
     from flowcoder.eval import write_comparison_report
 
     matrix = [
@@ -145,6 +147,7 @@ async def _run_compare(args: argparse.Namespace, problems) -> int:
 
 
 async def run_eval(args: argparse.Namespace) -> int:
+    """入口：加载数据集并分派到单轮或对比评测，返回进程退出码。"""
     from flowcoder.eval import load_problems
 
     problems = load_problems(args.dataset, limit=args.limit)

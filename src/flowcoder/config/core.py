@@ -88,6 +88,7 @@ class ProviderConfig:
         return 128_000
 
     def get_max_output_tokens(self) -> int:
+        """解析最大输出 token：显式配置优先，thinking 模式放宽到 64k。"""
         if self.max_output_tokens > 0:
             return self.max_output_tokens
         if self.thinking:
@@ -96,10 +97,12 @@ class ProviderConfig:
 
 
 def resolve_env_vars(value: str) -> str:
+    """把字符串中 ${VAR} 占位替换为环境变量值；未定义的保留原样。"""
     return _ENV_VAR_RE.sub(lambda m: os.environ.get(m.group(1), m.group(0)), value)
 
 
 def build_child_env(declared_env: dict[str, str] | None) -> dict[str, str]:
+    """为子进程构造环境：继承 PATH，并解析声明中的 ${VAR} 占位。"""
     env: dict[str, str] = {}
     path = os.environ.get("PATH", "")
     if path:
@@ -223,6 +226,7 @@ class AppConfig:
 
 
 def _load_single_file(path: Path, *, require_providers: bool = True) -> AppConfig:
+    """解析单个 YAML 文件为 AppConfig（含结构校验与模型组装）。"""
     try:
         raw = yaml.safe_load(path.read_text(encoding="utf-8"))
     except yaml.YAMLError as e:
@@ -331,6 +335,10 @@ def _load_single_file(path: Path, *, require_providers: bool = True) -> AppConfi
 
 
 def _merge_config(base: AppConfig, override: AppConfig) -> AppConfig:
+    """把上层（override）配置合入 base；仅以 declared 标记为准覆盖各段。
+
+    mcp_servers 按 name 逐项覆盖；hooks 追加；其余段整体替换。
+    """
     if override.providers:
         base.providers = override.providers
     if override.permission_mode_declared:

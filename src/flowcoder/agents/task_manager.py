@@ -40,6 +40,8 @@ class BackgroundTask:
 
 
 class TaskManager:
+    """管理后台 Agent 任务的注册、运行与完成通知（launch/adopt/poll）。"""
+
     def __init__(self) -> None:
         self._tasks: dict[str, BackgroundTask] = {}
         self._notify_queue: asyncio.Queue[str] = asyncio.Queue()
@@ -52,6 +54,7 @@ class TaskManager:
         name: str = "",
         fork_conversation: Any = None,
     ) -> str:
+        """启动一个后台任务（可带 fork 会话），返回任务 ID。"""
         task_id = uuid.uuid4().hex[:8]
         bg = BackgroundTask(
             id=task_id,
@@ -68,6 +71,7 @@ class TaskManager:
         return task_id
 
     async def _run_background(self, task_id: str, fork_conversation: Any = None) -> None:
+        """驱动后台 Agent 完成初始任务；若属团队，则转为 idle 监听邮箱等待后续指令。"""
         bg = self._tasks.get(task_id)
         if bg is None:
             return
@@ -132,6 +136,7 @@ class TaskManager:
         partial_result: str = "",
         name: str = "",
     ) -> str:
+        """接管一个已在运行的 Agent 作为后台任务，保留其部分结果。"""
         task_id = uuid.uuid4().hex[:8]
         bg = BackgroundTask(
             id=task_id,

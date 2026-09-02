@@ -70,6 +70,7 @@ def _empty_heal_and_failure() -> dict[str, float | int]:
 
 
 def _heal_and_failure_metrics(results: list[ProblemResult]) -> dict[str, float | int]:
+    """统计首轮失败数、被自愈回收的题数与失败类别分布。"""
     evaluated = [r for r in results if not r.skipped]
     first_round_failures = 0
     healed = 0

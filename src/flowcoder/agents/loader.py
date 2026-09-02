@@ -24,6 +24,11 @@ PLUGIN_AGENTS_DIR = "agents"
 
 
 class AgentLoader:
+    """从 项目级/用户级/内置/插件 多源加载 AgentDef，前一级优先。
+
+    定义以 agent_type 为键去重合并；加载后保留 file_path 以便热重载。
+    """
+
     def __init__(
         self,
         work_dir: str,
@@ -38,6 +43,7 @@ class AgentLoader:
             self.register_plugin_source(source)
 
     def _scan_directory(self, path: Path, source: str) -> list[AgentDef]:
+        """扫描目录下所有 .md 且可解析为 AgentDef 的文件，标记来源。"""
         results: list[AgentDef] = []
         if not path.is_dir():
             return results
@@ -108,6 +114,7 @@ class AgentLoader:
         return results
 
     def load_all(self) -> dict[str, AgentDef]:
+        """按优先级全量加载并合并多源定义，返回 agent_type → AgentDef。"""
         seen: dict[str, AgentDef] = {}
 
         # 优先级 1：项目级（最高）
@@ -128,6 +135,7 @@ class AgentLoader:
         return seen
 
     def get(self, agent_type: str) -> AgentDef | None:
+        """按类型取定义；来自文件的定义在命中后尝试从磁盘热重载。"""
         cached = self._agents.get(agent_type)
         if cached is None:
             return None

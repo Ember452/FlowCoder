@@ -54,6 +54,7 @@ _MISUSE_EXCEPTIONS = frozenset(
 
 
 def _compiles(code: str) -> bool:
+    """用静态 compile 探测代码是否可编译（不做执行）。"""
     try:
         compile(code, "<solution>", "exec")
     except SyntaxError:

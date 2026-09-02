@@ -24,6 +24,7 @@ class _LiveSession:
         self._conversation = ConversationManager()
 
     async def ask(self, prompt: str) -> AgentSolution:
+        """驱动 Agent 奔跑一轮，聚合文本输出与 token/轮次等统计到 AgentSolution。"""
         from flowcoder.agent import ErrorEvent, LoopComplete, StreamText, UsageEvent
 
         solution = AgentSolution()
@@ -75,6 +76,7 @@ class DockerSandboxExecutor:
         return self._pool
 
     async def run_test(self, files: Mapping[str, str], timeout_s: float) -> ExecutionOutcome:
+        """把待测文件写入沙箱并执行 run_test.py，映射 sandbox 结果为 ExecutionOutcome。"""
         from flowcoder.sandbox import SandboxError
 
         try:

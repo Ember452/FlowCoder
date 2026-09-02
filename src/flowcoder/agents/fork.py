@@ -35,6 +35,12 @@ def build_forked_messages(
     conversation: ConversationManager,
     task: str,
 ) -> ConversationManager:
+    """由父会话深拷贝出 fork 会话，追加 boilerplate 与任务提示。
+
+    拒绝从 fork 中再次 fork（防嵌套）；父会话最后一条助手消息若带
+    尚未拿到结果的工具调用，则用 interrupted 占位补上——否则新会话
+    在缺少对应 tool_result 的情况下回放会让模型困惑。
+    """
     for msg in conversation.history:
         if FORK_BOILERPLATE_TAG in msg.content:
             raise ForkError("Cannot fork from a forked agent. Fork nesting is not allowed.")
