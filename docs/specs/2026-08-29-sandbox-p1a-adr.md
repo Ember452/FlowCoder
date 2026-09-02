@@ -2,7 +2,7 @@
 
 - 状态：Accepted（真实容器验收项延后，见文末）
 - 日期：2026-08-29
-- 关联：PROMPTS.md P1a、TRANSFORMATION_PLAN.md Phase 1、docs/architecture/sandbox.md
+- 关联：PROMPTS.md P1a、docs/plans/TRANSFORMATION_PLAN.md Phase 1、docs/architecture/sandbox.md
 
 ## 背景与目标
 

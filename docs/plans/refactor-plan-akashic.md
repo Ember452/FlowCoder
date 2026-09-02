@@ -1,6 +1,6 @@
 # FlowCoder 借鉴 akashic-agent 改造计划
 
-> 参考项目：`C:\Users\7\Desktop\星环Agent\akashic-agent-main`
+> 参考项目：`akashic-agent（开源参考项目）`
 > 改造目标项目：`D:\DEVELOP\python\FlowCoder`
 > 文档版本：v1.0 · 2026-08-05
 

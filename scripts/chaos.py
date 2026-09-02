@@ -1,7 +1,7 @@
 """可脚本化混沌演练（P4）。
 
 每个场景四要素：注入方式、预期行为、实测、结论（pass/fail + 指标）。
-结果写 JSON（chaos-results/），供 docs/chaos-report.md 引用。
+结果写 JSON（chaos-results/），供 docs/reports/chaos-report.md 引用。
 
 场景与依赖：
   pool-exhaustion   容器池耗尽排队/快速失败      fake runtime（无 Docker 可跑）

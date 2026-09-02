@@ -2,7 +2,7 @@
 
 - 状态：Accepted（真实 LLM 跑 50 题的第一份报告待本机执行，见文末）
 - 日期：2026-08-29
-- 关联：PROMPTS.md P2a、TRANSFORMATION_PLAN.md Phase 2、docs/architecture/eval.md
+- 关联：PROMPTS.md P2a、docs/plans/TRANSFORMATION_PLAN.md Phase 2、docs/architecture/eval.md
 
 ## 背景
 

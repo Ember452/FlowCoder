@@ -9,7 +9,7 @@
 ## P0 — 基线与环境
 
 ```text
-先完整阅读 AGENTS.md、TRANSFORMATION_PLAN.md 的 Phase 0、PROJECT_REVIEW.md。
+先完整阅读 AGENTS.md、docs/plans/TRANSFORMATION_PLAN.md 的 Phase 0、docs/plans/PROJECT_REVIEW.md。
 
 任务：
 1. 检查本机 WSL2 与 Docker 环境是否就绪（wsl --status、docker version）；如果未安装，
@@ -27,8 +27,8 @@
 ## P0.5 — 质量修复批次一（安全与挂死，改造前必做）
 
 ```text
-先完整阅读 AGENTS.md、CODE_QUALITY_AUDIT.md 全文（重点是 P0 的 12 项与修复顺序建议）、
-TRANSFORMATION_PLAN.md 的 Phase 0。
+先完整阅读 AGENTS.md、docs/plans/CODE_QUALITY_AUDIT.md 全文（重点是 P0 的 12 项与修复顺序建议）、
+docs/plans/TRANSFORMATION_PLAN.md 的 Phase 0。
 
 任务：修复审查报告中的全部 12 项 P0，按安全类 → 挂死类 → 引擎类顺序，每项：
 1. 先写一个复现该问题的失败测试（安全类问题用恶意输入用例，如 sandbox.py 的
@@ -51,14 +51,14 @@ TRANSFORMATION_PLAN.md 的 Phase 0。
 
 约束：只修这 12 项，不顺手修 P1/P2；每项修复的 diff 独立可读。
 产出：docs/specs/ 写一篇安全修复 ADR（三个安全洞的根因与修法）；
-在 CODE_QUALITY_AUDIT.md 的 P0 表格逐项标注"已修复 + 测试名"。
+在 docs/plans/CODE_QUALITY_AUDIT.md 的 P0 表格逐项标注"已修复 + 测试名"。
 验收：全量测试绿；12 项 P0 每项有对应回归测试；ADR 存在。
 ```
 
 ## P1a — 沙箱：单容器执行与资源限额
 
 ```text
-先完整阅读 AGENTS.md、TRANSFORMATION_PLAN.md 的 Phase 1、docs/architecture/permissions-hooks.md、
+先完整阅读 AGENTS.md、docs/plans/TRANSFORMATION_PLAN.md 的 Phase 1、docs/architecture/permissions-hooks.md、
 docs/architecture/tools.md、P0 产出的两篇走读笔记。
 
 任务：新建 src/flowcoder/sandbox/ 子包，本阶段只做"单容器执行"，不做池化：
@@ -83,7 +83,7 @@ docker SDK 若未安装先在 pyproject.toml 可选依赖组中声明。
 ## P1b — 沙箱：容器池化与泄漏回收
 
 ```text
-先完整阅读 AGENTS.md、TRANSFORMATION_PLAN.md 的 Phase 1、src/flowcoder/sandbox/ 现有代码与测试。
+先完整阅读 AGENTS.md、docs/plans/TRANSFORMATION_PLAN.md 的 Phase 1、src/flowcoder/sandbox/ 现有代码与测试。
 
 任务：
 1. pool.py：SandboxPool——启动时预热 N 个容器（N 可配置，默认 10），执行请求 O(1) 租借、
@@ -105,7 +105,7 @@ docker SDK 若未安装先在 pyproject.toml 可选依赖组中声明。
 ## P1c — 沙箱：接入工具链与权限门
 
 ```text
-先完整阅读 AGENTS.md、TRANSFORMATION_PLAN.md 的 Phase 1、docs/architecture/tools.md、
+先完整阅读 AGENTS.md、docs/plans/TRANSFORMATION_PLAN.md 的 Phase 1、docs/architecture/tools.md、
 permissions-hooks.md、src/flowcoder/permissions/ 与 tools/ 的 bash 工具实现。
 
 任务：把 bash 工具的执行从裸 subprocess 切换到沙箱：
@@ -130,7 +130,7 @@ docker 模式"超时脚本被杀、内存超限被限、断网命令失败"三�
 ## P2a — 评测：HumanEval+ 流水线
 
 ```text
-先完整阅读 AGENTS.md、TRANSFORMATION_PLAN.md 的 Phase 2、docs/architecture/agent-loop.md、
+先完整阅读 AGENTS.md、docs/plans/TRANSFORMATION_PLAN.md 的 Phase 2、docs/architecture/agent-loop.md、
 P0 产出的 agent-loop 走读笔记、scripts/benchmark.py 现状。
 
 任务：新建 src/flowcoder/eval/ 包，结构按 dataset / runner / metrics / report 四段解耦：
@@ -151,7 +151,7 @@ P0 产出的 agent-loop 走读笔记、scripts/benchmark.py 现状。
 ## P2b — 评测：自愈闭环与失败分类
 
 ```text
-先完整阅读 AGENTS.md、TRANSFORMATION_PLAN.md 的 Phase 2、src/flowcoder/eval/ 现有代码。
+先完整阅读 AGENTS.md、docs/plans/TRANSFORMATION_PLAN.md 的 Phase 2、src/flowcoder/eval/ 现有代码。
 
 任务：
 1. runner.py 增加自愈循环：测试失败输出喂回 Agent，最多 N 轮（默认 3）修复重跑；
@@ -169,7 +169,7 @@ P0 产出的 agent-loop 走读笔记、scripts/benchmark.py 现状。
 ## P3 — 可靠性加固
 
 ```text
-先完整阅读 AGENTS.md、TRANSFORMATION_PLAN.md 的 Phase 3、docs/architecture/llm-client.md、
+先完整阅读 AGENTS.md、docs/plans/TRANSFORMATION_PLAN.md 的 Phase 3、docs/architecture/llm-client.md、
 docs/development/03-LLM客户端与Provider适配层.md、src/flowcoder/client/ 现有错误处理。
 
 任务：
@@ -187,15 +187,15 @@ docs/development/03-LLM客户端与Provider适配层.md、src/flowcoder/client/ 
 ## P4 — 混沌演练与数据整理
 
 ```text
-先完整阅读 AGENTS.md、TRANSFORMATION_PLAN.md 的 Phase 4 与扩展阶段、前序各阶段产出的 ADR。
+先完整阅读 AGENTS.md、docs/plans/TRANSFORMATION_PLAN.md 的 Phase 4 与扩展阶段、前序各阶段产出的 ADR。
 
 任务：
 1. 写 scripts/chaos.py：可脚本化的故障注入——池耗尽、执行中途 kill 容器、
    LLM 断网 30s、429 风暴、任务超预算，每个场景定义预期行为。
-2. 逐场景执行并记录实际行为 vs 预期，产出 docs/chaos-report.md：
+2. 逐场景执行并记录实际行为 vs 预期，产出 docs/reports/chaos-report.md：
    场景、注入方式、预期、实测、结论；附压测数据表（并发数、P50/P99、恢复成功率）。
 3. 任何场景实测不符预期：定位根因、修复、重测，修复计入 commit 正文。
-4. 把 TRANSFORMATION_PLAN.md 简历增量中的 X 占位符用实测数字填掉，更新 CHANGELOG.md。
+4. 把 docs/plans/TRANSFORMATION_PLAN.md 简历增量中的 X 占位符用实测数字填掉，更新 CHANGELOG.md。
 
 验收：chaos-report.md 中每个场景都有可复现的注入命令和实测结论。
 ```
@@ -203,7 +203,7 @@ docs/development/03-LLM客户端与Provider适配层.md、src/flowcoder/client/ 
 ## P5a — 扩展：自动化值守调度器
 
 ```text
-先完整阅读 AGENTS.md、TRANSFORMATION_PLAN.md 的扩展阶段、docs/architecture/daemon.md、
+先完整阅读 AGENTS.md、docs/plans/TRANSFORMATION_PLAN.md 的扩展阶段、docs/architecture/daemon.md、
 docs/architecture/config.md、src/flowcoder/daemon/ 任务注册表实现。
 
 任务：新建 src/flowcoder/scheduler/ 子包：
@@ -219,7 +219,7 @@ docs/architecture/config.md、src/flowcoder/daemon/ 任务注册表实现。
 ## P5b — 扩展：仓库看门狗（主动式 Agent）
 
 ```text
-先完整阅读 AGENTS.md、TRANSFORMATION_PLAN.md 的扩展阶段、docs/architecture/daemon.md、
+先完整阅读 AGENTS.md、docs/plans/TRANSFORMATION_PLAN.md 的扩展阶段、docs/architecture/daemon.md、
 P5a 产出的 scheduler 代码与 ADR。
 
 任务：新建 src/flowcoder/watchdog/ 子包：
@@ -235,7 +235,7 @@ P5a 产出的 scheduler 代码与 ADR。
 ## P5c — 扩展：Outbox 式可靠事件投递
 
 ```text
-先完整阅读 AGENTS.md、TRANSFORMATION_PLAN.md 的扩展阶段、docs/architecture/daemon.md、
+先完整阅读 AGENTS.md、docs/plans/TRANSFORMATION_PLAN.md 的扩展阶段、docs/architecture/daemon.md、
 src/flowcoder/daemon/ 的事件流实现、docs/architecture/observability.md。
 
 任务：改造 daemon 的 WebSocket 事件流为 Outbox 模式：
@@ -249,11 +249,98 @@ src/flowcoder/daemon/ 的事件流实现、docs/architecture/observability.md。
 
 ---
 
+## 求职冲刺阶段（A–E，总方案见 docs/plans/DIFFERENTIATION_PLAN.md）
+
+> A–D 相互独立、可随时穿插执行，不阻塞 P/R 系列；阶段 E 即下方 R1–R4。
+> 排序建议（回填优先 → B/C 二选一 → OTel → Keel）见 docs/plans/DIFFERENTIATION_PLAN.md 第九节。
+
+## A — 真实数据回填
+
+```text
+先完整阅读 AGENTS.md、docs/plans/DIFFERENTIATION_PLAN.md 阶段 A、docs/reports/chaos-report.md 的回填清单、
+src/flowcoder/eval/ 现有代码。
+
+任务：
+1. 检查 Docker 环境（docker version）；未就绪则给出精确安装步骤让我手动执行，
+   不自行安装系统级软件（同 P0 约定）。
+2. 跑 python scripts/chaos.py --all --docker，逐场景回填 docs/reports/chaos-report.md
+   "待环境就绪的回填项"。
+3. 20 容器并发压测：docker ps 对账无泄漏、P50/P99、冷启动消除数据（对比单容器路径）。
+4. 配置真实 LLM key 跑 HumanEval+ / SWE-bench Lite 子集：pass@1、自愈回收率、
+   单题 token 成本、耗时分布；结果落 eval-results/（不入 git），摘要入 docs/。
+5. 把 docs/plans/TRANSFORMATION_PLAN.md 与 docs/plans/DIFFERENTIATION_PLAN.md 中的 ⏳ 占位用实测数字填掉，
+   只填真实跑出来的；跑不出的保持 ⏳ 并注明原因。
+
+约束：不改任何 src/ 代码；评测暴露的产品缺陷记录为问题清单，不顺手修。
+验收：chaos-report 回填清单清零；同配置重跑评测分数稳定（温度固定）。
+```
+
+## B — 间接提示注入防御
+
+```text
+先完整阅读 AGENTS.md、docs/plans/DIFFERENTIATION_PLAN.md 阶段 B、docs/architecture/permissions-hooks.md、
+tools.md、sandbox.md、src/flowcoder/permissions/ 与 tools/ 的工具结果回传路径。
+
+任务：新建 src/flowcoder/security/ 子包：
+1. taint.py：工具输出污染标记——tool result 作为不可信数据的传播追踪。
+2. detector.py：检测文件 / web / MCP 结果中伪装成指令的注入模式（启发式规则，
+   规则集写进 ADR）。
+3. gate.py：升级门——被污染回合内的高危工具调用强制走 ask 审批，对接现有
+   permissions 四模式（审批语义只升不降）。
+4. attacks/：攻击测试集 ≥20 条 payload（藏进文件内容 / 搜索结果 / MCP 返回），
+   另配等量正常内容样本，实测拦截率与误报率双指标。
+5. 测试全部用 fake（不依赖真实 LLM）；docs/specs/ 写 ADR（含 prompts.py:61 从
+   prompt 恳求升级为引擎强制的取舍论证）；docs/architecture/ 新增 security.md
+   并在 AGENTS.md 第三节目录职责表登记。
+
+约束：不改 agent/core.py；接入点选在工具结果回传与权限判定之间的现有位置，
+若必须改核心循环，停下来给方案等我决策。
+验收：fake 单测全绿；拦截率 / 误报率有实测数字；污染 + 高危 = 强制 ask 有测试覆盖。
+```
+
+## C — 缓存感知的成本治理
+
+```text
+先完整阅读 AGENTS.md、docs/plans/DIFFERENTIATION_PLAN.md 阶段 C、docs/architecture/context-memory.md、
+src/flowcoder/providers/anthropic_request.py 的断点放置、src/flowcoder/context/ 压缩路径。
+
+任务：
+1. 压缩决策加入"缓存失效成本"项：估算压缩节省 vs 缓存重算成本，节省不足则不压；
+   估算模型（含 OpenAI 前缀缓存语义对照）写进 ADR。
+2. 成本归因：每任务 / 每工具 / 每阶段的 token 与成本分账，挂进事件流与 eval 报告，
+   提供"这次运行的 token 花在哪了"的内省 API。
+3. 对比实验：同负载跑"压缩激进 vs 缓存友好"两种策略，产出成本权衡曲线，
+   数据落 eval-results/，摘要入 docs/。
+4. tests：缓存感知决策的单元测试（fake usage 数字驱动决策路径）。
+
+约束：不改 providers 协议层既有断点放置；新逻辑收敛在 context/ 治理层。
+验收：两种策略的成本对比曲线可复现；内省 API 对任意一次历史运行能答出 token 分布。
+```
+
+## D — OpenTelemetry 可观测
+
+```text
+先完整阅读 AGENTS.md、docs/plans/DIFFERENTIATION_PLAN.md 阶段 D、docs/architecture/observability.md、
+现有 TraceManager 实现。
+
+任务：
+1. TraceManager 桥接 OTel：span 层级 agent-loop → llm-call → tool-call → sandbox-exec，
+   trace_id 贯穿（对齐 AGENTS.md 日志规范）。
+2. OTLP 导出，兼容 Jaeger / Tempo；现有事件语义不丢字段（新旧字段对照表写进 ADR）。
+3. opentelemetry-sdk 在 pyproject.toml 可选依赖组声明（新依赖理由写 commit 正文）。
+4. tests：span 层级与字段映射的单元测试（fake exporter）。
+
+约束：TraceManager 现有 API 保持可用（桥接而非替换），调用方零改动。
+验收：一次任务跑完导出完整 trace，可在标准 backend 查看；现有单测不回归。
+```
+
+---
+
 ## R1 — 框架重构：事件协议先行
 
 ```text
-先完整阅读 AGENTS.md、FRAMEWORK_REFACTOR_PLAN.md 全文（重点是第二节分层架构与第四节路线）、
-PROJECT_REVIEW.md。确认 TRANSFORMATION_PLAN 各阶段已完成。
+先完整阅读 AGENTS.md、docs/plans/FRAMEWORK_REFACTOR_PLAN.md 全文（重点是第二节分层架构与第四节路线）、
+docs/plans/PROJECT_REVIEW.md。确认 TRANSFORMATION_PLAN 各阶段已完成。
 
 任务（重构阶段 1，绞杀者模式第一步）：
 1. 新建顶层包 keel/（与 src/flowcoder 同级或在 src/ 下，按项目 src-layout 惯例定，写 ADR 记录决策）。
@@ -266,12 +353,12 @@ PROJECT_REVIEW.md。确认 TRANSFORMATION_PLAN 各阶段已完成。
 ## R2 — 框架重构：五端口抽取
 
 ```text
-先完整阅读 AGENTS.md、FRAMEWORK_REFACTOR_PLAN.md 第二、四节、R1 产出的 keel/events/、
+先完整阅读 AGENTS.md、docs/plans/FRAMEWORK_REFACTOR_PLAN.md 第二、四节、R1 产出的 keel/events/、
 docs/architecture/ 下 agent-loop / llm-client / permissions-hooks / observability 四篇。
 
 任务（重构阶段 2，依赖倒置）：
 1. keel/ 定义五个 Protocol：Provider、Tool、Policy、Memory、Sandbox
-   （签名按 FRAMEWORK_REFACTOR_PLAN.md 第二节，结合现有代码实际签名微调，偏差写进 ADR）。
+   （签名按 docs/plans/FRAMEWORK_REFACTOR_PLAN.md 第二节，结合现有代码实际签名微调，偏差写进 ADR）。
 2. 逐模块迁移（每个模块一个独立 commit，迁移完跑全量测试再迁下一个）：
    providers → keel.providers（实现 Provider）；permissions → keel.policy（实现 Policy）；
    sandbox → keel.sandbox（实现 Sandbox）；memory → keel.memory（实现 Memory 接口）；
@@ -285,7 +372,7 @@ docs/architecture/ 下 agent-loop / llm-client / permissions-hooks / observabili
 
 ```text
 先完整阅读 AGENTS.md（特别是第四节文件拆分规范与 app.py 禁令）、
-FRAMEWORK_REFACTOR_PLAN.md 第二、四节、keel/ 与 src/flowcoder/ 当前结构。
+docs/plans/FRAMEWORK_REFACTOR_PLAN.md 第二、四节、keel/ 与 src/flowcoder/ 当前结构。
 
 任务（重构阶段 3）：
 1. 编码专属物迁入 profiles/coder/（或保留 flowcoder 作为 coder profile，选一种并在 ADR
@@ -299,7 +386,7 @@ FRAMEWORK_REFACTOR_PLAN.md 第二、四节、keel/ 与 src/flowcoder/ 当前结�
 ## R4 — 框架重构：抽象验证（裁判局）
 
 ```text
-先完整阅读 AGENTS.md、FRAMEWORK_REFACTOR_PLAN.md 第二、四节、keel/ 全部公共接口。
+先完整阅读 AGENTS.md、docs/plans/FRAMEWORK_REFACTOR_PLAN.md 第二、四节、keel/ 全部公共接口。
 
 任务（重构阶段 4，抽象是否成功的唯一裁判）：
 1. 写 profiles/minimal/：一个 CSV 数据问答 Agent——只依赖 keel（Provider/Tool/Policy/Memory），

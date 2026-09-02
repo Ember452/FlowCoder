@@ -1,6 +1,6 @@
 # ADR：P0.5 安全修复批次——三个安全洞的根因与修法
 
-> 日期：2026-08-29 · 范围：CODE_QUALITY_AUDIT.md P0-1/2/3（安全类）
+> 日期：2026-08-29 · 范围：docs/plans/CODE_QUALITY_AUDIT.md P0-1/2/3（安全类）
 > 修复原则：最小 diff、先写失败测试再修、不顺手拆结构（结构问题留给 R2/R3）。
 
 ## ADR-001：PathSandbox fallback 分支的 `..` 穿越绕过（P0-1）
