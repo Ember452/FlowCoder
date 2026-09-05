@@ -21,7 +21,7 @@ import logging
 import time
 from collections.abc import Awaitable, Callable
 
-from flowcoder.scheduler.cron import CronExpr
+from flowcoder.core.cron import CronExpr
 from flowcoder.scheduler.latency import LatencyTracker
 from flowcoder.scheduler.store import (
     JobDefinition,

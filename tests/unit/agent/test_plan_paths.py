@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from flowcoder.ui.plan_paths import (
+from flowcoder.agent.plan_paths import (
     ADJECTIVES,
     NOUNS,
     create_plan_path,

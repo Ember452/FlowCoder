@@ -107,9 +107,9 @@ from flowcoder.permissions import (
     PermissionChecker,
     PermissionMode,
 )
-from flowcoder.ui.plan_paths import create_plan_path
+from flowcoder.agent.plan_paths import create_plan_path
 from flowcoder.hooks import HookContext, HookEngine
-from flowcoder.prompts import (
+from flowcoder.agent.prompts import (
     build_environment_context,
     build_plan_mode_reminder,
     build_system_prompt,

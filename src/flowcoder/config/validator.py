@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from flowcoder.core.cron import CronError, CronExpr
+
 from flowcoder.config.model_context import (
     lookup_model_context_window as lookup_model_context_window,
 )
@@ -275,8 +277,6 @@ def validate_scheduler(raw: object) -> dict:
         cron = _required_string_field(entry, "cron", label)
         prompt = _required_string_field(entry, "prompt", label)
         # cron 合法性提前到配置期（加载即报错，不等到触发）
-        from flowcoder.scheduler.cron import CronError, CronExpr
-
         try:
             CronExpr.parse(cron)
         except CronError as e:

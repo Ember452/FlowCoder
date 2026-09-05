@@ -23,23 +23,6 @@ from flowcoder.config import AppConfig
 logger = logging.getLogger(__name__)
 
 
-async def build_budget_for_agent(config: AppConfig):
-    """按配置构造 Budget（供 agent 工厂注入）；未配置返回 None。"""
-    from flowcoder.agent.budget import Budget
-
-    if config is None or config.budget is None:
-        return None
-    b = config.budget
-    return Budget(
-        max_total_tokens=b.max_total_tokens,
-        max_turns=b.max_turns,
-        max_seconds=b.max_seconds,
-        max_cost_usd=b.max_cost_usd,
-        input_price_per_1m=b.input_price_per_1m,
-        output_price_per_1m=b.output_price_per_1m,
-    )
-
-
 def _build_scheduler(server, config: AppConfig):
     from flowcoder.scheduler import DaemonJobExecutor, Scheduler
     from flowcoder.scheduler.store import ScheduleStore

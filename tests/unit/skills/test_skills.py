@@ -787,7 +787,7 @@ class TestLoadSkillTool:
 
 class TestAgentSkillIntegration:
     def test_activate_and_clear(self) -> None:
-        from flowcoder.prompts import build_environment_context
+        from flowcoder.agent.prompts import build_environment_context
 
         env = build_environment_context(
             "/test",
@@ -800,7 +800,7 @@ class TestAgentSkillIntegration:
         assert "Available: commit" in env
 
     def test_empty_active_skills(self) -> None:
-        from flowcoder.prompts import build_environment_context
+        from flowcoder.agent.prompts import build_environment_context
 
         env = build_environment_context("/test")
         assert "Active Skills" not in env

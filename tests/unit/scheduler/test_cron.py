@@ -6,7 +6,7 @@ import datetime as dt
 
 import pytest
 
-from flowcoder.scheduler.cron import CronError, CronExpr
+from flowcoder.core.cron import CronError, CronExpr
 
 
 def _dt(y, mo, d, h=0, mi=0, s=0) -> dt.datetime:

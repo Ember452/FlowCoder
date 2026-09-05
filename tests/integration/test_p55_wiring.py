@@ -12,7 +12,7 @@ from starlette.testclient import TestClient
 from flowcoder.config import AppConfig, ConfigError, ProviderConfig
 from flowcoder.config.core import BudgetConfig, SchedulerConfig
 from flowcoder.config.validator import validate_budget, validate_watchdog
-from flowcoder.daemon.background import build_budget_for_agent
+from flowcoder.agent.budget import build_budget_from_config
 from flowcoder.daemon.server import create_app
 from flowcoder.daemon.session.store import SessionStore
 from flowcoder.permissions import PermissionMode
@@ -93,11 +93,11 @@ class TestConfigParsing:
 class TestBudgetWiring:
     async def test_build_budget_from_config(self) -> None:
         cfg = AppConfig(providers=[_provider()])
-        assert await build_budget_for_agent(cfg) is None  # 未配置
+        assert build_budget_from_config(cfg) is None  # 未配置
         from flowcoder.config.core import BudgetConfig
 
         cfg.budget = BudgetConfig(max_total_tokens=50_000)
-        budget = await build_budget_for_agent(cfg)
+        budget = build_budget_from_config(cfg)
         assert budget is not None
         assert budget.max_total_tokens == 50_000
 

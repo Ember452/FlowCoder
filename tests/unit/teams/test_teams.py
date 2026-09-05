@@ -911,14 +911,14 @@ class TestTranscript:
 
 class TestAgentCoordinatorIntegration:
     def test_normal_prompt(self):
-        from flowcoder.prompts import build_system_prompt
+        from flowcoder.agent.prompts import build_system_prompt
 
         prompt = build_system_prompt()
         assert "You are FlowCoder" in prompt
         assert "# System" in prompt
 
     def test_coordinator_prompt(self):
-        from flowcoder.prompts import build_system_prompt
+        from flowcoder.agent.prompts import build_system_prompt
 
         prompt = build_system_prompt(coordinator_mode=True)
         assert "coordinator" in prompt.lower()
@@ -926,7 +926,7 @@ class TestAgentCoordinatorIntegration:
         assert "Synthesis" in prompt
 
     def test_coordinator_overrides_plan(self):
-        from flowcoder.prompts import build_system_prompt
+        from flowcoder.agent.prompts import build_system_prompt
 
         prompt = build_system_prompt(coordinator_mode=True)
         assert "# System" not in prompt

@@ -73,7 +73,7 @@ async def create_agent_from_config(
 
         logging.getLogger(__name__).warning(error)
 
-    from flowcoder.daemon.background import build_budget_for_agent
+    from flowcoder.agent.budget import build_budget_from_config
 
     agent = Agent(
         client=client,
@@ -85,7 +85,7 @@ async def create_agent_from_config(
         instructions_content=instructions,
         memory_hub=memory_hub,
         hook_engine=hook_engine,
-        budget=await build_budget_for_agent(config),
+        budget=build_budget_from_config(config),
     )
 
     deps = _create_agent_deps(config, work_dir, provider, agent, registry, mcp_manager)

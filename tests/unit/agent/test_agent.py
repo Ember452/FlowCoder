@@ -21,7 +21,7 @@ from flowcoder.agent import (
     UsageEvent,
     partition_tool_calls,
 )
-from flowcoder.prompts import (
+from flowcoder.agent.prompts import (
     build_environment_context,
     build_plan_mode_reminder,
     build_system_prompt,

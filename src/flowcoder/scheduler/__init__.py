@@ -7,7 +7,7 @@
 - daemon_job.py：把任务提交为 daemon 会话的 Agent 回合（复用任务注册表）
 """
 
-from flowcoder.scheduler.cron import CronError, CronExpr
+from flowcoder.core.cron import CronError, CronExpr
 from flowcoder.scheduler.daemon_job import DaemonJobExecutor
 from flowcoder.scheduler.latency import LatencyTracker
 from flowcoder.scheduler.runner import Scheduler

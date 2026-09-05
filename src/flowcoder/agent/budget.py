@@ -12,6 +12,10 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from flowcoder.config import AppConfig
 
 
 @dataclass(frozen=True)
@@ -90,3 +94,23 @@ class BudgetState:
 def converge_message(reason: str) -> str:
     """注入对话的收敛请求（作为 user 消息，模型下一轮可见）。"""
     return f"[预算告警] {reason}。请立即总结当前进展并给出最终结论，不要再调用任何工具。"
+
+
+def build_budget_from_config(config: AppConfig) -> Budget | None:
+    """按配置构造 Budget（供 agent 工厂注入）；未配置返回 None。
+
+    config 为 AppConfig（含 budget 段）。此函数原在 daemon/background.py，
+    为消除 agent→daemon 反向依赖迁入本模块：config→budget 是纯映射，
+    属 agent 层自身职责，daemon 只做消费。
+    """
+    if config is None or config.budget is None:
+        return None
+    b = config.budget
+    return Budget(
+        max_total_tokens=b.max_total_tokens,
+        max_turns=b.max_turns,
+        max_seconds=b.max_seconds,
+        max_cost_usd=b.max_cost_usd,
+        input_price_per_1m=b.input_price_per_1m,
+        output_price_per_1m=b.output_price_per_1m,
+    )
