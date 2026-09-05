@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -95,7 +96,7 @@ class SendMessageTool(Tool):
             if team.lead_agent_id != self._from_agent_id:
                 member_ids.append(team.lead_agent_id)
             mailbox.broadcast(member_ids, msg, exclude=self._from_agent_id)
-            self._wake_pane_members(team, member_ids)
+            await self._wake_pane_members(team, member_ids)
             return ToolResult(output=f"Message broadcast to {len(member_ids)} teammates.")
 
         target_id = registry.resolve(p.to)
@@ -106,11 +107,11 @@ class SendMessageTool(Tool):
             )
 
         mailbox.write(target_id, msg)
-        self._wake_pane(target_id)
+        await self._wake_pane(target_id)
 
         return ToolResult(output=f"Message sent to '{p.to}'.")
 
-    def _wake_pane(self, agent_id: str) -> None:
+    async def _wake_pane(self, agent_id: str) -> None:
         """唤醒队友的终端面板：向其 pane 发送一个空按键，触发其处理新消息。"""
         pane_id = self._team_manager.get_pane_id(agent_id)
         if pane_id is None:
@@ -118,10 +119,12 @@ class SendMessageTool(Tool):
         try:
             from flowcoder.teams.spawn_tmux import send_keys_to_pane
 
-            send_keys_to_pane(pane_id, "")
+            # tmux 子进程调用（timeout 10s）放线程池，避免阻塞事件循环
+            await asyncio.to_thread(send_keys_to_pane, pane_id, "")
         except Exception:
-            pass
+            # 唤醒失败不影响消息投递（邮箱已落盘），但需可观测
+            log.debug("Failed to wake pane for %s", agent_id, exc_info=True)
 
-    def _wake_pane_members(self, team: Any, agent_ids: list[str]) -> None:
+    async def _wake_pane_members(self, team: Any, agent_ids: list[str]) -> None:
         for aid in agent_ids:
-            self._wake_pane(aid)
+            await self._wake_pane(aid)

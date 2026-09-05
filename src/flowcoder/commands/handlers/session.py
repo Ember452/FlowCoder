@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from flowcoder.commands.registry import Command, CommandContext, CommandType
 from flowcoder.conversation import ConversationManager
 
@@ -67,7 +69,8 @@ async def handle_session(ctx: CommandContext) -> None:
             idx = int(session_id) - 1
             if 0 <= idx < len(candidates):
                 session_id = candidates[idx]
-        result = sm.resume(session_id)
+        # SessionManager 的 list/resume 含同步文件 IO（resume 需全量解析 jsonl），放线程池
+        result = await asyncio.to_thread(sm.resume, session_id)
         if result is None:
             ctx.ui.add_system_message(f"会话未找到: {session_id}")
             return
@@ -88,7 +91,7 @@ async def handle_session(ctx: CommandContext) -> None:
     elif sub == "new":
         if ctx.session:
             ctx.session.close()
-        new_session = sm.create()
+        new_session = await asyncio.to_thread(sm.create)
         ctx.config["set_session"](new_session)
         ctx.config["set_conversation"](ConversationManager())
         if ctx.agent:

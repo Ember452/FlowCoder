@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from flowcoder.commands.registry import Command, CommandContext, CommandType
 from flowcoder.conversation import ConversationManager
 
@@ -12,7 +14,8 @@ async def handle_clear(ctx: CommandContext) -> None:
         ctx.session.close()
 
     if ctx.session_manager:
-        new_session = ctx.session_manager.create()
+        # SessionManager.create 含同步文件 IO（meta 落盘），放线程池避免阻塞事件循环
+        new_session = await asyncio.to_thread(ctx.session_manager.create)
         ctx.config["set_session"](new_session)
 
     ctx.config["set_conversation"](ConversationManager())

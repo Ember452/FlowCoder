@@ -13,6 +13,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -426,7 +427,10 @@ class AgentTool(Tool):
 
         # 8. 按后端类型启动队友
         if backend in (BackendType.TMUX, BackendType.ITERM2):
-            return self._spawn_pane_teammate(p, team, member, backend, wt, agent_id, teammate_name)
+            # tmux/iTerm2 子进程调用（timeout 10s）放线程池，避免阻塞事件循环
+            return await asyncio.to_thread(
+                self._spawn_pane_teammate, p, team, member, backend, wt, agent_id, teammate_name
+            )
 
         # 进程内模式：直接用 task_manager 执行并通知结果
         task_id = self._task_manager.launch(

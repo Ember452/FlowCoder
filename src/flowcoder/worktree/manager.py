@@ -153,7 +153,9 @@ class WorktreeManager:
 
             os.makedirs(self.worktree_dir, exist_ok=True)
 
-            result = self._run_git(
+            # git 子进程（timeout 60s）与文件系统操作放线程池执行，避免阻塞事件循环
+            result = await asyncio.to_thread(
+                self._run_git,
                 [
                     "worktree",
                     "add",
@@ -161,12 +163,13 @@ class WorktreeManager:
                     branch_name,
                     wt_path,
                     base_branch,
-                ]
+                ],
             )
             if result.returncode != 0:
                 raise WorktreeError(f"git worktree add failed: {result.stderr.strip()}")
 
-            perform_post_creation_setup(
+            await asyncio.to_thread(
+                perform_post_creation_setup,
                 self.repo_root,
                 wt_path,
                 symlink_directories=self.symlink_directories,
@@ -193,8 +196,8 @@ class WorktreeManager:
         if wt is None:
             raise WorktreeError(f"worktree not found: {name}")
 
-        original_branch = self._get_current_branch()
-        original_head = self._get_head_commit()
+        original_branch = await asyncio.to_thread(self._get_current_branch)
+        original_head = await asyncio.to_thread(self._get_head_commit)
 
         session = WorktreeSession(
             original_cwd=self.repo_root,
@@ -232,7 +235,7 @@ class WorktreeManager:
             raise WorktreeError(f"not in worktree: {name}")
 
         if action == "remove" and not discard_changes:
-            changes = count_worktree_changes(wt.path, wt.head_commit)
+            changes = await asyncio.to_thread(count_worktree_changes, wt.path, wt.head_commit)
             if changes.uncommitted > 0 or changes.new_commits > 0:
                 raise WorktreeError(
                     f"worktree has changes ({changes.uncommitted} uncommitted, "
@@ -251,16 +254,13 @@ class WorktreeManager:
     # ------------------------------------------------------------------
 
     async def _remove_worktree(self, name: str, wt: Worktree) -> None:
-        result = self._run_git(["worktree", "remove", "--force", wt.path])
+        result = await asyncio.to_thread(self._run_git, ["worktree", "remove", "--force", wt.path])
         if result.returncode != 0:
             log.warning("git worktree remove failed: %s", result.stderr.strip())
 
-        # 短暂让出事件循环，等 git 落盘完成后删除分支，避免竞态失败
-        await asyncio.sleep(0.1)
-
         flat_slug = flatten_slug(name)
         branch_name = f"worktree-{flat_slug}"
-        self._run_git(["branch", "-D", branch_name])
+        await asyncio.to_thread(self._run_git, ["branch", "-D", branch_name])
 
         self.active.pop(name, None)
 
@@ -274,7 +274,7 @@ class WorktreeManager:
         if wt is None:
             return CleanupResult(kept=False)
 
-        if has_worktree_changes(wt.path, head_commit):
+        if await asyncio.to_thread(has_worktree_changes, wt.path, head_commit):
             return CleanupResult(kept=True, path=wt.path, branch=wt.branch)
 
         await self._remove_worktree(name, wt)
