@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 import re
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -489,5 +490,16 @@ def update_user_config_value(key: str, value: str, *, path: Path | None = None) 
         updated = pattern.sub(line, existing, count=1)
     else:
         updated = f"{line}\n{existing}" if existing else f"{line}\n"
-    target.write_text(updated, encoding="utf-8")
+    # config.yaml 可能含 api_key 明文：经 mkstemp（0o600）+ 原子替换落盘，
+    # 避免 POSIX 上以组/其他用户可读的默认权限存在
+    fd, temporary = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp", dir=target.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(updated)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, target)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
     return target
