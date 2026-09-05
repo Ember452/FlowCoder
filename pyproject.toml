@@ -52,6 +52,11 @@ markers = [
     "slow: 耗时较长的测试",
 ]
 
+[tool.coverage.report]
+# 单测语句覆盖率基线（2026-09 实测 63%）。门禁只防退化：提升覆盖率后应上调此值，
+# 降到阈值以下意味着新增代码没有配套测试。
+fail_under = 62
+
 [tool.ruff]
 line-length = 100
 src = ["src", "tests"]

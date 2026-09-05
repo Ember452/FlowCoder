@@ -55,6 +55,11 @@ jobs:
       - name: Run integration tests
         run: pytest tests/integration -q
 
+      - name: Run e2e tests
+        # e2e 全部基于 fake/进程内 TestClient（除 docker 标记用例自带 skipif），
+        # 不依赖真实 LLM API，纳入 CI 防关键路径回归
+        run: pytest tests/e2e -q
+
   coverage:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -68,5 +73,22 @@ jobs:
       - name: Install dependencies
         run: uv pip install -e ".[dev]" --system
       - name: Unit tests with coverage
+        # fail_under 钉在 pyproject [tool.coverage.report]，低于基线即失败
         run: pytest tests/unit --cov=src/flowcoder --cov-report=term-missing
-      # 说明：先观测覆盖率基线，稳定后在 --cov-fail-under=<基线> 处加门禁
+
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        run: pip install uv
+      - name: Install dependencies
+        run: uv pip install -e ".[dev]" --system
+      - name: Dependency vulnerability audit
+        run: |
+          pip install pip-audit
+          pip-audit --skip-editable
