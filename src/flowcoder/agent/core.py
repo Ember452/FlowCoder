@@ -58,6 +58,7 @@ from flowcoder.agent.output_recovery import (
     OutputRecoveryState,
     handle_output_token_limit,
 )
+from flowcoder.logctx import bind_trace_id, new_trace_id, reset_trace_id
 from flowcoder.agent.recovery import record_tool_recovery_snapshot
 from flowcoder.agent.response_history import (
     add_final_response,
@@ -277,6 +278,17 @@ class Agent:
         return latest_user_query(conversation)
 
     async def run(self, conversation: ConversationManager) -> AsyncIterator[AgentEvent]:
+        """主循环入口：确保根 trace_id 存在，并在整个调用链的日志上下文中绑定它。"""
+        if not self.trace_id:
+            self.trace_id = new_trace_id()
+        token = bind_trace_id(self.trace_id)
+        try:
+            async for event in self._run_loop(conversation):
+                yield event
+        finally:
+            reset_trace_id(token)
+
+    async def _run_loop(self, conversation: ConversationManager) -> AsyncIterator[AgentEvent]:
         """主循环：注入上下文后反复 LLM↔工具，直到无 tool_call 或达上限。
         这个是主要的ReAct循环"""
         # 初始化对话管理器；

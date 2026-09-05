@@ -7,11 +7,10 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import logging
 import os
 import sys
-from pathlib import Path
 
+from flowcoder.logctx import setup_logging
 from flowcoder.subagents.notification import format_task_notification
 from flowcoder.config import ConfigError, load_config
 from flowcoder.conversation import ConversationManager
@@ -20,14 +19,7 @@ from flowcoder.permissions import PermissionMode
 
 
 def main() -> None:
-    # 先确保 .flowcoder/ 目录存在，否则下面写 debug.log 会因目录不存在而崩溃
-    Path(".flowcoder").mkdir(parents=True, exist_ok=True)
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(name)s %(message)s",
-        filename=".flowcoder/debug.log",
-        filemode="w",
-    )
+    setup_logging(filename=".flowcoder/debug.log")
 
     parser = argparse.ArgumentParser(prog="flowcoder", description="FlowCoder AI coding assistant")
     parser.add_argument(

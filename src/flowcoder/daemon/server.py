@@ -15,6 +15,7 @@ from starlette.middleware.cors import CORSMiddleware
 from flowcoder.config import load_config, AppConfig
 from flowcoder.config.validator import ConfigError
 from flowcoder.hooks import HookEngine, load_hooks
+from flowcoder.logctx import setup_logging
 
 from flowcoder.daemon.routes.core import build_routes
 from flowcoder.daemon.background import build_background_lifespan
@@ -186,10 +187,7 @@ def run_daemon(host: str = "127.0.0.1", port: int = 7800, work_dir: str | None =
 
     wd = work_dir or os.getcwd()
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(name)s %(levelname)s %(message)s",
-    )
+    setup_logging()
 
     try:
         config = load_config()

@@ -17,6 +17,7 @@ import sys
 import time
 from pathlib import Path
 
+from flowcoder.logctx import setup_logging
 from flowcoder.scheduler.latency import LatencyTracker
 from flowcoder.scheduler.runner import Scheduler
 from flowcoder.scheduler.store import ScheduleStore
@@ -41,10 +42,7 @@ async def _demo_executor(job) -> None:
 
 
 async def run(args: argparse.Namespace) -> int:
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
+    setup_logging(level=logging.DEBUG if args.verbose else logging.INFO)
     scheduler = Scheduler(
         ScheduleStore(Path(args.state)),
         _demo_executor,
