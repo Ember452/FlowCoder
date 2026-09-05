@@ -95,6 +95,8 @@ class AgentTaskRunner:
         except asyncio.CancelledError:
             self._emit(sid, task_cancelled_event(task_id))
             self._emit(sid, loop_complete_event(task_id))
+            # 通知完取消事件后放行：取消语义不得吞掉（AGENTS.md 第五节）
+            raise
         except Exception as e:
             log.exception("Agent task %s failed", task_id)
             self._emit(sid, task_error_event(task_id, str(e)))

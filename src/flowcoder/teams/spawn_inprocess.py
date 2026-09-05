@@ -39,6 +39,8 @@ class InProcessTeammateHandle:
             try:
                 return self.task.result()
             except (asyncio.CancelledError, Exception):
+                # 读取的是子任务的终态（已取消子任务的 result 会抛 CancelledError），
+                # 非当前协程自身被取消，返回 None 即可
                 return None
         return None
 

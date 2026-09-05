@@ -137,9 +137,7 @@ def build_outbox_lifespan(server: Any, *, interval_s: float = 3600.0) -> Any:
         task = asyncio.create_task(outbox_cleanup_loop(server, interval_s=interval_s))
         yield
         task.cancel()
-        try:
-            await task
-        except (asyncio.CancelledError, Exception):
-            pass
+        # gather 吞掉子任务自身的取消；lifespan 自身被取消时 CancelledError 仍会放行
+        await asyncio.gather(task, return_exceptions=True)
 
     return lifespan

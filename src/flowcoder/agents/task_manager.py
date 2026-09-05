@@ -118,6 +118,8 @@ class TaskManager:
         except asyncio.CancelledError:
             bg.status = "cancelled"
             bg.result = "Task was cancelled"
+            # 标记后放行：取消语义不得吞掉（AGENTS.md 第五节）
+            raise
         except Exception as e:
             log.error("Background task %s failed: %s", task_id, e)
             bg.status = "failed"
@@ -163,6 +165,8 @@ class TaskManager:
             bg.status = "completed"
         except asyncio.CancelledError:
             bg.status = "cancelled"
+            # 标记后放行：取消语义不得吞掉（AGENTS.md 第五节）
+            raise
         except Exception as e:
             log.error("Background task %s failed: %s", task_id, e)
             bg.status = "failed"

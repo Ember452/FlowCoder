@@ -1235,10 +1235,8 @@ class FlowCoderApp(App):
         if self._streaming and not text.startswith("/"):
             if self._agent_task and not self._agent_task.done():
                 self._send_gate.cancel()
-                try:
-                    await self._agent_task
-                except (asyncio.CancelledError, Exception):
-                    pass
+                # gather 吞掉子任务自身的取消；当前协程被取消时 CancelledError 仍会放行
+                await asyncio.gather(self._agent_task, return_exceptions=True)
             self._finish_streaming()
             self._show_system_message("(response interrupted)")
         await self._dispatch_command(text)
@@ -1966,10 +1964,8 @@ class FlowCoderApp(App):
         # 取消未完成的 MCP 初始化并关闭所有已建立连接，确保退出时无残留资源
         if self._mcp_init_task is not None:
             self._mcp_init_task.cancel()
-            try:
-                await self._mcp_init_task
-            except (asyncio.CancelledError, Exception):
-                pass
+            # gather 吞掉子任务自身的取消；当前协程被取消时 CancelledError 仍会放行
+            await asyncio.gather(self._mcp_init_task, return_exceptions=True)
             self._mcp_init_task = None
         if self.mcp_manager is not None:
             await self.mcp_manager.shutdown()

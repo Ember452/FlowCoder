@@ -120,11 +120,8 @@ def build_background_lifespan(
         finally:
             for task in tasks:
                 task.cancel()
-            for task in tasks:
-                try:
-                    await task
-                except (asyncio.CancelledError, Exception):
-                    pass
+            # gather 吞掉各子任务自身的取消；lifespan 自身被取消时 CancelledError 仍会放行
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     return lifespan
 

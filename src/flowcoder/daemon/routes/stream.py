@@ -187,8 +187,6 @@ async def stream_events(websocket: WebSocket) -> None:
         log.exception("WS stream error for session %s", sid)
     finally:
         listener.cancel()
-        try:
-            await listener
-        except (asyncio.CancelledError, Exception):
-            pass
+        # gather 吞掉子任务自身的取消；当前协程被取消时 CancelledError 仍会放行
+        await asyncio.gather(listener, return_exceptions=True)
         log.info("WS stream ended for session %s", sid)
