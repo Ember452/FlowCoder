@@ -13,14 +13,28 @@
   超限触发"总结并收敛"而非硬杀，默认不设预算
 - 混沌演练框架（P4）：`scripts/chaos.py` 五场景（池耗尽、容器 kill 自愈、
   LLM 断网 30s、429 风暴、预算超限），实测报告 docs/reports/chaos-report.md（5/5 通过）
+- 质量加固（2026-09 大厂对标审查，详见 docs/plans/QUALITY_OPTIMIZATION_PLAN.md）：
+  CI 新增 e2e 执行、覆盖率 fail-under=62 门禁、pip-audit 依赖漏洞扫描 job；
+  提交 uv.lock 使构建可复现；Bash 工具新增 `aclose()` 公共关池入口，
+  TUI 退出时关闭沙箱池避免预热容器残留
 
 ### Changed
 - 新增错误类型：`ServerError`（5xx，可重试）、`LLMTimeoutError`；
   错误映射将 5xx 从一般 API 错误中分离
+- 安全命令白名单收紧：`env`/`printenv` 不再免审批；安全命令含 `$` 一律转审批
+  （防 shell 变量展开泄漏密钥）；`cat`/`head`/`tail`/`grep` 等读文件命令参数指向
+  凭据类路径（`.flowcoder`/`.ssh`/`.aws` 等）时转人工确认
+- 含 api_key 的 config.yaml 落盘改为 mkstemp（0o600）+ 原子替换，
+  不再以组/其他用户可读的默认权限存在
+- teams/worktree 工具链事件循环阻塞清理：git/tmux 子进程与 SessionManager
+  同步文件 IO 全部 `asyncio.to_thread` 化，删除以 `asyncio.sleep` 掩盖竞态的写法
+- CancelledError 取消语义统一：等待子任务改用 `gather(..., return_exceptions=True)`
+  （吞子任务取消、放行自身取消），任务边界标记状态后 re-raise，不再吞取消
 
 ### Tests
 - e2e 补课（P3）：TUI 关键路径（Textual run_test 驱动真实装配）、daemon 断线
   重连（离线事件按序补投 + 重启恢复）、沙箱任务端到端（docker marker）
+- 密钥泄漏通道回归测试（安全命令白名单收紧）；Bash `aclose()` 关池测试
 
 ## [0.4.0] - 2026-08-29
 
