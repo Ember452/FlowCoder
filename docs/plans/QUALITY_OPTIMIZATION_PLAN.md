@@ -46,7 +46,30 @@ async 函数内直接跑同步 `subprocess.run`（git timeout 60s、tmux 10s）�
 - **release 权限收窄**：workflow 级默认 `contents: read`，写权限下沉到 job 级
 - **uv.lock**：提交 lockfile，构建可复现
 
-## 二、遗留项（需决策或依赖架构配套，暂缓）
+## 二、结构评审与整改（2026-09）
+
+全仓 import 图对照 AGENTS.md 分层规则核查：17 组表面反向依赖中 10 组为
+`TYPE_CHECKING` 仅类型导入、5 组为函数内延迟导入（既有约定手法），真实
+反向依赖 4 处全部修复：
+
+| 整改 | 内容 |
+|---|---|
+| 依赖下沉 | `ui/plan_paths.py → agent/`（修 agent→ui）；`scheduler/cron.py → core/`（修 config→scheduler，validator 的延迟导入提升为模块级）；`daemon.background.build_budget_for_agent → agent/budget.build_budget_from_config`（修 agent→daemon）；顶层 `prompts.py → agent/` |
+| 包改名 | `agents/ → subagents/`：与 `agent/`（核心循环）仅差复数、边界无法自明。改名后 agent=运行时，subagents=子 Agent 基建（loader/parser/fork/task_manager/trace/tool_filter） |
+| 子包整合 | team 系工具收进 `tools/teams/`（create/delete/send_message），对齐 `tools/agent/`、`tools/tasks/` 既有模式；tools 顶层恢复纯净 |
+| 定位标注 | `conversation.py` 被 38 个文件跨全层 import，在 docstring 标注"第 0 层领域模型、禁止依赖上层"；`core/__init__` 明确第 0 层禁令 |
+
+评审确认无需调整：`daemon/`（5174 行）routes/session/tasks/actions 子包化
+清晰；`config/validator.py`（600 行）集中式校验不拆；`agent/core.py`（1066 行）
+已拆出 stream/tool_execution 等，剩余主循环可接受。`app.py`（2111 行）仍是
+唯一该拆对象，归框架重构阶段 3 处理。
+
+遗留（低优先，知道即可）：`core/` 包名与 `agent/core.py` 撞名（grep 导航
+易混，改名收益一般）；`gui/` 仅含浏览器桥接静态资源 index.html，作为"包"
+名不副实；`agent/tool_results.py` 与 `context/tool_results.py` 同名不同责
+（事件块构造 vs 预算落盘），导航时有迷惑性。
+
+## 三、遗留项（需决策或依赖架构配套，暂缓）
 
 | 项 | 现状 | 暂缓原因 / 建议 |
 |---|---|---|
@@ -59,7 +82,7 @@ async 函数内直接跑同步 `subprocess.run`（git timeout 60s、tmux 10s）�
 | 结构化日志 + trace_id 贯穿 | trace_id 出不了进程，日志无结构化字段 | 需统一 logging filter/formatter 并注入 LLM HTTP 头，涉及全部模块的日志调用面 |
 | 镜像源 | pyproject 默认 index 指向阿里云镜像 | 属开发者本地环境取舍（uv.lock 已固化解析结果），保留现状，团队协作时再议 |
 
-## 三、审查确认的优势（保持即可）
+## 四、审查确认的优势（保持即可）
 
 - Docker 沙箱：默认断网、256MB/1CPU/pids128 限额、只读根 + 非 root、双层超时、无 privileged/sock 挂载
 - daemon：默认 loopback 绑定、非 loopback 强制 token（`hmac.compare_digest`）、OriginGuard + CORS 白名单

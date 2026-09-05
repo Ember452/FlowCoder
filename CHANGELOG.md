@@ -5,6 +5,13 @@
 ## [Unreleased]
 
 ### Added
+- 结构整理（详见 docs/plans/QUALITY_OPTIMIZATION_PLAN.md 结构评审节）：
+  下沉三处放错位置的低层模块修复反向依赖（ui/plan_paths→agent/、
+  scheduler/cron→core/、daemon 预算构造→agent/budget）；agents/ 包
+  改名 subagents/ 消除 agent/agents 双包歧义；team 系工具收进
+  tools/teams/ 子包；prompts.py 归入 agent/
+
+### Added
 - 韧性层（P3）：`client/resilience.py`——`ResilientClient`（429/5xx/网络错误/超时
   指数退避重试，流式"零交付"失败才可重放）、进程内异步令牌桶限流（RPM）、
   单请求超时兜底；`create_client` 工厂统一包裹，provider 级
