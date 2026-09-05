@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from flowcoder.agents.model_selection import (
+from flowcoder.subagents.model_selection import (
     build_subagent_provider_config,
     create_subagent_client,
     resolve_subagent_model_override,
@@ -124,7 +124,7 @@ def test_select_subagent_client_returns_created_override(monkeypatch) -> None:
     created = object()
 
     monkeypatch.setattr(
-        "flowcoder.agents.model_selection.create_subagent_client",
+        "flowcoder.subagents.model_selection.create_subagent_client",
         lambda _provider, _model: created,
     )
 
@@ -149,7 +149,7 @@ def test_select_subagent_client_falls_back_when_override_creation_fails(monkeypa
     parent_client = object()
 
     monkeypatch.setattr(
-        "flowcoder.agents.model_selection.create_subagent_client",
+        "flowcoder.subagents.model_selection.create_subagent_client",
         lambda _provider, _model: None,
     )
 

@@ -10,9 +10,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from flowcoder.agent import Agent
-from flowcoder.agents.loader import AgentLoader
-from flowcoder.agents.task_manager import TaskManager
-from flowcoder.agents.trace import TraceManager
+from flowcoder.subagents.loader import AgentLoader
+from flowcoder.subagents.task_manager import TaskManager
+from flowcoder.subagents.trace import TraceManager
 from flowcoder.client import create_client, resolve_context_window
 from flowcoder.config import AppConfig, ProviderConfig, WorktreeConfig
 from flowcoder.hooks import HookEngine

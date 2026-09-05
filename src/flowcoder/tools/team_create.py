@@ -96,7 +96,7 @@ class TeamCreateTool(Tool):
         from flowcoder.teams.coordinator import is_coordinator_mode
 
         if is_coordinator_mode(self._enable_coordinator_mode):
-            from flowcoder.agents.tool_filter import apply_coordinator_filter
+            from flowcoder.subagents.tool_filter import apply_coordinator_filter
 
             self._parent_agent.coordinator_mode = True
             self._parent_agent._team_manager = self._team_manager

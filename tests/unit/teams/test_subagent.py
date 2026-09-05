@@ -9,20 +9,20 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from flowcoder.agents.parser import AgentDef, AgentParseError, parse_agent_file, parse_frontmatter
-from flowcoder.agents.loader import AgentLoader
-from flowcoder.agents.tool_filter import (
+from flowcoder.subagents.parser import AgentDef, AgentParseError, parse_agent_file, parse_frontmatter
+from flowcoder.subagents.loader import AgentLoader
+from flowcoder.subagents.tool_filter import (
     ASYNC_AGENT_ALLOWED_TOOLS,
     resolve_agent_tools,
 )
-from flowcoder.agents.fork import (
+from flowcoder.subagents.fork import (
     FORK_BOILERPLATE_TAG,
     ForkError,
     build_forked_messages,
 )
-from flowcoder.agents.trace import TraceManager
-from flowcoder.agents.task_manager import BackgroundTask, TaskManager
-from flowcoder.agents.notification import format_task_notification, inject_task_notifications
+from flowcoder.subagents.trace import TraceManager
+from flowcoder.subagents.task_manager import BackgroundTask, TaskManager
+from flowcoder.subagents.notification import format_task_notification, inject_task_notifications
 from flowcoder.conversation import ConversationManager, ToolUseBlock
 from flowcoder.tools import ToolRegistry
 from flowcoder.tools.base import Tool, ToolResult

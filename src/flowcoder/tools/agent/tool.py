@@ -19,8 +19,8 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from flowcoder.agents.model_selection import select_subagent_client
-from flowcoder.agents.defaults import (
+from flowcoder.subagents.model_selection import select_subagent_client
+from flowcoder.subagents.defaults import (
     fork_agent_def,
     teammate_agent_def,
     worktree_agent_def,
@@ -50,9 +50,9 @@ from flowcoder.tools.base import Tool, ToolResult
 
 if TYPE_CHECKING:
     from flowcoder.agent import Agent
-    from flowcoder.agents.loader import AgentLoader
-    from flowcoder.agents.task_manager import TaskManager
-    from flowcoder.agents.trace import TraceManager
+    from flowcoder.subagents.loader import AgentLoader
+    from flowcoder.subagents.task_manager import TaskManager
+    from flowcoder.subagents.trace import TraceManager
 
 log = logging.getLogger(__name__)
 
@@ -153,9 +153,9 @@ class AgentTool(Tool):
             return await self._execute_with_worktree(p)
 
         # 路径 3：默认 → 一次性子 Agent 或 fork 当前对话
-        from flowcoder.agents.fork import ForkError, build_forked_messages
-        from flowcoder.agents.parser import AgentDef
-        from flowcoder.agents.tool_filter import resolve_agent_tools
+        from flowcoder.subagents.fork import ForkError, build_forked_messages
+        from flowcoder.subagents.parser import AgentDef
+        from flowcoder.subagents.tool_filter import resolve_agent_tools
         from flowcoder.conversation import ConversationManager
 
         definition: AgentDef | None = None
@@ -294,9 +294,9 @@ class AgentTool(Tool):
                 output="WorktreeManager not configured for team spawn.", is_error=True
             )
 
-        from flowcoder.agents.fork import ForkError, build_forked_messages
-        from flowcoder.agents.parser import AgentDef
-        from flowcoder.agents.tool_filter import build_teammate_tools
+        from flowcoder.subagents.fork import ForkError, build_forked_messages
+        from flowcoder.subagents.parser import AgentDef
+        from flowcoder.subagents.tool_filter import build_teammate_tools
         from flowcoder.conversation import ConversationManager
         from flowcoder.teams.models import BackendType, TeammateInfo
         from flowcoder.teams.registry import AgentNameRegistry
@@ -525,8 +525,8 @@ class AgentTool(Tool):
                 is_error=True,
             )
 
-        from flowcoder.agents.parser import AgentDef
-        from flowcoder.agents.tool_filter import resolve_agent_tools
+        from flowcoder.subagents.parser import AgentDef
+        from flowcoder.subagents.tool_filter import resolve_agent_tools
         from flowcoder.worktree.integration import (
             build_worktree_notice,
             generate_worktree_name,

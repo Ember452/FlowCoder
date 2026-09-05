@@ -234,7 +234,7 @@ def get_coordinator_user_context(
     worker_tools: list[str] | None = None,
 ) -> dict[str, str]:
     if worker_tools is None:
-        from flowcoder.agents.tool_filter import IN_PROCESS_TEAMMATE_ALLOWED_TOOLS
+        from flowcoder.subagents.tool_filter import IN_PROCESS_TEAMMATE_ALLOWED_TOOLS
 
         tools_str = ", ".join(sorted(IN_PROCESS_TEAMMATE_ALLOWED_TOOLS))
     else:

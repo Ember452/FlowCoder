@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from flowcoder.commands.registry import Command, CommandContext, CommandType
 
 if TYPE_CHECKING:
-    from flowcoder.agents.trace import TraceManager
+    from flowcoder.subagents.trace import TraceManager
 
 
 def _format_elapsed(start: float, end: float | None) -> str:

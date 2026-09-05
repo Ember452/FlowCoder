@@ -81,10 +81,10 @@ from flowcoder.permissions import (
     PermissionMode,
     RuleEngine,
 )
-from flowcoder.agents.loader import AgentLoader
-from flowcoder.agents.task_manager import TaskManager
-from flowcoder.agents.trace import TraceManager
-from flowcoder.agents.notification import inject_task_notifications
+from flowcoder.subagents.loader import AgentLoader
+from flowcoder.subagents.task_manager import TaskManager
+from flowcoder.subagents.trace import TraceManager
+from flowcoder.subagents.notification import inject_task_notifications
 from flowcoder.commands.handlers.tasks import create_tasks_command
 from flowcoder.skills.executor import SkillExecutor
 from flowcoder.skills.loader import SkillLoader

@@ -32,7 +32,7 @@ from flowcoder.teams.coordinator import (
     is_coordinator_mode,
     match_session_mode,
 )
-from flowcoder.agents.tool_filter import (
+from flowcoder.subagents.tool_filter import (
     COORDINATOR_MODE_ALLOWED_TOOLS,
     IN_PROCESS_TEAMMATE_ALLOWED_TOOLS,
     TEAMMATE_COORDINATION_TOOLS,

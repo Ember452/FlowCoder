@@ -12,8 +12,8 @@ from flowcoder.tools.agent.support import (
 
 if TYPE_CHECKING:
     from flowcoder.agent import Agent
-    from flowcoder.agents.parser import AgentDef
-    from flowcoder.agents.trace import TraceManager, TraceNode
+    from flowcoder.subagents.parser import AgentDef
+    from flowcoder.subagents.trace import TraceManager, TraceNode
     from flowcoder.client import LLMClient
     from flowcoder.tools import ToolRegistry
 

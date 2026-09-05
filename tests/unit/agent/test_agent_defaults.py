@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from flowcoder.agents.defaults import (
+from flowcoder.subagents.defaults import (
     fork_agent_def,
     teammate_agent_def,
     worktree_agent_def,

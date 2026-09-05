@@ -12,7 +12,7 @@ import os
 import sys
 from pathlib import Path
 
-from flowcoder.agents.notification import format_task_notification
+from flowcoder.subagents.notification import format_task_notification
 from flowcoder.config import ConfigError, load_config
 from flowcoder.conversation import ConversationManager
 from flowcoder.hooks import HookConfigError, HookEngine, load_hooks

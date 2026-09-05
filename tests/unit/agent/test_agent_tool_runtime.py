@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from flowcoder.agents.parser import AgentDef
-from flowcoder.agents.trace import TraceManager
+from flowcoder.subagents.parser import AgentDef
+from flowcoder.subagents.trace import TraceManager
 from flowcoder.permissions import PermissionMode
 from flowcoder.tools import ToolRegistry
 from flowcoder.tools.agent.runtime import (
