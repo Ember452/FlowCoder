@@ -32,8 +32,8 @@ from flowcoder.tools.agent.tool import AgentTool
 from flowcoder.tools.ask_user import AskUserTool
 from flowcoder.tools.exit_plan_mode import ExitPlanModeTool
 from flowcoder.tools.impl.tool_search import ToolSearchTool
-from flowcoder.tools.team_create import TeamCreateTool
-from flowcoder.tools.team_delete import TeamDeleteTool
+from flowcoder.tools.teams.create import TeamCreateTool
+from flowcoder.tools.teams.delete import TeamDeleteTool
 from flowcoder.worktree import WorktreeManager
 
 

@@ -993,8 +993,8 @@ class FlowCoderApp(App):
 
         # --- Agent 团队系统初始化 ---
         from flowcoder.teams.manager import TeamManager
-        from flowcoder.tools.team_create import TeamCreateTool
-        from flowcoder.tools.team_delete import TeamDeleteTool
+        from flowcoder.tools.teams.create import TeamCreateTool
+        from flowcoder.tools.teams.delete import TeamDeleteTool
 
         self.team_manager = TeamManager(
             worktree_manager=self.worktree_manager, trace_manager=self.trace_manager

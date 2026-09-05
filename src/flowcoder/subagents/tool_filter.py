@@ -181,7 +181,7 @@ def build_teammate_tools(
     最后统一注入 Task*/SendMessage 等协调工具。
     """
     from flowcoder.teams.models import BackendType
-    from flowcoder.tools.send_message import SendMessageTool
+    from flowcoder.tools.teams.send_message import SendMessageTool
     from flowcoder.tools.tasks.create import TaskCreateTool
     from flowcoder.tools.tasks.get import TaskGetTool
     from flowcoder.tools.tasks.list import TaskListTool

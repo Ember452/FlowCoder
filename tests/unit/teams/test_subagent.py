@@ -9,7 +9,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from flowcoder.subagents.parser import AgentDef, AgentParseError, parse_agent_file, parse_frontmatter
+from flowcoder.subagents.parser import (
+    AgentDef,
+    AgentParseError,
+    parse_agent_file,
+    parse_frontmatter,
+)
 from flowcoder.subagents.loader import AgentLoader
 from flowcoder.subagents.tool_filter import (
     ASYNC_AGENT_ALLOWED_TOOLS,

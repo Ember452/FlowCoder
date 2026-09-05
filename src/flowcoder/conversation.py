@@ -2,6 +2,10 @@
 
 定义了对话历史的数据结构和 ConversationManager 管理器。
 
+层级定位：本模块被 client/context/memory/tools/agent/daemon 等全部
+上层 import，事实上的第 0 层领域模型（与 config/client 同底）。
+禁止在此引入对任何上层模块的依赖，否则会形成循环 import。
+
 数据结构：
 - ToolUseBlock: LLM 请求调用工具的描述
 - ToolResultBlock: 工具执行结果
