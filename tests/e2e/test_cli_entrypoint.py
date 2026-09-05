@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 import sys
 
@@ -18,6 +19,20 @@ def test_main_without_prompt_launches_tui(
 ) -> None:
     """Without -p, the CLI should launch the TUI app instead of exiting."""
     monkeypatch.chdir(tmp_path)
+    # 密闭化：HOME 钉到 tmp_path 并就地写最小配置。ensure_runtime_config
+    # 在无配置且 stdin 非 TTY 时会 sys.exit(1)——本测试此前隐式依赖开发机
+    # 的 ~/.flowcoder/config.yaml 才能通过，干净 CI runner 上必挂
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    config_dir = tmp_path / ".flowcoder"
+    config_dir.mkdir()
+    (config_dir / "config.yaml").write_text(
+        "providers:\n"
+        "  - name: local\n"
+        "    protocol: openai\n"
+        "    base_url: http://127.0.0.1:9/v1\n"
+        "    model: smoke-model\n",
+        encoding="utf-8",
+    )
     monkeypatch.setattr(sys, "argv", ["flowcoder"])
 
     launched: dict[str, bool] = {}
