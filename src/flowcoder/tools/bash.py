@@ -210,3 +210,7 @@ class Bash(Tool):
         except SandboxError:
             pass
         self._pool = None
+
+    async def aclose(self) -> None:
+        """关闭沙箱池的公共入口：宿主退出（TUI/daemon）时调用，避免预热容器残留。"""
+        await self._shutdown_pool()

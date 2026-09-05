@@ -115,6 +115,20 @@ class TestSetSandboxMode:
         assert pool.closed
         assert bash._pool is None
 
+    async def test_aclose_shuts_down_pool(self) -> None:
+        """宿主退出时经 aclose 关池，避免预热容器残留。"""
+        pool = FakePool()
+        bash = Bash()
+        bash._pool = pool
+        await bash.aclose()
+        assert pool.closed
+        assert bash._pool is None
+
+    async def test_aclose_without_pool_is_noop(self) -> None:
+        bash = Bash()
+        await bash.aclose()
+        assert bash._pool is None
+
     async def test_switch_to_docker_failure_keeps_off(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:

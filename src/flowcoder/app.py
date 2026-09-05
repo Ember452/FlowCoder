@@ -2017,6 +2017,11 @@ class FlowCoderApp(App):
             if self._stale_cleanup_task and not self._stale_cleanup_task.done():
                 self._stale_cleanup_task.cancel()
 
+            # 关闭 Bash 工具的 docker 沙箱池，避免预热容器（sleep infinity）在退出后残留
+            bash_tool = self.registry.get("Bash")
+            if bash_tool is not None and hasattr(bash_tool, "aclose"):
+                await bash_tool.aclose()
+
             if hasattr(self, "team_manager"):
                 for name in list(self.team_manager._teams):
                     try:
