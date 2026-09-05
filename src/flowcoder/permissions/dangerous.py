@@ -27,8 +27,6 @@ _SAFE_EXACT_COMMANDS = frozenset(
         "date",
         "cal",
         "uptime",
-        "env",
-        "printenv",
         "true",
         "false",
         "go version",
@@ -88,6 +86,31 @@ _SAFE_PREFIX_COMMANDS = frozenset(
 )
 
 
+# 这些命令会输出文件内容，参数指向凭据类路径时不能免审批放行：
+# 否则 Agent 可无审批读取 API key/JWT 等密钥，经对话上下文送给 LLM 供应商。
+_FILE_CONTENT_COMMANDS = frozenset(
+    {"cat", "head", "tail", "grep", "egrep", "fgrep", "diff", "comm"}
+)
+
+_SENSITIVE_PATH_MARKERS = (
+    ".flowcoder",
+    ".ssh",
+    ".aws",
+    ".kube",
+    ".gnupg",
+    ".netrc",
+    "id_rsa",
+    "id_ed25519",
+    ".env",
+)
+
+
+def _references_sensitive_path(command: str) -> bool:
+    """判断命令参数是否指向凭据/密钥类路径（大小写不敏感，兼容 POSIX 与 Windows 分隔符）。"""
+    lowered = command.lower()
+    return any(marker in lowered for marker in _SENSITIVE_PATH_MARKERS)
+
+
 def _tokenize_command(command: str) -> list[str]:
     """把命令按 shell 词法切分；切分失败时退化为按空白切分，避免误判。"""
     try:
@@ -139,13 +162,19 @@ def is_safe_command(command: str) -> bool:
     trimmed = command.strip()
     if not trimmed:
         return False
-    for ch in ("|", ";", "&&", "||", ">", "<", "$(", "`", "\n", "\r"):
+    for ch in ("|", ";", "&&", "||", ">", "<", "`", "\n", "\r"):
         if ch in trimmed:
             return False
+    # 命令经 shell 执行，含 $ 会在运行期展开变量（如 echo $API_KEY），
+    # 白名单命令都是无需变量的只读操作，含 $ 一律转人工审批。
+    if "$" in trimmed:
+        return False
     if trimmed in _SAFE_EXACT_COMMANDS:
         return True
     for safe in _SAFE_PREFIX_COMMANDS:
         if trimmed == safe or trimmed.startswith(safe + " "):
+            if safe in _FILE_CONTENT_COMMANDS and _references_sensitive_path(trimmed):
+                return False
             return True
     return False
 

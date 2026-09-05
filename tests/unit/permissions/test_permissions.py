@@ -130,6 +130,30 @@ class TestDangerousCommandDetector:
     @pytest.mark.parametrize(
         "command",
         [
+            "env",
+            "printenv",
+            "echo $ANTHROPIC_API_KEY",
+            "echo hello $USER",
+            "cat ~/.flowcoder/config.yaml",
+            "cat C:\\Users\\me\\.flowcoder\\config.yaml",
+            "head .ssh/id_rsa",
+            "tail /home/me/.aws/credentials",
+            "grep token ~/.netrc",
+            "diff .env .env.bak",
+        ],
+    )
+    def test_secret_leaking_commands_are_not_safe(self, command: str) -> None:
+        """env/printenv、变量展开、读凭据类路径都必须转人工审批，防止密钥进入对话上下文。"""
+        assert not is_safe_command(command)
+
+    def test_normal_file_reading_is_still_safe(self) -> None:
+        assert is_safe_command("cat README.md")
+        assert is_safe_command("head -n 20 src/main.py")
+        assert is_safe_command("grep pattern docs/guide.md")
+
+    @pytest.mark.parametrize(
+        "command",
+        [
             "npx cowsay hello",
             "env rm -rf /",
             "xargs rm -rf /",
